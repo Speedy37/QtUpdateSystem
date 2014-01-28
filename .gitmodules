@@ -1,0 +1,3 @@
+[submodule "QtLog"]
+	path = QtLog
+	url = https://github.com/Speedy37/QtLog.git
