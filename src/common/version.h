@@ -10,5 +10,4 @@ public:
     QString description;
 };
 
-
 #endif // VERSION_H

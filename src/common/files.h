@@ -1,16 +1,22 @@
 #ifndef FILES_H
 #define FILES_H
 
+#include "file.h"
 #include <QString>
 #include <QMap>
-#include <QList>
+#include <QVector>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 class File;
 
 class Files
 {
 public:
-    QMap<QString, QList<File*>> files;
+    void loadFiles(const QJsonDocument &json);
+    QJsonObject toJsonObject() const;
+private:
+    QMap<QString, QVector<File>> m_files;
 };
 
 #endif // FILES_H

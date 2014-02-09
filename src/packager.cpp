@@ -1,6 +1,8 @@
 #include "packager.h"
-#include "log.h"
+#include "packager/compressfiletask.h"
+#include "packager/patchfiletask.h"
 
+#include <qtlog.h>
 #include <QCryptographicHash>
 #include <QProcess>
 #include <QTemporaryFile>
@@ -26,6 +28,8 @@ Packager::GenerationError Packager::generate()
     {
         m_lastException = Exception();
         threadpool = NULL;
+
+        LOG_TRACE(tr("Checking preconditions"));
 
         if(newDirectoryPath().isEmpty())
             throw Exception(NewDirectoryPathIsEmpty, tr("New directory path is empty"));
@@ -53,6 +57,7 @@ Packager::GenerationError Packager::generate()
         if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
             throw Exception(DeltaMetaFileOpenFailed, tr("Unable to create new delta metadata file"));
 
+        LOG_TRACE(tr("Preconditions passed"));
 
         QFileInfoList newFiles = dirList(newDir);
         QFileInfoList oldFiles = oldDirectoryPath().isNull() ? QFileInfoList() : dirList(oldDir);
@@ -64,6 +69,7 @@ Packager::GenerationError Packager::generate()
                 throw Exception(TmpDirInvalid, tr("Unable to create temporary directory"));
             m_currentTmpDirectoryPath = tmpDirectory->path();
             m_tmpFileCounter = 0;
+
             generate_recursion(QStringLiteral(""), newFiles, oldFiles);
             scopedThreadPool->waitForDone();
         }
@@ -97,7 +103,7 @@ Packager::GenerationError Packager::generate()
 
         metadataFile.write(QJsonDocument(json).toJson(QJsonDocument::Indented));
 
-        Log::info(tr("Delta creation succeded"));
+        LOG_INFO(tr("Delta creation succeded"));
         return NoError;
     }
     catch (const Exception & reason)
@@ -110,7 +116,7 @@ Packager::GenerationError Packager::generate()
         }
         latentTaskInfos.clear();
 
-        Log::info(tr("Delta creation failed %1").arg(reason.errorString));
+        LOG_INFO(tr("Delta creation failed %1").arg(reason.errorString));
         m_lastException = reason;
         return reason.errorType;
     }
@@ -217,11 +223,8 @@ void Packager::generate_recursion(QString path, const QFileInfoList & newFiles, 
     int newPos = 0, newLen = newFiles.size();
     int oldPos = 0, oldLen = oldFiles.size();
 
-    if(Log::isTraceEnabled())
-        Log::trace(QString("generate_recursion : ") +
-              QString::number(newLen) + ", " +
-              QString::number(oldLen) + ", " +
-              path );
+    LOG_TRACE(tr("path = %1, newFiles.size() = %2, oldFiles.size() = %3").arg(path).arg(newLen).arg(oldLen));
+
     while(newPos < newLen || oldPos < oldLen)
     {
         QFileInfo newFile, oldFile;
@@ -236,8 +239,7 @@ void Packager::generate_recursion(QString path, const QFileInfoList & newFiles, 
         else
             diff = newPos < newLen ? -1 : 1;
 
-        if(Log::isTraceEnabled())
-            Log::trace(QString("step : ") + QString::number(diff) + ", "+ newFile.filePath() + ", " + oldFile.filePath() );
+        LOG_TRACE(tr("diff = %1, newFile = %2, oldFile = %3").arg(diff).arg(newFile.filePath()).arg(oldFile.filePath()));
 
         if(diff < 0)
         {
@@ -305,177 +307,3 @@ void Packager::generate_recursion(QString path, const QFileInfoList & newFiles, 
         Log::trace(QString("generate_recursion done"));
 }
 
-void Packager::CompressFileTask::run()
-{
-    compress(true);
-}
-
-void Packager::CompressFileTask::compress(bool isSourceFinalFile)
-{
-    try
-    {
-        QFile file(info->destinationFileName);
-        if(!file.open(QFile::ReadOnly))
-            throw Exception(CompressFailed, tr("Unable to open file %1").arg(file.fileName()));
-
-        qint64 read, filesize = 0;
-        char buffer[4096];
-        QProcess lzma;
-        QStringList arguments;
-        QString finalFileHash, dataFileHash;
-        QString compression;
-
-        if(QFileInfo(sourceFilename).size() > 4096)
-        {
-            QCryptographicHash dataHashMaker(QCryptographicHash::Sha1);
-            lzma.setProcessChannelMode(QProcess::ForwardedErrorChannel);
-#if defined(Q_OS_LINUX)
-            arguments << "e" << "-so" << sourceFilename;// Encode + Write to stdout
-            lzma.start(QStringLiteral("./lzma"), arguments, QIODevice::ReadWrite | QIODevice::Unbuffered);
-#endif
-
-            if(!lzma.waitForStarted())
-                throw Exception(CompressFailed, tr("Unable to start lzma"));
-
-            while(lzma.waitForReadyRead())
-            {
-                while((read = lzma.read(buffer, 4096)) > 0)
-                {
-                    filesize += read;
-                    dataHashMaker.addData(buffer, read);
-                    if(file.write(buffer, read) != read)
-                    {
-                        lzma.kill();
-                        throw Exception(PatchFailed, tr("Failed to write to %1").arg(file.fileName()));
-                    }
-                }
-            }
-
-            if(lzma.state() == QProcess::Running && !lzma.waitForFinished())
-                throw Exception(CompressFailed, tr("Unable to finish lzma"));
-
-            if(lzma.exitCode() != 0)
-                throw Exception(CompressFailed, tr("lzma exitcode != 0"));
-
-            if(!file.flush())
-                throw Exception(CompressFailed, tr("Unable to write everything to compressed file"));
-
-            dataFileHash = QString(dataHashMaker.result().toHex());
-            compression = QStringLiteral("lzma");
-        }
-        else
-        {
-            QCryptographicHash dataHashMaker(QCryptographicHash::Sha1);
-            QFile finalFile(sourceFilename);
-
-            if(!finalFile.open(QFile::ReadOnly))
-                throw Exception(CompressFailed, tr("Unable to open file %1").arg(finalFile.fileName()));
-
-            while((read = finalFile.read(buffer, 4096)) > 0)
-            {
-                filesize += read;
-                dataHashMaker.addData(buffer, read);
-                if(file.write(buffer, read) != read)
-                    throw Exception(CompressFailed, tr("Failed to write to %1").arg(file.fileName()));
-            }
-            dataFileHash = finalFileHash = QString(dataHashMaker.result().toHex());
-            compression = QStringLiteral("");
-        }
-
-        QJsonObject &operation = info->description;
-        if(isSourceFinalFile)
-        {
-            if(finalFileHash.isEmpty())
-                finalFileHash = generate_hash(sourceFilename);
-            operation.insert(QStringLiteral("finalSize"), QString::number(QFileInfo(sourceFilename).size()));
-            operation.insert(QStringLiteral("finalHash"), finalFileHash);
-            operation.insert(QStringLiteral("finalHashType"), QStringLiteral("Sha1"));
-        }
-
-        operation.insert(QStringLiteral("dataLength"), QString::number(filesize));
-        operation.insert(QStringLiteral("dataHash"), dataFileHash);
-        operation.insert(QStringLiteral("dataHashType"), QStringLiteral("Sha1"));
-        operation.insert(QStringLiteral("dataCompression"), compression);
-    }
-    catch(const Exception &reason)
-    {
-        info->exception = reason;
-    }
-}
-
-void Packager::PatchFileTask::run()
-{
-    try
-    {
-        QString finalFileHash = generate_hash(sourceFilename);
-        QString currentFileHash = generate_hash(oldFilename);
-
-        if(finalFileHash == currentFileHash) // No changes (info->isEmpty() == true)
-            return;
-
-        QFile file(tmpFilename);
-        if(!file.open(QFile::ReadOnly))
-            throw Exception(PatchFailed, tr("Unable to open file %1").arg(file.fileName()));
-
-        qint64 read, filesize = 0;
-        char buffer[4096];
-        QProcess xdelta3;
-        QStringList xdelta3Arguments;
-        QCryptographicHash dataHashMaker(QCryptographicHash::Sha1);
-
-        xdelta3.setProcessChannelMode(QProcess::ForwardedErrorChannel);
-#if defined(Q_OS_LINUX)
-        xdelta3Arguments << "-0" << "-e" << "-s" << oldFilename << sourceFilename;
-        xdelta3.start(QStringLiteral("xdelta3"), xdelta3Arguments);
-#endif
-
-        if(!xdelta3.waitForStarted())
-            throw Exception(PatchFailed, tr("Unable to start xdelta3"));
-
-        while(xdelta3.waitForReadyRead())
-        {
-            while((read = xdelta3.read(buffer, 4096)) > 0)
-            {
-                filesize += read;
-                dataHashMaker.addData(buffer, read);
-                if(file.write(buffer, read) != read)
-                {
-                    xdelta3.kill();
-                    throw Exception(PatchFailed, tr("Failed to write to %1").arg(tmpFilename));
-                }
-            }
-        }
-
-        if(xdelta3.state() == QProcess::Running && !xdelta3.waitForFinished())
-            throw Exception(PatchFailed, tr("Unable to finish xdelta3"));
-
-        if(xdelta3.exitCode() != 0)
-            throw Exception(PatchFailed, tr("xdelta3 exitcode != 0"));
-
-        if(!file.flush())
-            throw Exception(PatchFailed, tr("Unable to write everything to patch file"));
-
-        QJsonObject &operation = info->description;
-        operation.insert(QStringLiteral("currentSize"), QString::number(QFileInfo(oldFilename).size()));
-        operation.insert(QStringLiteral("currentHash"), currentFileHash);
-        operation.insert(QStringLiteral("currentHashType"), QStringLiteral("Sha1"));
-
-        operation.insert(QStringLiteral("finalSize"), QString::number(QFileInfo(sourceFilename).size()));
-        operation.insert(QStringLiteral("finalHash"), finalFileHash);
-        operation.insert(QStringLiteral("finalHashType"), QStringLiteral("Sha1"));
-
-        operation.insert(QStringLiteral("patchLength"), QString::number(filesize));
-        operation.insert(QStringLiteral("patchHash"), QString(dataHashMaker.result().toHex()));
-        operation.insert(QStringLiteral("patchHashType"), QStringLiteral("Sha1"));
-
-        sourceFilename = tmpFilename;
-        compress(false);
-
-        if(!QFile::remove(tmpFilename))
-            Log::warn(tr("Unable to remove temporary file : %1").arg(tmpFilename));
-    }
-    catch(const Exception &reason)
-    {
-        info->exception = reason;
-    }
-}

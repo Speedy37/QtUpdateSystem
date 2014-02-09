@@ -20,10 +20,9 @@ class QTUPDATESYSTEMSHARED_EXPORT Packager : public QObject
 {
     Q_OBJECT
 private:
-    Q_DISABLE_COPY(DirectoryDeltaCreator)
+    Q_DISABLE_COPY(Packager)
 
 public:
-
     enum GenerationError
     {
         NoError,
@@ -43,7 +42,7 @@ public:
     };
 
     Packager(QObject * parent = 0);
-    GenerationError  generate();
+    GenerationError generate();
 
     QString newDirectoryPath() const;
     QString newRevisionName() const;
@@ -157,7 +156,7 @@ inline void Packager::setTmpDirectoryPath(const QString &tmpDirectoryPath)
 
 inline Packager::GenerationError Packager::errorType() const
 {
-    return m_lastException.errorType;
+    return static_cast<Packager::GenerationError>(m_lastException.errorType);
 }
 
 inline QString Packager::errorString() const

@@ -1,6 +1,5 @@
-#include "remoteupdate.h"
-#include "remoteupdate_p.h"
-#include "log.h"
+#include "updater.h"
+#include <qtlog.h>
 #include <QNetworkReply>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -15,7 +14,6 @@
 #include <QAbstractEventDispatcher>
 #include <QAuthenticator>
 
-
 /*!
     \class RemoteUpdate
     \brief Provide remote update functionality
@@ -24,82 +22,82 @@
 
 */
 
-/*! \fn bool RemoteUpdate::isIdle() const
+/*! \fn bool Updater::isIdle() const
     Returns \c true if no action is in progress; otherwise returns \c false.
 
     \sa isUpdateRequired()
 */
 
-/*! \fn bool RemoteUpdate::isUpdateAvailable() const
+/*! \fn bool Updater::isUpdateAvailable() const
     Returns \c true if an update is available; otherwise returns \c false.
 
     \sa isIdle()
 */
 
-/*! \fn QString RemoteUpdate::currentVersion() const
+/*! \fn QString Updater::currentVersion() const
     Returns the local current version.
 
     \sa latestVersion(), versions()
 */
 
-/*! \fn QString RemoteUpdate::latestVersion() const
+/*! \fn QString Updater::latestVersion() const
     Returns the latest remote version.
 
     \sa currentVersion(), versions()
 */
 
-/*! \fn QVector<Version> RemoteUpdate::versions()
+/*! \fn QVector<Version> Updater::versions()
     Returns the remote version list.
 
     \sa currentVersion(), latestVersion()
 */
 
-/*! \fn QString RemoteUpdate::updateDirectory() const
+/*! \fn QString Updater::updateDirectory() const
     Returns the directory to update.
 
     \sa setUpdateDirectory(), updateTmpDirectory(), setUpdateTmpDirectory(), updateUrl(), setUpdateUrl()
 */
 
-/*! \fn void RemoteUpdate::setUpdateDirectory(const QString &updateDirectory)
+/*! \fn void Updater::setUpdateDirectory(const QString &updateDirectory)
     Set the directory to update
 
     \sa updateDirectory(), updateTmpDirectory(), setUpdateTmpDirectory(), updateUrl(), setUpdateUrl()
 */
 
-/*! \fn QString RemoteUpdate::updateTmpDirectory() const
+/*! \fn QString Updater::updateTmpDirectory() const
     Returns the directory to use for storing temporary files required for doing the update.
 
     \sa updateDirectory(), setUpdateDirectory(), setUpdateTmpDirectory(), updateUrl(), setUpdateUrl()
 */
 
-/*! \fn void RemoteUpdate::setUpdateTmpDirectory(const QString &updateTmpDirectory)
+/*! \fn void Updater::setUpdateTmpDirectory(const QString &updateTmpDirectory)
     Set the directory to use for storing temporary files required for doing the update.
 
     \sa updateDirectory(), setUpdateDirectory(), updateTmpDirectory(), updateUrl(), setUpdateUrl()
 */
 
-/*! \fn QString RemoteUpdate::updateUrl() const
+/*! \fn QString Updater::updateUrl() const
     Returns the remote update url.
 
     \sa setUpdateUrl(), setCredential()
 */
 
-/*! \fn void RemoteUpdate::setUpdateUrl(const QString &updateUrl)
+/*! \fn void Updater::setUpdateUrl(const QString &updateUrl)
     Set the remote update url.
 
     \sa updateUrl(), setCredential()
 */
 
-/*! \fn void RemoteUpdate::setCredential(const QString &username, const QString &password)
+/*! \fn void Updater::setCredential(const QString &username, const QString &password)
     Set the username and password for remote url basic authentification.
 
     \sa updateUrl(), setUpdateUrl()
 */
 
-/*! \fn RemoteUpdate::State RemoteUpdate::state() const
+/*! \fn Updater::State Updater::state() const
     Returns this object state.
 
-    \sa RemoteUpdate::State
+    \sa Updater::State
 */
 
 /**
@@ -117,50 +115,77 @@ const QString UpdateFile = QStringLiteral("UpdateFile");
  */
 const QString UpdateUrlInfo = QStringLiteral("info");
 
+/**
+ * @brief Name of the repository packages file
+ */
+const QString UpdateUrlPackages = QStringLiteral("packages");
 
 
-RemoteUpdate::RemoteUpdate(QObject *parent) : QObject(parent)
+
+Updater::Updater(QObject *parent) : QObject(parent)
 {
     m_state = Idle;
     m_createApplyManifest = false;
     m_manager = new QNetworkAccessManager(this);
-    connect(m_manager, &QNetworkAccessManager::authenticationRequired, this, &RemoteUpdate::authenticationRequired);
+    connect(m_manager, &QNetworkAccessManager::authenticationRequired, this, &Updater::authenticationRequired);
 }
 
-RemoteUpdate::~RemoteUpdate()
+Updater::~Updater()
 {
 }
 
-QString RemoteUpdate::iniCurrentVersion() const
+QString Updater::iniCurrentVersion() const
 {
     QSettings settings(updateDirectory()+QStringLiteral("status.ini"), QSettings::IniFormat);
     return (settings.value(Revision).toString());
 }
 
-void RemoteUpdate::checkForUpdates()
+void Updater::checkForUpdates()
 {
-    Q_ASSERT(isIdle());
-    setState(DownloadingInformations);
-    clearError();
-    setCurrentVersion(iniCurrentVersion());
-    info = get(UpdateUrlInfo);
-    connect(metadata, &QNetworkReply::finished, this, &RemoteUpdate::onInfoFinished);
+    if(isIdle())
+    {
+        setState(DownloadingInformations);
+        clearError();
+        setCurrentVersion(iniCurrentVersion());
+        info = get(UpdateUrlInfo);
+        connect(metadata, &QNetworkReply::finished, this, &Updater::onInfoFinished);
+    }
+    else
+    {
+        LOG_WARN("called while not Idle");
+    }
 }
 
-/**
- * @brief Start the update in it's own thread
- * TODO : Ensure safety of public methods
- */
-void RemoteUpdate::update()
+void Updater::update()
 {
-    Q_ASSERT(isUpdateAvailable());
-    setState(Updating);
-    clearError();
-    metadata = get(m_metaDataBaseUrl+QStringLiteral(".metadata"));
-    connect(metadata, &QNetworkReply::finished, this, &RemoteUpdate::onMetadataFinished);
+    if(isUpdateAvailable())
+    {
+        setState(Updating);
+        clearError();
+
+        LOG_TRACE(tr("Getting package list"));
+        info = get(UpdateUrlPackages);
+        connect(metadata, &QNetworkReply::finished, this, &Updater::onPackagesFinished);
+
+
+        if(currentVersion().isEmpty())
+        {
+            metadata = get(QStringLiteral("complete_%1.metadata").arg(latestVersion()));
+        }
+        else
+        {
+            metadata = get(QStringLiteral("patch%1_%2.metadata").arg(currentVersion(), latestVersion()));
+        }
+
+        connect(metadata, &QNetworkReply::finished, this, &Updater::onMetadataFinished);
+    }
+    else
+    {
+        LOG_WARN("called without an available update");
+    }
 }
 
-void RemoteUpdate::applyLocally(const QString &localFolder)
+void Updater::applyLocally(const QString &localFolder)
 {
     Q_ASSERT(isIdle());
     setState(ApplyingLocally);
@@ -190,7 +215,7 @@ void RemoteUpdate::applyLocally(const QString &localFolder)
         QThread * thread = new QThread(this);
         downloader->moveToThread(thread);
         connect(downloader, SIGNAL(actionFailed(QString)), this, SLOT(actionFailed(QString)));
-        connect(downloader, &DownloadManager::updateFinished, this, &RemoteUpdate::onApplyFinished);
+        connect(downloader, &DownloadManager::updateFinished, this, &Updater::onApplyFinished);
         connect(downloader, SIGNAL(applyProgress(qint64,qint64)), this, SLOT(onApplyProgress(qint64,qint64)));
         connect(downloader, SIGNAL(updateFinished()), thread, SLOT(quit()));
         connect(downloader, SIGNAL(updateFinished()), downloader, SLOT(deleteLater()));
@@ -204,7 +229,7 @@ void RemoteUpdate::applyLocally(const QString &localFolder)
     }
 }
 
-QNetworkReply* RemoteUpdate::get(const QString & what)
+QNetworkReply* Updater::get(const QString & what)
 {
     QNetworkRequest request(QUrl(updateUrl().arg(what)));
     QNetworkReply *reply = m_manager->get(request);
@@ -212,17 +237,17 @@ QNetworkReply* RemoteUpdate::get(const QString & what)
     return reply;
 }
 
-void RemoteUpdate::onInfoFinished()
+void Updater::onInfoFinished()
 {
     try
     {
         if(info->error() != QNetworkReply::NoError)
             throw info->errorString();
 
+        LOG_INFO(tr("Remote informations downloaded"));
+
         QJsonParseError jsonError;
         QJsonDocument json = QJsonDocument::fromJson(info->readAll(), &jsonError);
-
-        Log::info(tr("Remote information downloaded"));
 
         if(jsonError.error != QJsonParseError::NoError)
             throw(tr("Unable to parse json from info : %1").arg(jsonError.errorString()));
@@ -232,24 +257,22 @@ void RemoteUpdate::onInfoFinished()
 
         loadVersions(json);
 
-        Log::info(tr("Remote information analyzed"));
+        LOG_INFO(tr("Remote informations analyzed"));
 
         if(currentVersion() == latestVersion())
         {
-            Log::info(tr("Already at the latest version"));
+            LOG_INFO(tr("Already at the latest version"));
             setState(AlreadyUptodate);
         }
         else
         {
             if(currentVersion().isEmpty())
             {
-                Log::info(tr("Install required to %1").arg(latestVersion()));
-                m_metaDataBaseUrl = QStringLiteral("complete_%1").arg(latestVersion());
+                LOG_INFO(tr("Install required to %1").arg(latestVersion()));
             }
             else
             {
-                Log::info(tr("Update required from %1 to %2").arg(currentVersion(), latestVersion()));
-                m_metaDataBaseUrl = QStringLiteral("patch_%1_%2").arg(currentVersion(), latestVersion());
+                LOG_INFO(tr("Update required from %1 to %2").arg(currentVersion(), latestVersion()));
             }
 
             setState(UpdateRequired);
@@ -264,7 +287,57 @@ void RemoteUpdate::onInfoFinished()
     emit checkForUpdatesFinished();
 }
 
-void RemoteUpdate::onMetadataFinished()
+void Updater::onPackagesFinished()
+{
+    try
+    {
+        if(info->error() != QNetworkReply::NoError)
+            throw info->errorString();
+
+        LOG_INFO(tr("Package list downloaded"));
+
+        QJsonParseError jsonError;
+        QJsonDocument json = QJsonDocument::fromJson(info->readAll(), &jsonError);
+
+        if(jsonError.error != QJsonParseError::NoError)
+            throw(tr("Unable to parse json from info : %1").arg(jsonError.errorString()));
+
+        if(!json.isObject())
+            throw(tr("Json info : Expecting an object"));
+
+        loadVersions(json);
+
+        LOG_INFO(tr("Remote informations analyzed"));
+
+        if(currentVersion() == latestVersion())
+        {
+            LOG_INFO(tr("Already at the latest version"));
+            setState(AlreadyUptodate);
+        }
+        else
+        {
+            if(currentVersion().isEmpty())
+            {
+                LOG_INFO(tr("Install required to %1").arg(latestVersion()));
+            }
+            else
+            {
+                LOG_INFO(tr("Update required from %1 to %2").arg(currentVersion(), latestVersion()));
+            }
+
+            setState(UpdateRequired);
+            emit updateRequired();
+        }
+    }
+    catch(const QString & msg)
+    {
+        actionFailed(msg);
+    }
+
+    emit updateFinished();
+}
+
+void Updater::onMetadataFinished()
 {
     if(metadata->error() == QNetworkReply::ContentNotFoundError && m_metaDataBaseUrl.startsWith("patch_"))
     {
@@ -296,10 +369,10 @@ void RemoteUpdate::onMetadataFinished()
 
         QThread * thread = new QThread(this);
         downloader->moveToThread(thread);
-        connect(downloader, &DownloadManager::actionFailed, this, &RemoteUpdate::actionFailed);
-        connect(downloader, &DownloadManager::updateFinished, this, &RemoteUpdate::onUpdateFinished);
-        connect(downloader, &DownloadManager::downloadProgress, this, &RemoteUpdate::onDownloadProgress);
-        connect(downloader, &DownloadManager::applyProgress, this, &RemoteUpdate::onApplyProgress);
+        connect(downloader, &DownloadManager::actionFailed, this, &Updater::actionFailed);
+        connect(downloader, &DownloadManager::updateFinished, this, &Updater::onUpdateFinished);
+        connect(downloader, &DownloadManager::downloadProgress, this, &Updater::onDownloadProgress);
+        connect(downloader, &DownloadManager::applyProgress, this, &Updater::onApplyProgress);
         connect(downloader, &DownloadManager::finished, thread, &QThread::quit);
         connect(downloader, &DownloadManager::finished, downloader, &DownloadManager::deleteLater);
         connect(thread, &QThread::started, downloader, &DownloadManager::run);
@@ -312,18 +385,18 @@ void RemoteUpdate::onMetadataFinished()
     }
 }
 
-void RemoteUpdate::onApplyFinished(bool success)
+void Updater::onApplyFinished(bool success)
 {
     Log::info(tr("Apply finished"));
     emit applyFinished(success);
 }
 
-void RemoteUpdate::onUpdateFinished(bool success)
+void Updater::onUpdateFinished(bool success)
 {
     if(success)
     {
         QSettings settings(updateDirectory()+QStringLiteral("status.ini"), QSettings::IniFormat);
-        settings.setValue(RemoteUpdate::String::Revision, latestVersion());
+        settings.setValue(Updater::String::Revision, latestVersion());
         setCurrentVersion(latestVersion());
         setState(Uptodate);
     }
@@ -333,7 +406,7 @@ void RemoteUpdate::onUpdateFinished(bool success)
 
 
 
-void RemoteUpdate::actionFailed(const QString &msg)
+void Updater::actionFailed(const QString &msg)
 {
     m_lastError = msg;
     Log::error(msg);
@@ -341,17 +414,17 @@ void RemoteUpdate::actionFailed(const QString &msg)
     emit error(msg);
 }
 
-void RemoteUpdate::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
+void Updater::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
 {
     emit downloadProgress(bytesReceived, bytesTotal);
 }
 
-void RemoteUpdate::onApplyProgress(qint64 bytesReceived, qint64 bytesTotal)
+void Updater::onApplyProgress(qint64 bytesReceived, qint64 bytesTotal)
 {
     emit applyProgress(bytesReceived, bytesTotal);
 }
 
-void RemoteUpdate::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)
+void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)
 {
     if(!m_password.isEmpty() && authenticator->password() != m_password)
         authenticator->setPassword(m_password);
@@ -359,18 +432,41 @@ void RemoteUpdate::authenticationRequired(QNetworkReply *, QAuthenticator *authe
         authenticator->setUser(m_username);
 }
 
-bool RemoteUpdate::createApplyManifest() const
+bool Updater::createApplyManifest() const
 {
     return m_createApplyManifest;
 }
 
-void RemoteUpdate::setCreateApplyManifest(bool createApplyManifest)
+void Updater::setCreateApplyManifest(bool createApplyManifest)
 {
     isIdle();
     m_createApplyManifest = createApplyManifest;
 }
 
-void RemoteUpdate::loadVersions(const QJsonDocument & json)
+void Updater::loadVersions1(const QJsonObject & object)
+{
+    const QJsonArray history = object.value(QStringLiteral("history")).toArray();
+    if(history.isEmpty())
+        throw(tr("loadVersions1 : 'history' is empty"));
+
+    m_versions.resize(history.size());
+    for(int i = 0; i < history.size(); ++i)
+    {
+        const QJsonValue & jsonVersionValue = history[i];
+        if(!jsonVersionValue.isObject())
+            throw(tr("loadVersions1 : 'jsonVersion' is not an object"));
+        QJsonObject jsonVersion = jsonVersionValue.toObject();
+
+        Version & version = m_versions[i];
+        version.revision = jsonVersion.value(QStringLiteral("revision")).toString();
+        version.description = jsonVersion.value(QStringLiteral("description")).toString();
+
+        if(version.revision.isEmpty())
+            throw(tr("loadVersions1 : version[%1].name is empty").arg(i));
+    }
+}
+
+void Updater::loadVersions(const QJsonDocument & json)
 {
     QJsonObject object = json.object();
     QJsonValue versionJsonValue = object.value(QStringLiteral("version"));
@@ -385,7 +481,7 @@ void RemoteUpdate::loadVersions(const QJsonDocument & json)
         throw(tr("Json info : Unsupported version %1").arg(version));
 }
 
-void RemoteUpdate::loadVersions1(const QJsonObject & object)
+void Updater::loadVersions1(const QJsonObject & object)
 {
     const QJsonArray history = object.value(QStringLiteral("history")).toArray();
     if(history.isEmpty())

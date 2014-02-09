@@ -7,8 +7,11 @@ TEMPLATE = lib
 
 DEFINES += QTUPDATESYSTEM_LIBRARY
 
+Release:DEFINES += NOLOGDEBUG NOLOGTRACE
+
+INCLUDEPATH += ./QtLog/
+
 SOURCES += \
-    src/qtupdatesystem.cpp \
     src/operations/addoperation.cpp \
     src/updater/downloadmanager.cpp \
     src/updater/filemanager.cpp \
@@ -18,7 +21,6 @@ SOURCES += \
     src/operations/removeoperation.cpp \
     src/common/package.cpp \
     src/common/version.cpp \
-    src/remoteupdate.cpp \
     src/packagemanager.cpp \
     src/packager.cpp \
     src/common/files.cpp \
@@ -26,10 +28,13 @@ SOURCES += \
     src/packager/compressfiletask.cpp \
     src/packager/patchfiletask.cpp \
     src/common/exception.cpp \
-    src/packager/taskinfo.cpp
+    src/packager/taskinfo.cpp \
+    src/updater.cpp \
+    QtLog/qtlog.cpp \
+    src/common/packages.cpp \
+    src/common/jsonutil.cpp
 
 HEADERS +=\
-    src/qtupdatesystem.h \
     src/qtupdatesystem_global.h \
     src/operations/addoperation.h \
     src/updater/downloadmanager.h \
@@ -41,14 +46,17 @@ HEADERS +=\
     src/common/package.h \
     src/common/version.h \
     src/packagemanager.h \
-    src/remoteupdate.h \
     src/packager.h \
     src/common/files.h \
     src/common/file.h \
     src/packager/compressfiletask.h \
     src/packager/patchfiletask.h \
     src/common/exception.h \
-    src/packager/taskinfo.h
+    src/packager/taskinfo.h \
+    src/updater.h \
+    QtLog/qtlog.h \
+    src/common/packages.h \
+    src/common/jsonutil.h
 
 unix {
     target.path = /usr/lib

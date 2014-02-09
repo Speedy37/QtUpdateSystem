@@ -11,15 +11,13 @@
 #include <QNetworkAccessManager>
 #include <QEvent>
 
-using namespace Updater;
-
 class QNetworkReply;
 class Operation;
 class QSettings;
 class OperationThread;
 class DownloadManager;
 
-class QTUPDATESYSTEMSHARED_EXPORT RemoteUpdate : public QObject
+class QTUPDATESYSTEMSHARED_EXPORT Updater : public QObject
 {
     Q_OBJECT
 
@@ -34,8 +32,8 @@ public:
         Updating ///< Updating in progress
     };
 
-    RemoteUpdate(QObject * parent = 0);
-    ~RemoteUpdate();
+    Updater(QObject * parent = 0);
+    ~Updater();
 
     bool isIdle() const;
     bool isUpdateAvailable() const;
@@ -111,37 +109,37 @@ private:
     QVector<Version> m_versions;
 };
 
-inline bool RemoteUpdate::isIdle() const
+inline bool Updater::isIdle() const
 {
     return state() < DownloadingInformations;
 }
 
-inline bool RemoteUpdate::isUpdateAvailable() const
+inline bool Updater::isUpdateAvailable() const
 {
     return state() == UpdateRequired;
 }
 
-inline QString RemoteUpdate::currentVersion() const
+inline QString Updater::currentVersion() const
 {
     return m_currentVersion;
 }
 
-inline QString RemoteUpdate::latestVersion() const
+inline QString Updater::latestVersion() const
 {
     return m_versions.last().revision;
 }
 
-inline QVector<Version> RemoteUpdate::versions() const
+inline QVector<Version> Updater::versions() const
 {
     return m_versions;
 }
 
-inline QString RemoteUpdate::updateDirectory() const
+inline QString Updater::updateDirectory() const
 {
     return m_updateDirectory;
 }
 
-inline void RemoteUpdate::setUpdateDirectory(const QString &updateDirectory)
+inline void Updater::setUpdateDirectory(const QString &updateDirectory)
 {
     Q_ASSERT(isIdle());
     m_updateDirectory = updateDirectory;
@@ -149,12 +147,12 @@ inline void RemoteUpdate::setUpdateDirectory(const QString &updateDirectory)
         m_updateDirectory += QDir::separator();
 }
 
-inline QString RemoteUpdate::updateTmpDirectory() const
+inline QString Updater::updateTmpDirectory() const
 {
     return m_updateTmpDirectory;
 }
 
-inline void RemoteUpdate::setUpdateTmpDirectory(const QString &updateTmpDirectory)
+inline void Updater::setUpdateTmpDirectory(const QString &updateTmpDirectory)
 {
     Q_ASSERT(isIdle());
     m_updateTmpDirectory = updateTmpDirectory;
@@ -162,45 +160,45 @@ inline void RemoteUpdate::setUpdateTmpDirectory(const QString &updateTmpDirector
         m_updateTmpDirectory += QDir::separator();
 }
 
-inline QString RemoteUpdate::updateUrl() const
+inline QString Updater::updateUrl() const
 {
     return m_updateUrl;
 }
 
-inline void RemoteUpdate::setUpdateUrl(const QString &updateUrl)
+inline void Updater::setUpdateUrl(const QString &updateUrl)
 {
     Q_ASSERT(isIdle());
     m_updateUrl = updateUrl;
 }
 
-inline void RemoteUpdate::setCredential(const QString &username, const QString &password)
+inline void Updater::setCredential(const QString &username, const QString &password)
 {
     Q_ASSERT(isIdle());
     m_username = username;
     m_password = password;
 }
 
-inline QString RemoteUpdate::lastError() const
+inline QString Updater::lastError() const
 {
     return m_lastError;
 }
 
-inline RemoteUpdate::State RemoteUpdate::state() const
+inline Updater::State Updater::state() const
 {
     return m_state;
 }
 
-inline void RemoteUpdate::clearError()
+inline void Updater::clearError()
 {
     m_lastError = QString();
 }
 
-inline void RemoteUpdate::setState(RemoteUpdate::State newState)
+inline void Updater::setState(Updater::State newState)
 {
     m_state = newState;
 }
 
-inline void RemoteUpdate::setCurrentVersion(const QString &versionName)
+inline void Updater::setCurrentVersion(const QString &versionName)
 {
     Q_ASSERT(isIdle());
     m_currentVersion = versionName;
