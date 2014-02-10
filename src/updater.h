@@ -38,9 +38,8 @@ public:
     bool isIdle() const;
     bool isUpdateAvailable() const;
 
-    QString currentVersion() const;
-    QString latestVersion() const;
-    QVector<Version> versions() const;
+    QString localRevision() const;
+    QString remoteRevision() const;
 
     QString updateDirectory() const;
     void setUpdateDirectory(const QString &updateDirectory);
@@ -50,35 +49,42 @@ public:
 
     QString updateUrl() const;
     void setUpdateUrl(const QString &updateUrl);
+
+    QString username() const;
+    QString password() const;
     void setCredential(const QString &username, const QString &password);
 
     bool createApplyManifest() const;
     void setCreateApplyManifest(bool createApplyManifest);
 
-    QString lastError() const;
+    QString errorString() const;
     State state() const;
 
     QString iniCurrentVersion() const;
 
 public slots:
     void checkForUpdates();
-    void update();
-
 private slots:
     void onInfoFinished();
+signals:
+    void updateRequired();
+    void checkForUpdatesFinished();
+
+public slots:
+    void update();
+signals:
+    void updateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void updateApplyProgress(qint64 bytesApplied, qint64 bytesTotal);
+    void updateFinished();
+
+private slots:
+    void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
     void onMetadataFinished();
     void onUpdateFinished(bool success);
     void onApplyFinished(bool success);
     void actionFailed(const QString &msg);
-    void onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void onApplyProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
 
 signals:
-    void currentVersionChanged(const QString &version);
-    void updateRequired();
-    void checkForUpdatesFinished();
-
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void applyProgress(qint64 bytesReceived, qint64 bytesTotal);
     void updateFinished(bool success);
@@ -104,7 +110,8 @@ private:
     QString m_updateDirectory, m_updateTmpDirectory, m_updateUrl, m_username, m_password;
 
     // Informations
-    QString m_currentVersion, m_metaDataBaseUrl, m_lastError;
+    QString m_localRevision, m_remoteRevision;
+    QString m_errorString;
     State m_state;
     QVector<Version> m_versions;
 };
@@ -119,19 +126,14 @@ inline bool Updater::isUpdateAvailable() const
     return state() == UpdateRequired;
 }
 
-inline QString Updater::currentVersion() const
+inline QString Updater::localRevision() const
 {
-    return m_currentVersion;
+    return m_localRevision;
 }
 
-inline QString Updater::latestVersion() const
+inline QString Updater::remoteRevision() const
 {
-    return m_versions.last().revision;
-}
-
-inline QVector<Version> Updater::versions() const
-{
-    return m_versions;
+    return m_remoteRevision;
 }
 
 inline QString Updater::updateDirectory() const
@@ -171,6 +173,16 @@ inline void Updater::setUpdateUrl(const QString &updateUrl)
     m_updateUrl = updateUrl;
 }
 
+inline QString Updater::username() const
+{
+    return m_username;
+}
+
+inline QString Updater::password() const
+{
+    return m_password;
+}
+
 inline void Updater::setCredential(const QString &username, const QString &password)
 {
     Q_ASSERT(isIdle());
@@ -178,9 +190,9 @@ inline void Updater::setCredential(const QString &username, const QString &passw
     m_password = password;
 }
 
-inline QString Updater::lastError() const
+inline QString Updater::errorString() const
 {
-    return m_lastError;
+    return m_errorString;
 }
 
 inline Updater::State Updater::state() const
@@ -190,7 +202,7 @@ inline Updater::State Updater::state() const
 
 inline void Updater::clearError()
 {
-    m_lastError = QString();
+    m_errorString = QString();
 }
 
 inline void Updater::setState(Updater::State newState)
@@ -202,7 +214,6 @@ inline void Updater::setCurrentVersion(const QString &versionName)
 {
     Q_ASSERT(isIdle());
     m_currentVersion = versionName;
-    emit currentVersionChanged(versionName.isEmpty() ? tr("Unknown") : versionName);
 }
 
 #endif // REMOTEUPDATE_H

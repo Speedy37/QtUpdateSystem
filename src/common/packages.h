@@ -10,7 +10,7 @@ class Packages
 {
 public:
     void addPackage(const Package & package);
-    void loadPackages(const QJsonDocument &json);
+    void loadPackages(const QJsonObject &object);
     QJsonObject toJsonObject() const;
     QVector<Package> findBestPath(const QString &from, const QString &to);
     const QVector<Package> packages() const;

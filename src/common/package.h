@@ -4,6 +4,8 @@
 #include <QJsonObject>
 #include <QString>
 
+class Operation;
+
 class Package
 {
 public:
@@ -11,8 +13,15 @@ public:
     QString from;
     qint64 size;
 
+    QString url() const;
+    QString metadataUrl() const;
     void fromJsonObject(const QJsonObject &packageObject);
     QJsonObject toJsonObject() const;
 };
+
+inline QString Package::metadataUrl() const
+{
+    return url() + QStringLiteral(".metadata");
+}
 
 #endif // UPDATER_PACKAGE_H

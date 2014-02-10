@@ -5,17 +5,18 @@
 
 class PatchOperation : public AddOperation
 {
-    Q_OBJECT
 public:
-    PatchOperation(DownloadManager * _update) : AddOperation(_update) {}
-    virtual void load1(const QJsonObject &object);
-    virtual QString actionString() Q_DECL_OVERRIDE  { return QStringLiteral("PATCH"); }
-    virtual void run() Q_DECL_OVERRIDE;
+    static const QString Action;
+    virtual void load1(const QJsonObject &object) Q_DECL_OVERRIDE;
+
 protected:
-    virtual void save1(QJsonObject & object);
-    qint64 currentSize;
-    QCryptographicHash::Algorithm currentHashType;
-    QString currentHash;
+    virtual Status localDataStatus() Q_DECL_OVERRIDE;
+    virtual void applyData() Q_DECL_OVERRIDE;
+    virtual QString action() Q_DECL_OVERRIDE;
+    virtual void save1(QJsonObject & object) Q_DECL_OVERRIDE;
+
+    QString m_patchtype, m_localSha1;
+    qint64 m_localSize;
 };
 
 #endif // UPDATER_PATCHOPERATION_H

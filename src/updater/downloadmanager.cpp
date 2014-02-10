@@ -1,183 +1,218 @@
 #include "downloadmanager.h"
+#include "filemanager.h"
+#include "../common/packages.h"
+#include "../common/jsonutil.h"
+#include "../common/packagemetadata.h"
+#include "../operations/operation.h"
 
-DownloadManager::DownloadManager(RemoteUpdate *_update)
+#include <qtlog.h>
+#include <QNetworkReply>
+#include <QAuthenticator>
+
+DownloadManager::DownloadManager(Updater *updater)
     : QObject()
 {
-    m_updateDirectory = _update->updateDirectory();
-    m_updateTmpDirectory = _update->updateTmpDirectory();
-    m_updateUrl = _update->updateUrl();
-    m_createApplyManifest = _update->createApplyManifest();
-    m_metaDataBaseUrl = _update->m_metaDataBaseUrl;
-    m_username = _update->m_username;
-    m_password = _update->m_password;
+    // Make a safe copy of important properties
+    m_updateDirectory = updater->updateDirectory();
+    m_updateTmpDirectory = updater->updateTmpDirectory();
+    m_updateUrl = updater->updateUrl();
+    m_localRevision = updater->localRevision();
+    m_remoteRevision = updater->remoteRevision();
+    m_username = updater->username();
+    m_password = updater->password();
 
     m_manager = new QNetworkAccessManager(this);
     connect(m_manager, &QNetworkAccessManager::authenticationRequired, this, &DownloadManager::authenticationRequired);
-    m_operationThread = new OperationThread(this);
-    connect(m_operationThread, SIGNAL(operationFinished(Operation*)), SLOT(operationFinishedDirect(Operation*)), Qt::DirectConnection);
-    connect(m_operationThread, &OperationThread::operationFinished, this, &DownloadManager::operationFinished);
 
-    m_dlBaseOffset = 0;
-    m_dlReaded = 0;
-    m_dlOperationIdx = 0;
-    m_appliedSize = 0;
-    m_appliedCount = 0;
-    m_failedCount = 0;
+    m_filemanager = new FileManager();
+    QThread * thread = new QThread(this);
+    m_filemanager->moveToThread(thread);
+
+    connect(this, &DownloadManager::operationLoaded, m_filemanager, &FileManager::prepareOperation);
+    connect(m_filemanager, &FileManager::operationPrepared, this, &DownloadManager::operationPrepared);
+
+    connect(this, &DownloadManager::operationDownloaded, m_filemanager, &FileManager::applyOperation);
+    connect(m_filemanager, &FileManager::operationApplied, this, &DownloadManager::operationApplied);
+
+    connect(this, &DownloadManager::downloadFinished, m_filemanager, &FileManager::downloadFinished);
+    connect(m_filemanager, &FileManager::applyFinished, this, &DownloadManager::applyFinished);
+
+    connect(this, &DownloadManager::destroyed, m_filemanager, &FileManager::deleteLater);
+    connect(thread, &QThread::destroyed, m_filemanager, &FileManager::deleteLater);
+    thread->start();
 }
 
-DownloadManager::~DownloadManager()
+void DownloadManager::update()
 {
-    for(int i = 0; i < m_operations.size(); ++i)
-    {
-        delete m_operations[i];
-    }
+    packagesListRequest = get(QStringLiteral("packages"));
+    connect(packagesListRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackagesListRequestFinished);
 }
 
-void DownloadManager::loadMetadata(const QJsonDocument & json)
+void DownloadManager::updatePackagesListRequestFinished()
 {
-    QJsonObject object = json.object();
-    QJsonValue versionJsonValue = object.value(QStringLiteral("version"));
-
-    if(!versionJsonValue.isString())
-        throw(tr("Json metadata : Unable to find 'version' as a string"));
-
-    QString version = versionJsonValue.toString();
-    if(version == "1")
-        loadMetadata1(object);
-    else
-        throw(tr("Json metadata : Unsupported version %1").arg(version));
-
-    if(m_createApplyManifest)
-    {
-        QFile saveFile(updateDirectory()+QStringLiteral("manifest.json"));
-
-        if (!saveFile.open(QIODevice::WriteOnly))
-            throw tr("Couldn't open save file.");
-
-        saveFile.write(json.toJson());
-    }
-}
-
-void DownloadManager::loadMetadata1(const QJsonObject & object)
-{
-    int i;
-    const QJsonArray operations = object.value(QStringLiteral("operations")).toArray();
-    if(operations.isEmpty())
-        throw(tr("loadMetadata1 : 'operations' is empty"));
-
-    QJsonValue sizeValue = object.value(QStringLiteral("size"));
-    if(!sizeValue.isString())
-        throw(tr("loadMetadata1 : 'size' isn't a string"));
-
-    bool ok;
-    m_dlTotalSize = sizeValue.toString().toLongLong(&ok);
-    if(!ok)
-        throw(tr("loadMetadata1 : 'size' isn't a valid qint64 string"));
-
-    for(i = 0; i < m_operations.size(); ++i)
-    {
-        delete m_operations[i];
-    }
-    m_operations.resize(operations.size());
-
     try
     {
-        for(i = 0; i < operations.size(); ++i)
-        {
-            const QJsonValue & jsonOperationValue = operations[i];
-            if(!jsonOperationValue.isObject())
-                throw(tr("loadMetadata1 : 'jsonVersion' is not an object"));
-            QJsonObject jsonOperation = jsonOperationValue.toObject();
+        if(packagesListRequest->error() != QNetworkReply::NoError)
+            throw packagesListRequest->errorString();
 
-            QString action = jsonOperation.value(QStringLiteral("action")).toString();
-            Operation * op;
-            if(action == QLatin1String("RM"))
-                op = new RemoveOperation(this);
-            else if(action == QLatin1String("RMDIR"))
-                op = new RemoveDirectoryOperation(this);
-            else if(action == QLatin1String("ADD"))
-                op = new AddOperation(this);
-            else if(action == QLatin1String("PATCH"))
-                op = new PatchOperation(this);
-            else
-                throw(tr("loadMetadata1 : 'action'==\"%1\" is not supported").arg(action));
+        LOG_INFO(tr("Packages list downloaded"));
 
-            try
-            {
-                op->load1(jsonOperation);
-            }
-            catch(...)
-            {
-                delete op;
-                throw;
-            }
+        Packages packages;
+        packages.loadPackages(JsonUtil::fromJson(packagesListRequest->readAll()));
 
-            op->setFilename(updateTmpDirectory()+QStringLiteral("Operation")+QString::number(i));
-            op->setPosition(i);
-            m_operations[i] = op;
-        }
+        LOG_INFO(tr("Remote informations analyzed"));
+
+        downloadPath = packages.findBestPath(m_localRevision, m_remoteRevision);
+        downloadPathPos = 0;
+
+        updatePackageLoop();
     }
-    catch(...)
+    catch(const QString & msg)
     {
-        while(i > 0)
-        {
-            delete m_operations[--i];
-        }
-        m_operations.resize(0);
-        throw;
+        LOG_ERROR(tr("Update failed %1").arg(msg));
+        emit failure(msg);
     }
 }
 
-void DownloadManager::applyLocally(const QString &localFolder)
+void DownloadManager::updatePackageLoop()
 {
-    m_applyLocally = localFolder;
-    if(!m_applyLocally.endsWith(QDir::separator()))
-        m_applyLocally += QDir::separator();
-    m_operationThread->applyLocally(m_applyLocally);
-}
-
-void DownloadManager::run()
-{
-    if(m_applyLocally.isEmpty())
+    if(downloadPathPos < downloadPath.size())
     {
-        // Start Download
-        QString name = m_metaDataBaseUrl;
-        nextOperation(false);
-
-        if(m_dlTotalSize > 0 && m_dlOperationIdx < m_operations.size())
-        {
-
-            // Open the next
-            m_dlFile.setFileName(m_operations[m_dlOperationIdx]->filename());
-            if(!m_dlFile.open(QFile::WriteOnly | QFile::Truncate))
-                throw(tr("Unable to open datafile for writing : %1").arg(m_dlFile.fileName()));
-
-            data = get(name, 0);
-            Log::info(tr("Starting downloading data"));
-            connect(data, SIGNAL(downloadProgress(qint64,qint64)), SLOT(onDataDownloadProgress(qint64,qint64)));
-            connect(data, SIGNAL(finished()), SLOT(onDataFinished()));
-        }
-        else
-        {
-            data = NULL;
-            Log::info(tr("Data is already downloaded"));
-            emit downloadProgress(m_dlTotalSize, m_dlTotalSize);
-            onDataFinished();
-        }
+        const Package & package = downloadPath.at(downloadPathPos);
+        metadata.setPackage(package);
+        metadataRequest = get(package.metadataUrl());
+        connect(metadataRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackageMetadataFinished);
+        LOG_INFO(tr("Downloading metadata for %1").arg(package.url()));
     }
     else
     {
-        for(int i = 0; i < m_operations.size(); ++i)
+        LOG_INFO(tr("Main update finished, checking for errors"));
+    }
+}
+
+void DownloadManager::updatePackageMetadataFinished()
+{
+    try
+    {
+        if(metadataRequest->error() != QNetworkReply::NoError)
+            throw metadataRequest->errorString();
+
+        LOG_INFO(tr("Metadata downloaded"));
+
+        metadata.loadMetadata(JsonUtil::fromJson(metadataRequest->readAll()));
+        metadata.setup(m_updateDirectory, m_updateTmpDirectory);
+
+        foreach(Operation * op, metadata.operations())
         {
-            Operation * operation = m_operations[i];
-            m_operationThread->apply(operation);
+            emit operationLoaded(op);
+        }
+
+        LOG_INFO(tr("Metadata analyzed and prepared"));
+
+        operationIndex = 0;
+        updateDataSetupOperationFile();
+
+        dataRequest = get(metadata.dataUrl(), 0);
+        connect(dataRequest, SIGNAL(downloadProgress(qint64,qint64)), SLOT(updateDataDownloadProgress(qint64,qint64)));
+        connect(dataRequest, SIGNAL(finished()), SLOT(updateDataFinished()));
+
+        LOG_INFO(tr("Downloading data"));
+    }
+    catch(const QString & msg)
+    {
+        LOG_ERROR(tr("Update failed %1").arg(msg));
+        emit failure(msg);
+    }
+}
+
+void DownloadManager::updateDataDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
+{
+    emit downloadProgress(bytesReceived, bytesTotal);
+
+    Q_ASSERT(bytesTotal == metadata.size());
+
+    if(dataRequest->error() != QNetworkReply::NoError)
+        return;
+
+    updateDataReadAll();
+}
+
+void DownloadManager::updateDataFinished()
+{
+    try
+    {
+        if(dataRequest->error() != QNetworkReply::NoError)
+        {
+            // TODO : Recover in case of connection lost
+            throw dataRequest->errorString();
+        }
+
+        emit downloadProgress(metadata.size(), metadata.size());
+
+        updateDataReadAll();
+
+        LOG_INFO(tr("Data downloaded"));
+
+        while(operation != NULL)
+        {
+            LOG_ERROR(tr("Some data are missing for %1").arg(operationIndex));
+            failures.insert(operation->path(), DownloadFailed);
+            operation = metadata.operation(++operationIndex);
+        }
+
+        emit downloadFinished();
+    }
+    catch(const QString & msg)
+    {
+        LOG_ERROR(tr("Update failed %1").arg(msg));
+        emit failure(msg);
+    }
+}
+
+void DownloadManager::updateDataSetupOperationFile()
+{
+    operation = metadata.operation(operationIndex);
+    if(operation != NULL)
+    {
+        offset = 0;
+        if(!operation->dataFile()->open(QFile::WriteOnly | QFile::Truncate))
+            throw(tr("Unable to open datafile for writing : %1").arg(operation->dataFilename()));
+    }
+}
+
+void DownloadManager::updateDataReadAll()
+{
+    QByteArray bytes = dataRequest->readAll();
+    const char * data = bytes.constData();
+    qint64 writeSize, size = bytes.size();
+    while(size > 0)
+    {
+        if(operation == NULL)
+        {
+            LOG_ERROR(tr("No more operation while there is still data to read"));
+            return;
+        }
+        writeSize = qMin(size, operation->size() - offset);
+        if(writeSize > 0)
+        {
+            operation->dataFile()->write(data, writeSize);
+            offset += writeSize;
+            data += writeSize;
+            size -= writeSize;
+        }
+        if(offset == operation->size())
+        {
+            emit operationDownloaded(operation);
+            ++operationIndex;
+            updateDataSetupOperationFile();
         }
     }
 }
+
 
 QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition)
 {
-    QNetworkRequest request(QUrl(updateUrl().arg(what)));
+    QNetworkRequest request(QUrl(m_updateUrl.arg(what)));
     if(startPosition > 0)
     {
         request.setRawHeader("Range", QStringLiteral("bytes=%1-").arg(startPosition).toLatin1());
@@ -189,156 +224,10 @@ QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition)
     return reply;
 }
 
-void DownloadManager::nextOperation(bool continuous)
-{
-    for(; m_dlOperationIdx < m_operations.size(); ++m_dlOperationIdx)
-    {
-        Operation * operation = m_operations[m_dlOperationIdx];
-        if(operation->offset() != -1)
-        {
-            if(continuous || !operation->isDataValid())
-            {
-                m_dlBaseOffset = operation->offset();
-                m_dlOperationLength = operation->size();
-                break;
-            }
-            emit downloadProgress(operation->offset() + operation->size(), m_dlTotalSize);
-        }
-        m_operationThread->apply(operation);
-    }
-}
-
-void DownloadManager::operationFinishedDirect(Operation * operation)
-{
-    Log::trace(tr("Operation finished received %1").arg(operation->position()));
-    emit applyProgress(m_appliedSize += operation->size(), m_dlTotalSize);
-}
-
-void DownloadManager::operationFinished(Operation *)
-{
-    ++m_appliedCount;
-    if(m_appliedCount + m_failedCount == m_operations.size())
-    {
-        emit updateFinished(m_failedCount == 0);
-        emit finished();
-    }
-}
-
-void DownloadManager::operationFailed(Operation *)
-{
-    ++m_failedCount;
-    if(m_appliedCount + m_failedCount == m_operations.size())
-    {
-        emit updateFinished(m_failedCount == 0);
-        emit finished();
-    }
-}
-
 void DownloadManager::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)
 {
     if(!m_password.isEmpty() && authenticator->password().isEmpty())
         authenticator->setPassword(m_password);
     if(!m_username.isEmpty() && authenticator->user().isEmpty())
         authenticator->setUser(m_username);
-}
-
-void DownloadManager::onDataFinished()
-{
-    try
-    {
-        Log::info(tr("Data download finished"));
-        if(data != NULL)
-        {
-            data->deleteLater();
-
-            onDataDownloadProgress(true, m_dlTotalSize, m_dlTotalSize);
-
-            if(data->error() != QNetworkReply::NoError)
-                throw(tr("Download failed : %1").arg(data->errorString()));
-
-            data = NULL;
-        }
-
-        Log::info(tr("Data download saved"));
-
-        //Finish apply operations
-        for(; m_dlOperationIdx < m_operations.size(); ++m_dlOperationIdx)
-        {
-            Operation * operation = m_operations[m_dlOperationIdx];
-            if(operation->offset() != -1)
-                throw(tr("Download failed : %1").arg(m_dlOperationIdx));
-            else
-                m_operationThread->apply(operation);
-        }
-    }
-    catch(const QString & msg)
-    {
-        actionFailed(msg);
-    }
-}
-
-void DownloadManager::onDataDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
-{
-    onDataDownloadProgress(false, m_dlBaseOffset+bytesReceived, m_dlBaseOffset+bytesTotal);
-}
-
-void DownloadManager::onDataDownloadProgress(bool final, qint64 bytesReceived, qint64 bytesTotal)
-{
-    emit downloadProgress(bytesReceived, bytesTotal);
-    while(data->error() == QNetworkReply::NoError && m_dlOperationIdx < m_operations.size() && m_dlFile.isOpen())
-    {
-        char buffer[4096];
-        qint64 read, size = 4096;
-
-        if(m_dlReaded < m_dlBaseOffset)
-        {
-            if(size > m_dlBaseOffset-m_dlReaded)
-                size = m_dlBaseOffset-m_dlReaded;
-            while(size > 0 && (read = data->read(buffer, size)) > 0)
-            {
-                m_dlReaded += read;
-                if(size > m_dlBaseOffset-m_dlReaded)
-                    size = m_dlBaseOffset-m_dlReaded;
-            }
-            size = 4096;
-        }
-
-        if(size > m_dlOperationLength)
-            size = m_dlOperationLength;
-        while(size > 0 && (read = data->read(buffer, size)) > 0)
-        {
-            m_dlFile.write(buffer, read);
-            m_dlOperationLength -= read;
-            m_dlReaded += read;
-            if(size > m_dlOperationLength)
-                size = m_dlOperationLength;
-        }
-        if(m_dlOperationLength == 0)
-        {
-            // Operation download is done
-            m_dlFile.close();
-            {
-                Operation * operation = m_operations[m_dlOperationIdx];
-                m_operationThread->apply(operation);
-            }
-            ++m_dlOperationIdx;
-            nextOperation(true);
-            if(m_dlOperationIdx < m_operations.size())
-            {
-                m_dlFile.setFileName(m_operations[m_dlOperationIdx]->filename());
-                if(!m_dlFile.open(QFile::WriteOnly | QFile::Truncate))
-                {
-                    Log::error(tr("Unable to open datafile for writing : %1").arg(m_dlFile.fileName()));
-                }
-            }
-            if(final)
-                continue;
-        }
-        else if(m_dlOperationLength < 0)
-        {
-            // Download failed
-            Log::error(tr("m_dlOperationLength < 0 : %1").arg(m_dlFile.fileName()));
-        }
-        break;
-    }
 }

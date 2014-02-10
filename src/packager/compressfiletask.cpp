@@ -1,5 +1,8 @@
 #include "compressfiletask.h"
 
+#include <QFile>
+#include <QProcess>
+
 CompressFileTask::CompressFileTask(QObject *parent) :
     QRunnable(parent)
 {

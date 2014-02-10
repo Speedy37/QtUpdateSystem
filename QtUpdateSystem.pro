@@ -5,7 +5,7 @@ QT       -= gui
 TARGET = QtUpdateSystem
 TEMPLATE = lib
 
-DEFINES += QTUPDATESYSTEM_LIBRARY
+DEFINES += QTUPDATESYSTEM_LIBRARY LZMA_API_STATIC QTLOG_STATIC
 
 Release:DEFINES += NOLOGDEBUG NOLOGTRACE
 
@@ -25,14 +25,12 @@ SOURCES += \
     src/packager.cpp \
     src/common/files.cpp \
     src/common/file.cpp \
-    src/packager/compressfiletask.cpp \
-    src/packager/patchfiletask.cpp \
     src/common/exception.cpp \
-    src/packager/taskinfo.cpp \
     src/updater.cpp \
     QtLog/qtlog.cpp \
     src/common/packages.cpp \
-    src/common/jsonutil.cpp
+    src/common/jsonutil.cpp \
+    src/common/packagemetadata.cpp
 
 HEADERS +=\
     src/qtupdatesystem_global.h \
@@ -49,14 +47,12 @@ HEADERS +=\
     src/packager.h \
     src/common/files.h \
     src/common/file.h \
-    src/packager/compressfiletask.h \
-    src/packager/patchfiletask.h \
     src/common/exception.h \
-    src/packager/taskinfo.h \
     src/updater.h \
     QtLog/qtlog.h \
     src/common/packages.h \
-    src/common/jsonutil.h
+    src/common/jsonutil.h \
+    src/common/packagemetadata.h
 
 unix {
     target.path = /usr/lib

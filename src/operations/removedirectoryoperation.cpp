@@ -1,31 +1,42 @@
 #include "removedirectoryoperation.h"
 
-void RemoveDirectoryOperation::run()
+#include <qtlog.h>
+#include <QFileInfo>
+#include <QDir>
+
+const QString RemoveDirectoryOperation::Action = QStringLiteral("rmdir");
+
+Operation::Status RemoveDirectoryOperation::localDataStatus()
 {
-    QFileInfo dirInfo(localpath());
+    QFileInfo dirInfo(localFilename());
     if(!dirInfo.exists())
     {
-        Log::warn(tr("The update was supposed to remove this directory %1, but it was already not there anymore").arg(path));
-        return;
+        LOG_INFO(QObject::tr("Directory %1 was already removed").arg(path()));
+        return Valid;
     }
 
-    if(!dirInfo.isDir())
-    {
-        Log::warn(tr("The update was supposed to remove the directory %1, but a file was found").arg(path));
-        if(!QFile::remove(localpath()))
-            throw tr("The update failed to remove the file %1").arg(path);
-        Log::info(tr("Successfully removed file %1 that was supposed to be a directory").arg(path));
-        return;
-    }
-    if(!QDir().rmdir(localpath()))
-        throw tr("Failed to remove the directory %1").arg(path);
-    Log::info(tr("Successfully removed directory %1").arg(path));
+    return ApplyRequired;
 }
 
-void RemoveDirectoryOperation::applyLocally(const QString &localFolder)
+void RemoveDirectoryOperation::applyData()
 {
-    QString tmpUpdateDir = updateDir;
-    updateDir = localFolder;
-    run();
-    updateDir = tmpUpdateDir;
+    QFileInfo dirInfo(localFilename());
+    if(!dirInfo.isDir())
+    {
+        LOG_WARN(QObject::tr("The update was supposed to remove the directory %1, but a file was found").arg(path()));
+        if(!QFile::remove(localFilename()))
+            throw QObject::tr("The update failed to remove the file %1").arg(path());
+        LOG_INFO(QObject::tr("Successfully removed file %1 that was supposed to be a directory").arg(path()));
+    }
+    else
+    {
+        if(!QDir().rmdir(localFilename()))
+            throw QObject::tr("Failed to remove directory %1").arg(path());
+        LOG_INFO(QObject::tr("Directory %1 removed").arg(path()));
+    }
+}
+
+QString RemoveDirectoryOperation::action()
+{
+    return Action;
 }

@@ -1,12 +1,27 @@
 #include "jsonutil.h"
+#include <QJsonParseError>
+#include <QObject>
 
 namespace JsonUtil {
 
+QJsonObject fromJson(const QByteArray &json)
+{
+    QJsonParseError jsonError;
+    QJsonDocument doc = QJsonDocument::fromJson(json, &jsonError);
+
+    if(jsonError.error != QJsonParseError::NoError)
+        throw(QObject::tr("Unable to parse json").arg(jsonError.errorString()));
+
+    if(!doc.isObject())
+        throw(QObject::tr("Expecting an object"));
+
+    return doc.object();
+}
 
 QString asString(const QJsonValue & value)
 {
     if(!value.isString())
-        throw(tr("A string was expected").arg(key));
+        throw(QObject::tr("A string was expected"));
 
     return value.toString();
 }
@@ -14,7 +29,7 @@ QString asString(const QJsonValue & value)
 QJsonArray asArray(const QJsonValue & value)
 {
     if(!value.isArray())
-        throw(tr("An array was expected").arg(key));
+        throw(QObject::tr("An array was expected"));
 
     return value.toArray();
 }
@@ -22,9 +37,45 @@ QJsonArray asArray(const QJsonValue & value)
 QJsonObject asObject(const QJsonValue & value)
 {
     if(!value.isObject())
-        throw(tr("An object was expected").arg(key));
+        throw(QObject::tr("An object was expected"));
 
     return value.toObject();
+}
+
+int asIntString(const QJsonObject & object, QString key)
+{
+    const QJsonValue value = object.value(key);
+
+    if(value.isUndefined())
+        throw(QObject::tr("Unable to find '%1' in the object").arg(key));
+
+    if(!value.isString())
+        throw(QObject::tr("Unable to find '%1' as an Int String").arg(key));
+
+    bool ok;
+    int v = value.toString().toInt(&ok);
+    if(!ok)
+        throw(QObject::tr("Unable to find '%1' as an Int String").arg(key));
+
+    return v;
+}
+
+qint64 asInt64String(const QJsonObject & object, QString key)
+{
+    const QJsonValue value = object.value(key);
+
+    if(value.isUndefined())
+        throw(QObject::tr("Unable to find '%1' in the object").arg(key));
+
+    if(!value.isString())
+        throw(QObject::tr("Unable to find '%1' as an Int64 String").arg(key));
+
+    bool ok;
+    qint64 v = value.toString().toLongLong(&ok);
+    if(!ok)
+        throw(QObject::tr("Unable to find '%1' as an Int64 String").arg(key));
+
+    return v;
 }
 
 QString asString(const QJsonObject & object, QString key)
@@ -32,10 +83,10 @@ QString asString(const QJsonObject & object, QString key)
     const QJsonValue value = object.value(key);
 
     if(value.isUndefined())
-        throw(tr("Unable to find '%1' in the object").arg(key));
+        throw(QObject::tr("Unable to find '%1' in the object").arg(key));
 
     if(!value.isString())
-        throw(tr("Unable to find '%1' as a string").arg(key));
+        throw(QObject::tr("Unable to find '%1' as a string").arg(key));
 
     return value.toString();
 }
@@ -45,10 +96,10 @@ QJsonArray asArray(const QJsonObject & object, QString key)
     const QJsonValue value = object.value(key);
 
     if(value.isUndefined())
-        throw(tr("Unable to find '%1' in the object").arg(key));
+        throw(QObject::tr("Unable to find '%1' in the object").arg(key));
 
     if(!value.isArray())
-        throw(tr("Unable to find '%1' as an array").arg(key));
+        throw(QObject::tr("Unable to find '%1' as an array").arg(key));
 
     return value.toArray();
 }
@@ -58,12 +109,38 @@ QJsonObject asObject(const QJsonObject & object, QString key)
     const QJsonValue value = object.value(key);
 
     if(value.isUndefined())
-        throw(tr("Unable to find '%1' in the object").arg(key));
+        throw(QObject::tr("Unable to find '%1' in the object").arg(key));
 
     if(!value.isObject())
-        throw(tr("Unable to find '%1' as an object").arg(key));
+        throw(QObject::tr("Unable to find '%1' as an object").arg(key));
 
     return value.toObject();
+}
+
+int asIntString(const QJsonValue &value)
+{
+    if(!value.isString())
+        throw(QObject::tr("Unable to find '%1' as an Int String"));
+
+    bool ok;
+    int v = value.toString().toInt(&ok);
+    if(!ok)
+        throw(QObject::tr("Unable to find '%1' as an Int String"));
+
+    return v;
+}
+
+qint64 asInt64String(const QJsonValue &value)
+{
+    if(!value.isString())
+        throw(QObject::tr("Unable to find '%1' as an Int64 String"));
+
+    bool ok;
+    qint64 v = value.toString().toLongLong(&ok);
+    if(!ok)
+        throw(QObject::tr("Unable to find '%1' as an Int64 String"));
+
+    return v;
 }
 
 }

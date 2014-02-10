@@ -1,10 +1,12 @@
 #ifndef UPDATER_OPERATION_H
 #define UPDATER_OPERATION_H
 
-#include <QObject>
+#include <QString>
 #include <QProcess>
 #include <QJsonObject>
+#include <QFile>
 
+class QFile;
 class DownloadManager;
 
 inline bool waitForFinished(QProcess & process)
@@ -13,43 +15,111 @@ inline bool waitForFinished(QProcess & process)
             process.exitCode() == 0;
 }
 
-class Operation : public QObject
+class Operation
 {
-    Q_OBJECT
 public:
-    Operation(DownloadManager *_update)
-    {
-        updateDir = _update->updateDirectory();
-    }
-    virtual ~Operation() {}
-    virtual void run() = 0;
-    virtual void applyLocally(const QString &localFolder) = 0;
-    virtual QString actionString() = 0;
+    enum Status {
+        Unknown,
+        DownloadRequired,
+        ApplyRequired,
+        Valid,
+        LocalFileInvalid,
+        ApplyFailed
+    };
+
+    Operation();
+    qint64 offset() const;
+    qint64 size() const;
+
+    QString dataFilename() const;
+    QFile *dataFile(); // DownloadManager thread
+    void setDataFilename(const QString &dataFilename);
+
+    QString localFilename() const;
+    void setUpdateDirectory(const QString &updateDirectory);
+
+    QString path() const;
+    QString sha1() const;
+    QString sha1(QFile *dataFile) const;
+
+
+    QString errorString() const;
+    Status status() const;
+    void checkLocalData(); // FileManager thread
+    void apply(); // FileManager thread
+
+    //virtual void create(const QString &path, const QString &oldFilename, const QString &newFilename) = 0;
     virtual void load1(const QJsonObject &object);
     QJsonObject save1();
-    virtual qint64 offset() const { return -1; }
-    virtual qint64 size() const { return -1; }
-    virtual bool isDataValid() { return true; }
 
-
-    int position() const { return m_position; }
-    void setPosition(int position) { m_position = position; }
-
-    QString name() const { return path; }
-    QString filename() const { return m_filename; }
-    void setFilename(const QString & _filename) { m_filename = _filename; }
-    void setHash(const QString & _hash) { hash = _hash; }
-
-    QString error() const { return m_error; }
-    void setError(const QString & error) { m_error = error; }
+private:
+    QString m_localFilename;
 
 protected:
+    virtual Status localDataStatus() = 0; // FileManager thread
+    virtual void applyData() = 0; // FileManager thread
+    virtual QString action() = 0;
     virtual void save1(QJsonObject & object);
-    int m_position;
-    QString path, updateDir, m_error;
-    QString localpath(){ return updateDir+path; }
-    QString m_filename, hash;
+
+    qint64 m_offset, m_size;
+    QString m_path, m_sha1, m_errorString;
+    QFile m_dataFile;
+    Status m_status;
 };
 
+inline qint64 Operation::offset() const
+{
+    return m_offset;
+}
+
+inline qint64 Operation::size() const
+{
+    return m_size;
+}
+
+inline QString Operation::dataFilename() const
+{
+    return m_dataFile.fileName();;
+}
+
+inline QFile *Operation::dataFile()
+{
+    return &m_dataFile;
+}
+
+inline void Operation::setDataFilename(const QString &dataFilename)
+{
+    m_dataFile.setFileName(dataFilename);
+}
+
+inline QString Operation::localFilename() const
+{
+    return m_localFilename;
+}
+
+inline void Operation::setUpdateDirectory(const QString &updateDirectory)
+{
+    m_localFilename = updateDirectory + m_path;
+}
+
+inline QString Operation::path() const
+{
+    return m_path;
+}
+
+inline QString Operation::sha1() const
+{
+    return m_sha1;
+}
+
+inline QString Operation::errorString() const
+{
+    return m_errorString;
+}
+
+inline Operation::Status Operation::status() const
+{
+    return m_status;
+}
 
 #endif // UPDATER_OPERATION_H

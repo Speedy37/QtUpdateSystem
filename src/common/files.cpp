@@ -1,13 +1,15 @@
 #include "files.h"
 #include "jsonutil.h"
 
-void Files::loadFiles(const QJsonDocument &json)
+#include <QObject>
+
+void Files::loadFiles(const QJsonObject &object)
 {
-    const QString version = JsonUtil::asString(json.object(), QStringLiteral("version"));
+    const QString version = JsonUtil::asString(object, QStringLiteral("version"));
     if(version == "1")
         loadFiles1(object);
     else
-        throw(tr("Unsupported version %1").arg(version));
+        throw(QObject::tr("Unsupported version %1").arg(version));
 }
 
 void Files::loadFiles1(const QJsonObject object)
@@ -18,7 +20,7 @@ void Files::loadFiles1(const QJsonObject object)
     QJsonObject::const_iterator i = files.constBegin();
     while (i != files.constEnd())
     {
-        QVector<File> & filesInPath;
+        QVector<File> filesInPath;
         const QJsonArray filesInPathArray = JsonUtil::asArray(i.value());
         filesInPath.resize(filesInPathArray.size());
         for(int i = 0; i < filesInPathArray.size(); ++i)

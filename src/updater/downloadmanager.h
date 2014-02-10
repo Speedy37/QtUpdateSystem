@@ -1,58 +1,78 @@
 #ifndef DOWNLOADMANAGER_H
 #define DOWNLOADMANAGER_H
 
-#include "remoteupdate.h"
+#include "../updater.h"
+#include "../common/package.h"
+#include "../common/packagemetadata.h"
 #include <QFile>
 #include <QObject>
 
 class QNetworkReply;
 class QNetworkAccessManager;
 class Operation;
+class FileManager;
 
 class DownloadManager : public QObject
 {
     Q_OBJECT
 public:
-    DownloadManager(RemoteUpdate *_update);
-    ~DownloadManager();
-    void loadMetadata(const QJsonDocument &json);
-    void applyLocally(const QString &localFolder);
-    QString updateDirectory() const { return m_updateDirectory; }
-    QString updateTmpDirectory() const { return m_updateTmpDirectory; }
-    QString updateUrl() const { return m_updateUrl; }
-public slots:
-    void run();
+    DownloadManager(Updater *updater);
 
-signals:
-    void operationDownloaded(Operation * operation);
-    void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+public slots:
+    void update();
 
 private slots:
-    void onDataFinished();
-    void onDataDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void operationFinishedDirect(Operation *);
-    void operationFinished(Operation *);
-    void operationFailed(Operation *);
     void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
+    void updatePackagesListRequestFinished();
+    void updatePackageMetadataFinished();
+    void updateDataDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void updateDataFinished();
+    void operationPrepared(Operation *);
+    void operationApplied(Operation *);
+    void applyFinished();
+
+signals:
+    void operationLoaded(Operation * operation);
+    void operationDownloaded(Operation * operation);
+    void downloadFinished();
+    void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void failure(const QString &reason);
+    void finished();
 
 private:
+    void updateDataSetupOperationFile();
+    void updatePackageLoop();
+    void updateDataReadAll();
     QNetworkReply *get(const QString &what, qint64 startPosition = 0);
-    void onDataDownloadProgress(bool final, qint64 bytesReceived, qint64 bytesTotal);
-    void nextOperation(bool continuous);
-    void loadMetadata1(const QJsonObject &object);
 
 private:
+    enum Failure
+    {
+        DownloadFailed
+    };
+
+    // Configuration
     bool m_createApplyManifest;
-    QString m_updateDirectory, m_updateTmpDirectory, m_updateUrl, m_metaDataBaseUrl, m_applyLocally, m_username, m_password;
+    QString m_updateDirectory, m_updateTmpDirectory;
+    QString m_localRevision, m_remoteRevision;
+    QString m_updateUrl, m_username, m_password;
+
+    // Network
     QNetworkAccessManager *m_manager;
-    QNetworkReply *info, *metadata, *data;
+    QNetworkReply *packagesListRequest, *metadataRequest, *dataRequest;
+
+    // Packages
+    int downloadPathPos;
+    QVector<Package> downloadPath;
 
     // Data download/application
-    QFile m_dlFile;
-    QVector<Operation*> m_operations;
-    int m_dlOperationIdx, m_appliedSize, m_appliedCount, m_failedCount;
-    qint64 m_dlReaded, m_dlBaseOffset, m_dlTotalSize, m_dlOperationLength;
-    OperationThread *m_operationThread;
+    PackageMetadata metadata;
+    QMap<QString, Failure> failures;
+    Operation *operation;
+    int operationIndex;
+    qint64 offset;
+
+    FileManager *m_filemanager;
 };
 
 #endif // DOWNLOADMANAGER_H

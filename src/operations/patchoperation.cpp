@@ -1,139 +1,179 @@
 #include "patchoperation.h"
 
-#include <log.h>
+#include "../common/jsonutil.h"
+#include <qtlog.h>
 #include <QFileInfo>
 #include <QProcess>
 
-void PatchOperation::run()
-{
-    if(state() == Applied)
-        return;
+const QString PatchOperation::Action = QStringLiteral("patch");
 
-    QFileInfo fileInfo(localpath());
-    if(!fileInfo.exists())
+const QString LOCALSIZE = QStringLiteral("localSize");
+const QString LOCALSHA1 = QStringLiteral("localSha1");
+const QString PATCHTYPE = QStringLiteral("patchType");
+
+const QString COMPRESSION_LZMA = QStringLiteral("lzma");
+const QString COMPRESSION_NONE = QStringLiteral("none");
+
+const QString PATCHTYPE_XDELTA = QStringLiteral("xdelta");
+
+
+Operation::Status PatchOperation::localDataStatus()
+{
+    QFile file(localFilename());
+
+    if(file.exists())
     {
-        if(fileInfo.size() == finalSize)
+        if(file.size() == m_finalSize || file.size() == m_localSize)
         {
-            QFile file(localpath());
-            file.open(QFile::ReadOnly);
-            QString hash = fileHash(&file, file.size(), finalHashType);
-            if(hash == finalHash)
+            QString hash = sha1(&file);
+
+            if(hash == m_finalSha1)
             {
-                Log::info(QObject::tr("File was already at the right version %1").arg(path));
-                return;
+                LOG_INFO(QObject::tr("File %1 is already at the right version").arg(path()));
+                return Valid;
+            }
+            else if(hash == m_localSha1)
+            {
+                LOG_INFO(QObject::tr("File %1 is as expected for patching").arg(path()));
+
+                file.setFileName(dataFilename());
+                if(file.exists())
+                {
+                    // Check downloaded data file content
+                    if(file.size() == size() && sha1(&file) == sha1())
+                    {
+                        LOG_INFO(QObject::tr("File %1 data is valid").arg(path()));
+                        return ApplyRequired;
+                    }
+
+                    LOG_WARN(QObject::tr("File %1 data is invalid and will be downloaded again").arg(path()));
+                }
+                return DownloadRequired;
             }
         }
-        throw tr("The update was supposed to create a new file %1, another one is already there").arg(path);
+
+        LOG_WARN(QObject::tr("File %1 content is invalid").arg(path()));
+    }
+    else
+    {
+        LOG_WARN(QObject::tr("File %1 doesn't exists and can't be patched, complete file download will happen").arg(path()));
     }
 
-    QFile dataFile(filename());
+    return LocalFileInvalid;
+}
 
-    if(dataFile.size() != dataLength)
-        throw tr("Data file size is unexpected");
+void PatchOperation::applyData()
+{
+    QFile dataFile(dataFilename());
 
-    QDir filedir = fileInfo.dir();
-    if(!filedir.exists() && !filedir.mkpath(filedir.absolutePath()))
-        throw tr("Unable to create directory %1 to contains %2").arg(filedir.path(), path);
-
-    if(dataCompression == Uncompressed)
+    if(m_patchtype == PATCHTYPE_XDELTA)
     {
-        if(!fileInfo.exists())
-            Log::warn(tr("The file was supposed to already exists %1").arg(path));
-        else if(!QFile(localpath()).remove())
-            throw tr("Unable to remove file %1").arg(path);
-        else if(!dataFile.rename(localpath()))
-            throw tr("Unable to rename file %1 to %2").arg(filename(), path);
-        Log::info(tr("Rename succeeded %1").arg(path));
-        return;
-    }
-    else if(dataCompression == XdeltaLzma)
-    {
-        Log::trace(tr("Xdelta3+lzma decompression %1 to %2").arg(filename(), path));
+        LOG_TRACE(QObject::tr("Decompressing %1 to %2 by %3+%4").arg(dataFilename(), path(), m_compression, m_patchtype));
 
-        if(!fileInfo.exists())
-            throw tr("The original file %1 is required for the decompression").arg(path);
-
-        QFile file(filename()+QStringLiteral(".final"));
+        QString patchedFilename = dataFilename()+".patched";
+        QFile file(patchedFilename);
         if(!file.open(QFile::WriteOnly | QFile::Truncate))
-            throw tr("Unable to open file %1 for writing").arg(file.fileName());
+            throw QObject::tr("Unable to open file %1 for writing").arg(file.fileName());
 
-        QProcess lzma, xdelta;
-        QStringList lzmaArguments, xdeltaArguments;
-        lzma.setStandardOutputProcess(&xdelta);
+        QProcess decompressor, xdelta;
+        QStringList xdeltaArguments;
+        bool hasCompression;
+
+        xdeltaArguments << "-d" << "-c" << "-s" << localFilename();
+        if(m_compression == COMPRESSION_NONE)
+        {
+            xdeltaArguments << dataFilename();
+            hasCompression = false;
+        }
+        else if(m_compression == COMPRESSION_LZMA)
+        {
+            QStringList decompressorArguments;
+            decompressor.setStandardOutputProcess(&xdelta);
 #ifdef Q_OS_WIN
-        lzmaArguments << "d" << dataFile.fileName() << "-so";
-        xdeltaArguments << "-d" << "-c" << "-s" << localpath();
-        xdelta.start(QStringLiteral("xdelta3.exe"), xdeltaArguments);
-        lzma.start(QStringLiteral("lzma.exe"), lzmaArguments);
+            decompressorArguments << "d" << dataFilename() << "-so";
+            decompressor.start(QStringLiteral("lzma.exe"), decompressorArguments);
 #endif
-        if(!xdelta.waitForStarted())
-            throw tr("Unable to start xdelta3");
-        if(!lzma.waitForStarted())
-            throw tr("Unable to start lzma");
+            hasCompression = true;
+        }
+        xdelta.start(QStringLiteral("xdelta3.exe"), xdeltaArguments);
 
-        QCryptographicHash hashMaker(finalHashType);
-        char buffer[4096];
+        if(hasCompression && !decompressor.waitForStarted())
+            throw QObject::tr("Unable to start %1").arg(decompressor.program());
+
+        if(!xdelta.waitForStarted())
+            throw QObject::tr("Unable to start %1").arg(xdelta.program());
+
+        QCryptographicHash sha1Hash(QCryptographicHash::Sha1);
+        char buffer[8192];
         qint64 read;
         while(xdelta.waitForReadyRead())
         {
-            while((read = xdelta.read(buffer, 4096)) > 0)
+            while((read = xdelta.read(buffer, sizeof(buffer))) > 0)
             {
-                hashMaker.addData(buffer, read);
+                sha1Hash.addData(buffer, read);
                 if(file.write(buffer, read) != read)
-                {
-                    lzma.kill();
-                    xdelta.kill();
-                    throw tr("Failed to write to %1").arg(file.fileName());
-                }
+                    throw QObject::tr("Failed to write to %1").arg(file.fileName());
             }
         }
 
-        if(!waitForFinished(lzma))
+        if(hasCompression && !waitForFinished(decompressor))
         {
-            Log::error(QString(lzma.readAllStandardError()));
-            throw tr("Extraction failed, lzma failed");
+            LOG_ERROR(QString(decompressor.readAllStandardError()));
+            throw QObject::tr("Decompression by %1 failed").arg(decompressor.program());
         }
 
         if(!waitForFinished(xdelta))
         {
-            Log::error(QString(xdelta.readAllStandardError()));
-            throw tr("Extraction failed, xdelta3 failed");
+            LOG_ERROR(QString(xdelta.readAllStandardError()));
+            throw QObject::tr("%1 failed").arg(xdelta.program());
         }
 
-        if(QString(hashMaker.result().toHex()) != finalHash)
-            throw tr("Extraction failed, the result was unexpected");
+        if(QString(sha1Hash.result().toHex()) != m_finalSha1)
+            throw QObject::tr("Final sha1 file signature doesn't match");
 
-        if(!QFile(localpath()).remove())
-            throw tr("Unable to remove file %1").arg(path);
+        if(!file.flush())
+            throw QObject::tr("Unable to flush all extracted data");
 
-        if(!file.rename(localpath()))
-            throw tr("Unable to rename file %1 to %2").arg(file.fileName(), path);
+        file.close();
 
-        Log::info(tr("Extraction succeeded %1").arg(path));
-        if(!QFile(filename()).remove())
-            Log::warn(tr("Unable to remove temporary file %1").arg(filename()));
+        Q_ASSERT(sha1(&file) == m_finalSha1);
+
+        LOG_INFO(QObject::tr("Patch succeeded %1").arg(path()));
+
+        if(!QFile(localFilename()).remove())
+            throw QObject::tr("Unable to remove local file %1").arg(path());
+
+        if(!file.rename(localFilename()))
+            throw QObject::tr("Unable to rename file %1 to %2").arg(file.fileName(), path());
+
+        if(!QFile(dataFilename()).remove())
+            LOG_WARN(QObject::tr("Unable to remove temporary file %1").arg(dataFilename()));
     }
     else
     {
-        throw tr("Unsupported dataCompression %1").arg(dataCompression);
+        throw QObject::tr("Patchtype %1 unknown").arg(m_patchtype);
     }
-    setState(Applied);
 }
 
 void PatchOperation::save1(QJsonObject &object)
 {
     AddOperation::save1(object);
 
-    object.insert(QStringLiteral("currentSize"), QString::number(currentSize));
-    object.insert(QStringLiteral("currentHashType"), getHashType(currentHashType));
-    object.insert(QStringLiteral("currentHash"), currentHash);
+    object.insert(LOCALSIZE, QString::number(m_localSize));
+    object.insert(LOCALSHA1, m_localSha1);
+    object.insert(PATCHTYPE, m_patchtype);
 }
 
 void PatchOperation::load1(const QJsonObject &object)
 {
     AddOperation::load1(object);
 
-    loadInt64(object.value(QStringLiteral("currentSize")), &currentSize);
-    loadHashType(object.value(QStringLiteral("currentHashType")), &currentHashType);
-    currentHash = object.value(QStringLiteral("currentHash")).toString();
+    m_localSize = JsonUtil::asInt64String(object, LOCALSHA1);
+    m_localSha1 = JsonUtil::asString(object, LOCALSHA1);
+    m_patchtype = JsonUtil::asString(object, PATCHTYPE);
+}
+
+QString PatchOperation::action()
+{
+    return Action;
 }

@@ -14,13 +14,13 @@ void Packages::addPackage(const Package &package)
     m_packages.append(package);
 }
 
-void Packages::loadPackages(const QJsonDocument & json)
+void Packages::loadPackages(const QJsonObject & object)
 {
-    const QString version = JsonUtil::asString(json.object(), QStringLiteral("version"));
+    const QString version = JsonUtil::asString(object, QStringLiteral("version"));
     if(version == "1")
         loadPackages1(object);
     else
-        throw(tr("Unsupported version %1").arg(version));
+        throw(QObject::tr("Unsupported version %1").arg(version));
 }
 
 QJsonObject Packages::toJsonObject() const
@@ -33,7 +33,7 @@ QJsonObject Packages::toJsonObject() const
         packages.append(m_packages[i].toJsonObject());
     }
 
-    object.insert(QStringLiteral("version"), "1");
+    object.insert(QStringLiteral("version"), QStringLiteral("1"));
     object.insert(QStringLiteral("packages"), packages);
 
     return object;
@@ -48,9 +48,11 @@ void Packages::loadPackages1(const QJsonObject object)
     for(int i = 0; i < packages.size(); ++i)
     {
         Package & package = m_packages[i];
-        package.fromJsonObject(JsonUtil::asObject(packages[i]);
+        package.fromJsonObject(JsonUtil::asObject(packages[i]));
     }
 }
+
+class Edge;
 
 class Node
 {
@@ -79,6 +81,7 @@ class Edge
 private:
     Q_DISABLE_COPY(Edge)
 public:
+    Edge() {}
     Node * to;
     Package* package;
 };
@@ -121,7 +124,7 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
         }
     }
 
-    LOG_INFO(tr("Graph built in %1 ms").arg(t.restart()));
+    LOG_INFO(QObject::tr("Graph built in %1 ms").arg(t.restart()));
 
     QVector<Package> path;
     Node * node = startNode;
@@ -133,7 +136,7 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
         if(node == endNode)
             break;
 
-        foreach(const Edge *edge, node->childs)
+        foreach(Edge *edge, node->childs)
         {
             qint64 parcouru = node->parcouru + edge->package->size;
             if(edge->to->parcouru > parcouru)
@@ -146,7 +149,7 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
 
         bestParcouru = LLONG_MAX;
         node = NULL;
-        foreach(const Node * n, nodes)
+        foreach(Node * n, nodes)
         {
             if(!n->done && n->parcouru < bestParcouru)
             {
@@ -165,20 +168,14 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
             path.prepend(*node->previousPackage);
             node = node->previousNode;
         }
-        LOG_INFO(tr("Best path found in %1 ms").arg(t.elapsed()));
+        LOG_INFO(QObject::tr("Best path found in %1 ms").arg(t.elapsed()));
     }
     else
     {
-        LOG_WARN(tr("No path found from %1 to %2").arg(from, to));
+        LOG_WARN(QObject::tr("No path found from %1 to %2").arg(from, to));
     }
 
     delete[] edges;
 
     return path;
-}
-
-
-void Packages::setPackages(const QVector<Package> &value)
-{
-    packages = value;
 }

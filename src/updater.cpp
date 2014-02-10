@@ -1,4 +1,5 @@
 #include "updater.h"
+#include "common/jsonutil.h"
 #include <qtlog.h>
 #include <QNetworkReply>
 #include <QJsonDocument>
@@ -13,6 +14,7 @@
 #include <QMutexLocker>
 #include <QAbstractEventDispatcher>
 #include <QAuthenticator>
+#include "updater/downloadmanager.h"
 
 /*!
     \class RemoteUpdate
@@ -115,13 +117,6 @@ const QString UpdateFile = QStringLiteral("UpdateFile");
  */
 const QString UpdateUrlInfo = QStringLiteral("info");
 
-/**
- * @brief Name of the repository packages file
- */
-const QString UpdateUrlPackages = QStringLiteral("packages");
-
-
-
 Updater::Updater(QObject *parent) : QObject(parent)
 {
     m_state = Idle;
@@ -147,94 +142,13 @@ void Updater::checkForUpdates()
         setState(DownloadingInformations);
         clearError();
         setCurrentVersion(iniCurrentVersion());
-        info = get(UpdateUrlInfo);
+        info = get(QStringLiteral("current"));
         connect(metadata, &QNetworkReply::finished, this, &Updater::onInfoFinished);
     }
     else
     {
-        LOG_WARN("called while not Idle");
+        LOG_WARN(tr("Called while not Idle"));
     }
-}
-
-void Updater::update()
-{
-    if(isUpdateAvailable())
-    {
-        setState(Updating);
-        clearError();
-
-        LOG_TRACE(tr("Getting package list"));
-        info = get(UpdateUrlPackages);
-        connect(metadata, &QNetworkReply::finished, this, &Updater::onPackagesFinished);
-
-
-        if(currentVersion().isEmpty())
-        {
-            metadata = get(QStringLiteral("complete_%1.metadata").arg(latestVersion()));
-        }
-        else
-        {
-            metadata = get(QStringLiteral("patch%1_%2.metadata").arg(currentVersion(), latestVersion()));
-        }
-
-        connect(metadata, &QNetworkReply::finished, this, &Updater::onMetadataFinished);
-    }
-    else
-    {
-        LOG_WARN("called without an available update");
-    }
-}
-
-void Updater::applyLocally(const QString &localFolder)
-{
-    Q_ASSERT(isIdle());
-    setState(ApplyingLocally);
-    clearError();
-
-    try
-    {
-        QFile file(updateDirectory()+QStringLiteral("manifest.json"));
-
-        if(!file.open(QFile::ReadOnly))
-            throw tr("Unable to open file %1").arg(file.errorString());
-
-        QJsonParseError e;
-        QJsonDocument json = QJsonDocument::fromJson(file.readAll(), &e);
-
-        if(e.error != QJsonParseError::NoError)
-            throw(tr("Unable to parse json from manisfest : %1").arg(e.errorString()));
-
-        if(!json.isObject())
-            throw(tr("Json metadata : Expecting an object"));
-
-        DownloadManager *downloader = new DownloadManager(this);
-        downloader->applyLocally(localFolder);
-        downloader->loadMetadata(json);
-        Log::info(tr("Metadata information analyzed"));
-
-        QThread * thread = new QThread(this);
-        downloader->moveToThread(thread);
-        connect(downloader, SIGNAL(actionFailed(QString)), this, SLOT(actionFailed(QString)));
-        connect(downloader, &DownloadManager::updateFinished, this, &Updater::onApplyFinished);
-        connect(downloader, SIGNAL(applyProgress(qint64,qint64)), this, SLOT(onApplyProgress(qint64,qint64)));
-        connect(downloader, SIGNAL(updateFinished()), thread, SLOT(quit()));
-        connect(downloader, SIGNAL(updateFinished()), downloader, SLOT(deleteLater()));
-        connect(thread, SIGNAL(started()), downloader, SLOT(run()));
-        connect(thread, SIGNAL(destroyed()), downloader, SLOT(deleteLater()));
-        thread->start();
-    }
-    catch(const QString & msg)
-    {
-        actionFailed(msg);
-    }
-}
-
-QNetworkReply* Updater::get(const QString & what)
-{
-    QNetworkRequest request(QUrl(updateUrl().arg(what)));
-    QNetworkReply *reply = m_manager->get(request);
-    connect(reply, SIGNAL(finished()), reply, SLOT(deleteLater()));
-    return reply;
 }
 
 void Updater::onInfoFinished()
@@ -246,33 +160,24 @@ void Updater::onInfoFinished()
 
         LOG_INFO(tr("Remote informations downloaded"));
 
-        QJsonParseError jsonError;
-        QJsonDocument json = QJsonDocument::fromJson(info->readAll(), &jsonError);
-
-        if(jsonError.error != QJsonParseError::NoError)
-            throw(tr("Unable to parse json from info : %1").arg(jsonError.errorString()));
-
-        if(!json.isObject())
-            throw(tr("Json info : Expecting an object"));
-
-        loadVersions(json);
+        loadVersions(JsonUtil::fromJson(info->readAll()));
 
         LOG_INFO(tr("Remote informations analyzed"));
 
-        if(currentVersion() == latestVersion())
+        if(localRevision() == remoteRevision())
         {
             LOG_INFO(tr("Already at the latest version"));
             setState(AlreadyUptodate);
         }
         else
         {
-            if(currentVersion().isEmpty())
+            if(localRevision().isEmpty())
             {
-                LOG_INFO(tr("Install required to %1").arg(latestVersion()));
+                LOG_INFO(tr("Install required to %1").arg(remoteRevision()));
             }
             else
             {
-                LOG_INFO(tr("Update required from %1 to %2").arg(currentVersion(), latestVersion()));
+                LOG_INFO(tr("Update required from %1 to %2").arg(localRevision(), remoteRevision()));
             }
 
             setState(UpdateRequired);
@@ -287,108 +192,36 @@ void Updater::onInfoFinished()
     emit checkForUpdatesFinished();
 }
 
-void Updater::onPackagesFinished()
+void Updater::update()
 {
-    try
+    if(isUpdateAvailable())
     {
-        if(info->error() != QNetworkReply::NoError)
-            throw info->errorString();
+        setState(Updating);
+        clearError();
 
-        LOG_INFO(tr("Package list downloaded"));
-
-        QJsonParseError jsonError;
-        QJsonDocument json = QJsonDocument::fromJson(info->readAll(), &jsonError);
-
-        if(jsonError.error != QJsonParseError::NoError)
-            throw(tr("Unable to parse json from info : %1").arg(jsonError.errorString()));
-
-        if(!json.isObject())
-            throw(tr("Json info : Expecting an object"));
-
-        loadVersions(json);
-
-        LOG_INFO(tr("Remote informations analyzed"));
-
-        if(currentVersion() == latestVersion())
-        {
-            LOG_INFO(tr("Already at the latest version"));
-            setState(AlreadyUptodate);
-        }
-        else
-        {
-            if(currentVersion().isEmpty())
-            {
-                LOG_INFO(tr("Install required to %1").arg(latestVersion()));
-            }
-            else
-            {
-                LOG_INFO(tr("Update required from %1 to %2").arg(currentVersion(), latestVersion()));
-            }
-
-            setState(UpdateRequired);
-            emit updateRequired();
-        }
-    }
-    catch(const QString & msg)
-    {
-        actionFailed(msg);
-    }
-
-    emit updateFinished();
-}
-
-void Updater::onMetadataFinished()
-{
-    if(metadata->error() == QNetworkReply::ContentNotFoundError && m_metaDataBaseUrl.startsWith("patch_"))
-    {
-        m_metaDataBaseUrl = QStringLiteral("complete_%1").arg(latestVersion());
-        metadata = get(m_metaDataBaseUrl+QStringLiteral(".metadata"));
-        connect(metadata, SIGNAL(finished()), SLOT(onMetadataFinished()));
-        return;
-    }
-
-    try
-    {
-        if(metadata->error() != QNetworkReply::NoError)
-            throw(metadata->errorString());
-
-        Log::info(tr("Metadata information downloaded"));
-
-        QJsonParseError e;
-        QJsonDocument json = QJsonDocument::fromJson(metadata->readAll(), &e);
-
-        if(e.error != QJsonParseError::NoError)
-            throw(tr("Unable to parse json from metadata : %1").arg(e.errorString()));
-
-        if(!json.isObject())
-            throw(tr("Json metadata : Expecting an object"));
+        LOG_TRACE(tr("Creating download manager"));
 
         DownloadManager *downloader = new DownloadManager(this);
-        downloader->loadMetadata(json);
-        Log::info(tr("Metadata information analyzed"));
-
         QThread * thread = new QThread(this);
         downloader->moveToThread(thread);
-        connect(downloader, &DownloadManager::actionFailed, this, &Updater::actionFailed);
-        connect(downloader, &DownloadManager::updateFinished, this, &Updater::onUpdateFinished);
-        connect(downloader, &DownloadManager::downloadProgress, this, &Updater::onDownloadProgress);
-        connect(downloader, &DownloadManager::applyProgress, this, &Updater::onApplyProgress);
+        connect(downloader, &DownloadManager::finished, this, &Updater::updateFinished);
         connect(downloader, &DownloadManager::finished, thread, &QThread::quit);
-        connect(downloader, &DownloadManager::finished, downloader, &DownloadManager::deleteLater);
-        connect(thread, &QThread::started, downloader, &DownloadManager::run);
+        connect(thread, &QThread::started, downloader, &DownloadManager::update);
         connect(thread, &QThread::destroyed, downloader, &DownloadManager::deleteLater);
         thread->start();
     }
-    catch(const QString & msg)
+    else
     {
-        actionFailed(msg);
+        LOG_WARN(tr("called without an available update"));
     }
 }
 
-void Updater::onApplyFinished(bool success)
+QNetworkReply* Updater::get(const QString & what)
 {
-    Log::info(tr("Apply finished"));
-    emit applyFinished(success);
+    QNetworkRequest request(QUrl(updateUrl().arg(what)));
+    QNetworkReply *reply = m_manager->get(request);
+    connect(reply, SIGNAL(finished()), reply, SLOT(deleteLater()));
+    return reply;
 }
 
 void Updater::onUpdateFinished(bool success)
@@ -396,32 +229,12 @@ void Updater::onUpdateFinished(bool success)
     if(success)
     {
         QSettings settings(updateDirectory()+QStringLiteral("status.ini"), QSettings::IniFormat);
-        settings.setValue(Updater::String::Revision, latestVersion());
-        setCurrentVersion(latestVersion());
+        settings.setValue(Updater::String::Revision, remoteRevision());
+        setCurrentVersion(remoteRevision());
         setState(Uptodate);
     }
     Log::info(tr("Update finished"));
     emit updateFinished(success);
-}
-
-
-
-void Updater::actionFailed(const QString &msg)
-{
-    m_lastError = msg;
-    Log::error(msg);
-    m_state = Idle;
-    emit error(msg);
-}
-
-void Updater::onDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
-{
-    emit downloadProgress(bytesReceived, bytesTotal);
-}
-
-void Updater::onApplyProgress(qint64 bytesReceived, qint64 bytesTotal)
-{
-    emit applyProgress(bytesReceived, bytesTotal);
 }
 
 void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)
@@ -480,75 +293,3 @@ void Updater::loadVersions(const QJsonDocument & json)
     else
         throw(tr("Json info : Unsupported version %1").arg(version));
 }
-
-void Updater::loadVersions1(const QJsonObject & object)
-{
-    const QJsonArray history = object.value(QStringLiteral("history")).toArray();
-    if(history.isEmpty())
-        throw(tr("loadVersions1 : 'history' is empty"));
-
-    m_versions.resize(history.size());
-    for(int i = 0; i < history.size(); ++i)
-    {
-        const QJsonValue & jsonVersionValue = history[i];
-        if(!jsonVersionValue.isObject())
-            throw(tr("loadVersions1 : 'jsonVersion' is not an object"));
-        QJsonObject jsonVersion = jsonVersionValue.toObject();
-
-        Version & version = m_versions[i];
-        version.revision = jsonVersion.value(QStringLiteral("revision")).toString();
-        version.description = jsonVersion.value(QStringLiteral("description")).toString();
-
-        if(version.revision.isEmpty())
-            throw(tr("loadVersions1 : version[%1].name is empty").arg(i));
-    }
-}
-
-
-bool OperationThread::isEmpty()
-{
-    QMutexLocker locker(&m_queueMutex);
-    return m_queue.isEmpty();
-}
-
-void OperationThread::apply(Operation *operation)
-{
-    m_queueMutex.lock();
-    m_queue.enqueue(operation);
-    m_queueMutex.unlock();
-    if(!isRunning())
-        start();
-}
-
-void OperationThread::run()
-{
-    while (!isEmpty())
-    {
-        m_queueMutex.lock();
-        Operation * operation = m_queue.dequeue();
-        m_queueMutex.unlock();
-        try
-        {
-            if(m_applyLocally.isEmpty())
-                operation->run();
-            else
-                operation->applyLocally(m_applyLocally);
-            Log::trace(tr("%1 %2 finished").arg(operation->actionString(), operation->name()));
-            emit operationFinished(operation);
-        }
-        catch(const QString &msg)
-        {
-            Log::error(tr("%1 %2 failed : %3").arg(operation->actionString(),operation->name()).arg(msg));
-            operation->setError(msg);
-            emit operationFailed(operation);
-        }
-        catch(...)
-        {
-            Log::error(tr("%1 %2 failed : Unknown reason").arg(operation->actionString(),operation->name()));
-            operation->setError(tr("Unknown reason"));
-            emit operationFailed(operation);
-        }
-    }
-}
-
-
