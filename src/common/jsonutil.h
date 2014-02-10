@@ -4,7 +4,6 @@
 #include <QString>
 #include <QJsonArray>
 #include <QJsonObject>
-#include <QJsonDocument>
 
 namespace JsonUtil {
     QJsonObject fromJson(const QByteArray & json);

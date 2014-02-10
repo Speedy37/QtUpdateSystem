@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
+#include <QJsonDocument>
 
 const QString AddOperation::Action = QStringLiteral("add");
 
@@ -16,6 +17,116 @@ const QString FINALSHA1 = QStringLiteral("finalSha1");
 
 const QString COMPRESSION_LZMA = QStringLiteral("lzma");
 const QString COMPRESSION_NONE = QStringLiteral("none");
+
+void AddOperation::load1(const QJsonObject &object)
+{
+    Operation::load1(object);
+
+    m_offset = JsonUtil::asInt64String(object, DATAOFFSET);
+    m_size = JsonUtil::asInt64String(object, DATASIZE);
+    m_sha1 = JsonUtil::asString(object, DATASHA1);
+    m_compression = JsonUtil::asString(object, DATACOMPRESSION);
+    m_finalSize = JsonUtil::asInt64String(object, FINALSIZE);
+    m_finalSha1 = JsonUtil::asString(object, FINALSHA1);
+}
+
+void AddOperation::create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory)
+{
+    Q_UNUSED(oldFilename);
+    m_path = path;
+
+    // Final file informations
+    {
+        QFile file(newFilename);
+        if(!file.exists(newFilename))
+            throw QObject::tr("File %1 doesn't exists").arg(newFilename);
+
+        m_finalSha1 = sha1(&file);
+        m_finalSize = file.size();
+    }
+
+    m_dataFile.setFileName(tmpDirectory+"add_"+sha1Hash);
+    QFile metadataFile(m_dataFile.fileName()+".metadata");
+    if(m_dataFile.exists() && metadataFile.exists())
+    {
+        if (metadataFile.open(QFile::ReadOnly | QFile::Text))
+        {
+            try
+            {
+                QJsonObject object = JsonUtil::fromJson(metadataFile.readAll());
+                m_size = JsonUtil::asInt64String(object, DATASIZE);
+                m_sha1 = JsonUtil::asString(object, DATASHA1);
+                m_compression = JsonUtil::asString(object, DATACOMPRESSION);
+                return;
+            }
+            catch(const QString &msg)
+            {
+                Q_UNUSED(msg);
+            }
+        }
+    }
+
+    if(!m_dataFile.open(QFile::WriteOnly | QFile::Truncate))
+        throw QObject::tr("Unable to open file %1 for writing").arg(m_dataFile.fileName());
+
+    if (!metadataFile.open(QFile::WriteOnly | QFile::Truncate | QFile::Text))
+        throw QObject::tr("Unable to open file %1 for writing").arg(metadataFile.fileName());
+
+    QProcess compressor;
+    QStringList arguments;
+    arguments << "e" << "-so" << newFilename;
+    m_compression = COMPRESSION_LZMA;
+#ifdef Q_OS_WIN
+    compressor.start(QStringLiteral("lzma.exe"), arguments);
+#elif defined(Q_OS_LINUX)
+    compressor.start(QStringLiteral("./lzma"), arguments);
+#endif
+
+    if(!compressor.waitForStarted())
+        throw QObject::tr("Unable to start %1").arg(compressor.program());
+
+    QCryptographicHash sha1Hash(QCryptographicHash::Sha1);
+    char buffer[8192];
+    qint64 read;
+    while(compressor.waitForReadyRead())
+    {
+        while((read = compressor.read(buffer, sizeof(buffer))) > 0)
+        {
+            sha1Hash.addData(buffer, read);
+            if(m_dataFile.write(buffer, read) != read)
+                throw QObject::tr("Failed to write to %1").arg(m_dataFile.fileName());
+        }
+    }
+
+    if(!waitForFinished(compressor))
+    {
+        LOG_ERROR(QString(compressor.readAllStandardError()));
+        throw QObject::tr("%1 failed").arg(compressor.program());
+    }
+
+    m_sha1 = QString(sha1Hash.result().toHex());
+    m_size = m_dataFile.size();
+
+    if(!m_dataFile.flush())
+        throw QObject::tr("Unable to flush all compressed data");
+
+    m_dataFile.close();
+
+    // Writing metadata
+    {
+        QJsonObject object;
+        object.insert(DATASIZE, m_size);
+        object.insert(DATASHA1, m_sha1);
+        object.insert(DATACOMPRESSION, m_compression);
+        if(metadataFile.write(QJsonDocument(object).toJson()) == -1)
+            throw QObject::tr("Unable to write metadata");
+
+        if(!metadataFile.flush())
+            throw QObject::tr("Unable to flush metadata");
+
+        metadataFile.close();
+    }
+}
 
 Operation::Status AddOperation::localDataStatus()
 {
@@ -125,18 +236,6 @@ void AddOperation::applyData()
     {
         throw QObject::tr("Compression %1 unknown").arg(m_compression);
     }
-}
-
-void AddOperation::load1(const QJsonObject &object)
-{
-    Operation::load1(object);
-
-    m_offset = JsonUtil::asInt64String(object, DATAOFFSET);
-    m_size = JsonUtil::asInt64String(object, DATASIZE);
-    m_sha1 = JsonUtil::asString(object, DATASHA1);
-    m_compression = JsonUtil::asString(object, DATACOMPRESSION);
-    m_finalSize = JsonUtil::asInt64String(object, FINALSIZE);
-    m_finalSha1 = JsonUtil::asString(object, FINALSHA1);
 }
 
 void AddOperation::save1(QJsonObject &object)

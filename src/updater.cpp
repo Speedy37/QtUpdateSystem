@@ -2,9 +2,6 @@
 #include "common/jsonutil.h"
 #include <qtlog.h>
 #include <QNetworkReply>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
 #include <QDir>
 #include <QFileInfo>
 #include <QProcess>
@@ -14,6 +11,7 @@
 #include <QMutexLocker>
 #include <QAbstractEventDispatcher>
 #include <QAuthenticator>
+#include <QThread>
 #include "updater/downloadmanager.h"
 
 /*!
@@ -103,11 +101,6 @@
 */
 
 /**
- * @brief Config name of the key that hold the current Revision of the working repository
- */
-const QString Revision = QStringLiteral("Revision");
-
-/**
  * @brief Config name of the key that hold the name of the in update file
  */
 const QString UpdateFile = QStringLiteral("UpdateFile");
@@ -120,7 +113,6 @@ const QString UpdateUrlInfo = QStringLiteral("info");
 Updater::Updater(QObject *parent) : QObject(parent)
 {
     m_state = Idle;
-    m_createApplyManifest = false;
     m_manager = new QNetworkAccessManager(this);
     connect(m_manager, &QNetworkAccessManager::authenticationRequired, this, &Updater::authenticationRequired);
 }
@@ -129,10 +121,18 @@ Updater::~Updater()
 {
 }
 
+QNetworkReply* Updater::get(const QString & what)
+{
+    QNetworkRequest request(QUrl(updateUrl().arg(what)));
+    QNetworkReply *reply = m_manager->get(request);
+    connect(reply, SIGNAL(finished()), reply, SLOT(deleteLater()));
+    return reply;
+}
+
 QString Updater::iniCurrentVersion() const
 {
     QSettings settings(updateDirectory()+QStringLiteral("status.ini"), QSettings::IniFormat);
-    return (settings.value(Revision).toString());
+    return (settings.value(QStringLiteral("Revision")).toString());
 }
 
 void Updater::checkForUpdates()
@@ -141,9 +141,9 @@ void Updater::checkForUpdates()
     {
         setState(DownloadingInformations);
         clearError();
-        setCurrentVersion(iniCurrentVersion());
-        info = get(QStringLiteral("current"));
-        connect(metadata, &QNetworkReply::finished, this, &Updater::onInfoFinished);
+        m_localRevision = iniCurrentVersion();
+        m_currentRequest = get(QStringLiteral("current"));
+        connect(m_currentRequest, &QNetworkReply::finished, this, &Updater::onInfoFinished);
     }
     else
     {
@@ -155,12 +155,19 @@ void Updater::onInfoFinished()
 {
     try
     {
-        if(info->error() != QNetworkReply::NoError)
-            throw info->errorString();
+        if(m_currentRequest->error() != QNetworkReply::NoError)
+            throw m_currentRequest->errorString();
 
         LOG_INFO(tr("Remote informations downloaded"));
 
-        loadVersions(JsonUtil::fromJson(info->readAll()));
+        {
+            QJsonObject object = JsonUtil::fromJson(m_currentRequest->readAll());
+            QString version = JsonUtil::asString(object, QStringLiteral("version"));
+            if(version != "1")
+                throw tr("Unsupported version");
+
+            m_remoteRevision.fromJsonObject(JsonUtil::asObject(object, QStringLiteral("current")));
+        }
 
         LOG_INFO(tr("Remote informations analyzed"));
 
@@ -186,7 +193,8 @@ void Updater::onInfoFinished()
     }
     catch(const QString & msg)
     {
-        actionFailed(msg);
+        failure(msg);
+        setState(Idle);
     }
 
     emit checkForUpdatesFinished();
@@ -216,21 +224,13 @@ void Updater::update()
     }
 }
 
-QNetworkReply* Updater::get(const QString & what)
-{
-    QNetworkRequest request(QUrl(updateUrl().arg(what)));
-    QNetworkReply *reply = m_manager->get(request);
-    connect(reply, SIGNAL(finished()), reply, SLOT(deleteLater()));
-    return reply;
-}
-
 void Updater::onUpdateFinished(bool success)
 {
     if(success)
     {
         QSettings settings(updateDirectory()+QStringLiteral("status.ini"), QSettings::IniFormat);
         settings.setValue(Updater::String::Revision, remoteRevision());
-        setCurrentVersion(remoteRevision());
+        setLocalRevision(remoteRevision());
         setState(Uptodate);
     }
     Log::info(tr("Update finished"));
@@ -245,51 +245,18 @@ void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authentica
         authenticator->setUser(m_username);
 }
 
-bool Updater::createApplyManifest() const
+void Updater::setUpdateDirectory(const QString &updateDirectory)
 {
-    return m_createApplyManifest;
+    Q_ASSERT(isIdle());
+    m_updateDirectory = updateDirectory;
+    if(!m_updateDirectory.endsWith(QChar('/')))
+        m_updateDirectory += QChar('/');
 }
 
-void Updater::setCreateApplyManifest(bool createApplyManifest)
+void Updater::setUpdateTmpDirectory(const QString &updateTmpDirectory)
 {
-    isIdle();
-    m_createApplyManifest = createApplyManifest;
-}
-
-void Updater::loadVersions1(const QJsonObject & object)
-{
-    const QJsonArray history = object.value(QStringLiteral("history")).toArray();
-    if(history.isEmpty())
-        throw(tr("loadVersions1 : 'history' is empty"));
-
-    m_versions.resize(history.size());
-    for(int i = 0; i < history.size(); ++i)
-    {
-        const QJsonValue & jsonVersionValue = history[i];
-        if(!jsonVersionValue.isObject())
-            throw(tr("loadVersions1 : 'jsonVersion' is not an object"));
-        QJsonObject jsonVersion = jsonVersionValue.toObject();
-
-        Version & version = m_versions[i];
-        version.revision = jsonVersion.value(QStringLiteral("revision")).toString();
-        version.description = jsonVersion.value(QStringLiteral("description")).toString();
-
-        if(version.revision.isEmpty())
-            throw(tr("loadVersions1 : version[%1].name is empty").arg(i));
-    }
-}
-
-void Updater::loadVersions(const QJsonDocument & json)
-{
-    QJsonObject object = json.object();
-    QJsonValue versionJsonValue = object.value(QStringLiteral("version"));
-
-    if(!versionJsonValue.isString())
-        throw(tr("Json info : Unable to find 'version' as a string"));
-
-    QString version = versionJsonValue.toString();
-    if(version == "1")
-        loadVersions1(object);
-    else
-        throw(tr("Json info : Unsupported version %1").arg(version));
+    Q_ASSERT(isIdle());
+    m_updateTmpDirectory = updateTmpDirectory;
+    if(!m_updateTmpDirectory.endsWith(QDir::separator()))
+        m_updateTmpDirectory += QDir::separator();
 }

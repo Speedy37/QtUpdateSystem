@@ -1,5 +1,7 @@
 #include "jsonutil.h"
+
 #include <QJsonParseError>
+#include <QJsonDocument>
 #include <QObject>
 
 namespace JsonUtil {

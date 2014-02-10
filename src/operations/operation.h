@@ -48,7 +48,7 @@ public:
     void checkLocalData(); // FileManager thread
     void apply(); // FileManager thread
 
-    //virtual void create(const QString &path, const QString &oldFilename, const QString &newFilename) = 0;
+    virtual void create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory) = 0;
     virtual void load1(const QJsonObject &object);
     QJsonObject save1();
 
@@ -79,7 +79,7 @@ inline qint64 Operation::size() const
 
 inline QString Operation::dataFilename() const
 {
-    return m_dataFile.fileName();;
+    return m_dataFile.fileName();
 }
 
 inline QFile *Operation::dataFile()

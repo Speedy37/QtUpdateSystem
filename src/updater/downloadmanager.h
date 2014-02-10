@@ -6,6 +6,7 @@
 #include "../common/packagemetadata.h"
 #include <QFile>
 #include <QObject>
+#include <QMap>
 
 class QNetworkReply;
 class QNetworkAccessManager;

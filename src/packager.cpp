@@ -22,7 +22,7 @@ Packager::Packager(QObject *parent) : QObject(parent)
  * @brief Generate a new patch from old source to new source
  * @return
  */
-Packager::GenerationError Packager::generate()
+void Packager::generate()
 {
     try
     {

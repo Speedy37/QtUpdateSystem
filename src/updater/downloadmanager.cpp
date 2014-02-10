@@ -8,6 +8,7 @@
 #include <qtlog.h>
 #include <QNetworkReply>
 #include <QAuthenticator>
+#include <QThread>
 
 DownloadManager::DownloadManager(Updater *updater)
     : QObject()

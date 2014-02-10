@@ -12,7 +12,7 @@ class AddOperation : public Operation
 public:
     static const QString Action;
     virtual void load1(const QJsonObject &object) Q_DECL_OVERRIDE;
-
+    virtual void create(const QString &path, const QString &oldFilename, const QString &newFilename);
 protected:
     virtual Status localDataStatus() Q_DECL_OVERRIDE;
     virtual void applyData() Q_DECL_OVERRIDE;

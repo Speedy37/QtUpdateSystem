@@ -39,4 +39,3 @@ PackageManager::PackageManager(const QString &directory) : QObject(0)
 {
     m_directory = directory;
 }
-

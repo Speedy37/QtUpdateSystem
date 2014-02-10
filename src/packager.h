@@ -23,26 +23,8 @@ private:
     Q_DISABLE_COPY(Packager)
 
 public:
-    enum GenerationError
-    {
-        NoError,
-        NewDirectoryPathIsEmpty,
-        NewRevisionNameIsEmpty,
-        NewDirectoryInvalid,
-        OldDirectoryInvalid,
-        DeltaFileAlreadyExists,
-        DeltaFileOpenFailed,
-        DeltaMetaFileAlreadyExists,
-        DeltaMetaFileOpenFailed,
-        TmpDirInvalid,
-        PatchFailed,
-        CompressFailed,
-        AppendFailed,
-        FileSignatureFailed
-    };
-
     Packager(QObject * parent = 0);
-    GenerationError generate();
+    void generate();
 
     QString newDirectoryPath() const;
     QString newRevisionName() const;
@@ -61,7 +43,6 @@ public:
     QString tmpDirectoryPath();
     void setTmpDirectoryPath(const QString &tmpDirectoryPath);
 
-    GenerationError errorType() const;
     QString errorString() const;
 
 private:
@@ -72,12 +53,11 @@ private:
     QString m_tmpDirectoryPath;
 
 private:
-    Exception m_lastException;
     QJsonArray operations;
     QVector<TaskInfo*> latentTaskInfos;
 
     QThreadPool * threadpool;
-    QString m_currentTmpDirectoryPath;
+    QString m_currentTmpDirectoryPath, m_errorString;
     int m_tmpFileCounter;
     QFileInfoList dirList(const QDir &dir);
     QString newTmpFilename();
@@ -154,14 +134,9 @@ inline void Packager::setTmpDirectoryPath(const QString &tmpDirectoryPath)
     m_tmpDirectoryPath = tmpDirectoryPath;
 }
 
-inline Packager::GenerationError Packager::errorType() const
-{
-    return static_cast<Packager::GenerationError>(m_lastException.errorType);
-}
-
 inline QString Packager::errorString() const
 {
-    return m_lastException.errorString;
+    return m_errorString;
 }
 
 #endif // PACKAGER_H
