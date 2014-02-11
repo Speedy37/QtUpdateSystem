@@ -45,7 +45,7 @@ void AddOperation::create(const QString &path, const QString &oldFilename, const
         m_finalSize = file.size();
     }
 
-    m_dataFile.setFileName(tmpDirectory+"add_"+sha1Hash);
+    m_dataFile.setFileName(tmpDirectory+"add_"+m_finalSha1);
     QFile metadataFile(m_dataFile.fileName()+".metadata");
     if(m_dataFile.exists() && metadataFile.exists())
     {

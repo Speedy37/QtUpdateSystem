@@ -1,24 +1,20 @@
 #include "packages.h"
-#include "package.h"
 #include "jsonutil.h"
 
 #include <qtlog.h>
 #include <QMap>
 #include <QTime>
-#include <QJsonArray>
-#include <QJsonValue>
-#include <QJsonObject>
 
 void Packages::addPackage(const Package &package)
 {
     m_packages.append(package);
 }
 
-void Packages::loadPackages(const QJsonObject & object)
+void Packages::fromJsonObject(const QJsonObject & object)
 {
     const QString version = JsonUtil::asString(object, QStringLiteral("version"));
     if(version == "1")
-        loadPackages1(object);
+        fromJsonObject1(object);
     else
         throw(QObject::tr("Unsupported version %1").arg(version));
 }
@@ -39,7 +35,7 @@ QJsonObject Packages::toJsonObject() const
     return object;
 }
 
-void Packages::loadPackages1(const QJsonObject object)
+void Packages::fromJsonObject1(const QJsonObject object)
 {
     const QJsonArray packages = JsonUtil::asArray(object, QStringLiteral("packages"));
 

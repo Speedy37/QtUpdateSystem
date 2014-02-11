@@ -18,7 +18,7 @@ public:
     QVector<Operation *> operations() const;
     Operation *operation(int i) const;
     void setPackage(const Package & package);
-    void loadMetadata(const QJsonObject &object);
+    void fromJsonObject(const QJsonObject &object);
     void setup(const QString &updateDir, const QString &tmpUpdateDir);
 
 private:

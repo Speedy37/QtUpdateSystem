@@ -18,7 +18,7 @@ PackageMetadata::~PackageMetadata()
     clearOperations();
 }
 
-void PackageMetadata::loadMetadata(const QJsonObject &object)
+void PackageMetadata::fromJsonObject(const QJsonObject &object)
 {
     QString version = JsonUtil::asString(object, QStringLiteral("version"));
     if(version == "1")

@@ -59,7 +59,7 @@ void DownloadManager::updatePackagesListRequestFinished()
         LOG_INFO(tr("Packages list downloaded"));
 
         Packages packages;
-        packages.loadPackages(JsonUtil::fromJson(packagesListRequest->readAll()));
+        packages.fromJsonObject(JsonUtil::fromJson(packagesListRequest->readAll()));
 
         LOG_INFO(tr("Remote informations analyzed"));
 
@@ -100,7 +100,7 @@ void DownloadManager::updatePackageMetadataFinished()
 
         LOG_INFO(tr("Metadata downloaded"));
 
-        metadata.loadMetadata(JsonUtil::fromJson(metadataRequest->readAll()));
+        metadata.fromJsonObject(JsonUtil::fromJson(metadataRequest->readAll()));
         metadata.setup(m_updateDirectory, m_updateTmpDirectory);
 
         foreach(Operation * op, metadata.operations())

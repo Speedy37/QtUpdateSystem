@@ -95,6 +95,10 @@ void PatchOperation::applyData()
 #endif
             hasCompression = true;
         }
+        else
+        {
+            throw QObject::tr("Unsupported compression %1").arg(m_compression);
+        }
         xdelta.start(QStringLiteral("xdelta3.exe"), xdeltaArguments);
 
         if(hasCompression && !decompressor.waitForStarted())

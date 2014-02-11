@@ -30,7 +30,8 @@ SOURCES += \
     QtLog/qtlog.cpp \
     src/common/packages.cpp \
     src/common/jsonutil.cpp \
-    src/common/packagemetadata.cpp
+    src/common/packagemetadata.cpp \
+    src/common/versions.cpp
 
 HEADERS +=\
     src/qtupdatesystem_global.h \
@@ -52,7 +53,8 @@ HEADERS +=\
     QtLog/qtlog.h \
     src/common/packages.h \
     src/common/jsonutil.h \
-    src/common/packagemetadata.h
+    src/common/packagemetadata.h \
+    src/common/versions.h
 
 unix {
     target.path = /usr/lib
