@@ -64,8 +64,6 @@ Operation::Status PatchOperation::localDataStatus()
 
 void PatchOperation::applyData()
 {
-    QFile dataFile(dataFilename());
-
     if(m_patchtype == PATCHTYPE_XDELTA)
     {
         LOG_TRACE(QObject::tr("Decompressing %1 to %2 by %3+%4").arg(dataFilename(), path(), m_compression, m_patchtype));
@@ -159,18 +157,18 @@ void PatchOperation::applyData()
     }
 }
 
-void PatchOperation::save1(QJsonObject &object)
+void PatchOperation::toJsonObjectV1(QJsonObject &object)
 {
-    AddOperation::save1(object);
+    AddOperation::toJsonObjectV1(object);
 
     object.insert(LOCALSIZE, QString::number(m_localSize));
     object.insert(LOCALSHA1, m_localSha1);
     object.insert(PATCHTYPE, m_patchtype);
 }
 
-void PatchOperation::load1(const QJsonObject &object)
+void PatchOperation::fromJsonObjectV1(const QJsonObject &object)
 {
-    AddOperation::load1(object);
+    AddOperation::fromJsonObjectV1(object);
 
     m_localSize = JsonUtil::asInt64String(object, LOCALSHA1);
     m_localSha1 = JsonUtil::asString(object, LOCALSHA1);

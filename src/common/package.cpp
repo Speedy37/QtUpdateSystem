@@ -3,6 +3,11 @@
 
 #include <QObject>
 
+Package::Package()
+{
+    size = -1;
+}
+
 QString Package::url() const
 {
     if(from.isEmpty())
@@ -10,7 +15,7 @@ QString Package::url() const
     return QStringLiteral("patch%1_%2").arg(from, to);
 }
 
-void Package::fromJsonObject(const QJsonObject &packageObject)
+void Package::fromJsonObjectV1(const QJsonObject &packageObject)
 {
     from = JsonUtil::asString(packageObject, QStringLiteral("from"));
     to = JsonUtil::asString(packageObject, QStringLiteral("to"));
@@ -20,7 +25,7 @@ void Package::fromJsonObject(const QJsonObject &packageObject)
         throw(QObject::tr("package 'size' is not a qint64 string"));
 }
 
-QJsonObject Package::toJsonObject() const
+QJsonObject Package::toJsonObjectV1() const
 {
     QJsonObject packageObject;
     packageObject.insert(QStringLiteral("from"), from);

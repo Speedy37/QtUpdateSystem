@@ -8,15 +8,20 @@
 class Packages
 {
 public:
+    static const QString FileName;
     void addPackage(const Package & package);
+    const QVector<Package> packages() const;
+
+    QVector<Package> findBestPath(const QString &from, const QString &to);
+
     void fromJsonObject(const QJsonObject &object);
     QJsonObject toJsonObject() const;
-    QVector<Package> findBestPath(const QString &from, const QString &to);
-    const QVector<Package> packages() const;
+
+    void fromJsonArrayV1(const QJsonArray &packages);
+    QJsonArray toJsonArrayV1() const;
 
 private:
     QVector<Package> m_packages;
-    void fromJsonObject1(const QJsonObject object);
 };
 
 inline const QVector<Package> Packages::packages() const

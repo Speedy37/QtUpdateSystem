@@ -2,7 +2,7 @@
 #define PACKAGER_H
 
 #include "qtupdatesystem_global.h"
-#include "common/exception.h"
+#include "common/packagemetadata.h"
 #include "packager/taskinfo.h"
 #include <QString>
 #include <QDir>
@@ -115,7 +115,7 @@ inline void Packager::setDeltaFilename(const QString &deltaFilename)
 inline QString Packager::deltaMetaDataFilename() const
 {
     if(m_deltaMetaDataFilename.isNull())
-        return deltaFilename() + QStringLiteral(".metadata");
+        return deltaFilename() + PackageMetadata::FileExtension;
     return m_deltaMetaDataFilename;
 }
 

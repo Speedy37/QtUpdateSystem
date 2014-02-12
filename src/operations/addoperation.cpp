@@ -1,5 +1,6 @@
 #include "addoperation.h"
 #include "../common/jsonutil.h"
+#include "../common/packagemetadata.h"
 #include <qtlog.h>
 #include <QFile>
 #include <QFileInfo>
@@ -18,9 +19,9 @@ const QString FINALSHA1 = QStringLiteral("finalSha1");
 const QString COMPRESSION_LZMA = QStringLiteral("lzma");
 const QString COMPRESSION_NONE = QStringLiteral("none");
 
-void AddOperation::load1(const QJsonObject &object)
+void AddOperation::fromJsonObjectV1(const QJsonObject &object)
 {
-    Operation::load1(object);
+    Operation::fromJsonObjectV1(object);
 
     m_offset = JsonUtil::asInt64String(object, DATAOFFSET);
     m_size = JsonUtil::asInt64String(object, DATASIZE);
@@ -46,7 +47,7 @@ void AddOperation::create(const QString &path, const QString &oldFilename, const
     }
 
     m_dataFile.setFileName(tmpDirectory+"add_"+m_finalSha1);
-    QFile metadataFile(m_dataFile.fileName()+".metadata");
+    QFile metadataFile(m_dataFile.fileName() + PackageMetadata::FileExtension);
     if(m_dataFile.exists() && metadataFile.exists())
     {
         if (metadataFile.open(QFile::ReadOnly | QFile::Text))
@@ -238,9 +239,9 @@ void AddOperation::applyData()
     }
 }
 
-void AddOperation::save1(QJsonObject &object)
+void AddOperation::toJsonObjectV1(QJsonObject &object)
 {
-    Operation::save1(object);
+    Operation::toJsonObjectV1(object);
 
     object.insert(DATAOFFSET, QString::number(offset()));
     object.insert(DATASIZE, QString::number(size()));

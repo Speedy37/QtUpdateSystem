@@ -1,13 +1,34 @@
 #include "version.h"
 #include "jsonutil.h"
 
+#include <QObject>
+
 void Version::fromJsonObject(const QJsonObject &object)
+{
+    QString version = JsonUtil::asString(object, QStringLiteral("version"));
+    if(version == "1")
+        fromJsonObjectV1(JsonUtil::asObject(object, QStringLiteral("current")));
+    else
+        throw QObject::tr("Unsupported version");
+}
+
+QJsonObject Version::toJsonObject() const
+{
+    QJsonObject object;
+
+    object.insert(QStringLiteral("version"), QStringLiteral("1"));
+    object.insert(QStringLiteral("current"), toJsonObjectV1());
+
+    return object;
+}
+
+void Version::fromJsonObjectV1(const QJsonObject &object)
 {
     revision = JsonUtil::asString(object, QStringLiteral("revision"));
     description = JsonUtil::asString(object, QStringLiteral("description"));
 }
 
-QJsonObject Version::toJsonObject() const
+QJsonObject Version::toJsonObjectV1() const
 {
     QJsonObject object;
 

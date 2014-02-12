@@ -11,13 +11,13 @@ class AddOperation : public Operation
 {
 public:
     static const QString Action;
-    virtual void load1(const QJsonObject &object) Q_DECL_OVERRIDE;
+    virtual void fromJsonObjectV1(const QJsonObject &object) Q_DECL_OVERRIDE;
     virtual void create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory);
 protected:
     virtual Status localDataStatus() Q_DECL_OVERRIDE;
     virtual void applyData() Q_DECL_OVERRIDE;
     virtual QString action() Q_DECL_OVERRIDE;
-    virtual void save1(QJsonObject & object) Q_DECL_OVERRIDE;
+    virtual void toJsonObjectV1(QJsonObject & object) Q_DECL_OVERRIDE;
 
     QString m_compression, m_finalSha1;
     qint64 m_finalSize;

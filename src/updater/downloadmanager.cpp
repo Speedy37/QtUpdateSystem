@@ -154,7 +154,7 @@ void DownloadManager::updateDataFinished()
 
         LOG_INFO(tr("Data downloaded"));
 
-        while(operation != NULL)
+        while(operation != nullptr)
         {
             LOG_ERROR(tr("Some data are missing for %1").arg(operationIndex));
             failures.insert(operation->path(), DownloadFailed);
@@ -173,7 +173,7 @@ void DownloadManager::updateDataFinished()
 void DownloadManager::updateDataSetupOperationFile()
 {
     operation = metadata.operation(operationIndex);
-    if(operation != NULL)
+    if(operation != nullptr)
     {
         offset = 0;
         if(!operation->dataFile()->open(QFile::WriteOnly | QFile::Truncate))
@@ -188,7 +188,7 @@ void DownloadManager::updateDataReadAll()
     qint64 writeSize, size = bytes.size();
     while(size > 0)
     {
-        if(operation == NULL)
+        if(operation == nullptr)
         {
             LOG_ERROR(tr("No more operation while there is still data to read"));
             return;

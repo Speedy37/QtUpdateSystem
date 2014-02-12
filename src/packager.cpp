@@ -12,6 +12,7 @@
 #include <QRunnable>
 #include <QThreadPool>
 #include <QTemporaryDir>
+#include <QScopedPointer>
 
 Packager::Packager(QObject *parent) : QObject(parent)
 {
@@ -26,36 +27,35 @@ void Packager::generate()
 {
     try
     {
-        m_lastException = Exception();
-        threadpool = NULL;
+        threadpool = nullptr;
 
         LOG_TRACE(tr("Checking preconditions"));
 
         if(newDirectoryPath().isEmpty())
-            throw Exception(NewDirectoryPathIsEmpty, tr("New directory path is empty"));
+            throw tr("New directory path is empty");
 
         if(newRevisionName().isEmpty())
-            throw Exception(NewRevisionNameIsEmpty, tr("New revision name is empty"));
+            throw tr("New revision name is empty");
 
         QDir oldDir(oldDirectoryPath());
         if(!oldDir.exists() && !oldDirectoryPath().isEmpty())
-            throw Exception(OldDirectoryInvalid, tr("Old directory doesn't exists"));
+            throw tr("Old directory doesn't exists");
 
         QDir newDir(newDirectoryPath());
         if(!newDir.exists())
-            throw Exception(NewDirectoryInvalid, tr("New directory doesn't exists"));
+            throw tr("New directory doesn't exists");
 
         QFile deltaFile(deltaFilename());
         if(deltaFile.exists())
-            throw Exception(DeltaFileAlreadyExists, tr("Delta file already exists"));
+            throw tr("Delta file already exists");
         if(!deltaFile.open(QFile::WriteOnly))
-            throw Exception(DeltaFileOpenFailed, tr("Unable to create new delta file"));
+            throw tr("Unable to create new delta file");
 
         QFile metadataFile(deltaMetaDataFilename());
         if(metadataFile.exists())
-            throw Exception(DeltaMetaFileAlreadyExists, tr("Delta metadata file already exists"));
+            throw tr("Delta metadata file already exists");
         if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
-            throw Exception(DeltaMetaFileOpenFailed, tr("Unable to create new delta metadata file"));
+            throw tr("Unable to create new delta metadata file");
 
         LOG_TRACE(tr("Preconditions passed"));
 
@@ -66,7 +66,7 @@ void Packager::generate()
             QScopedPointer<QThreadPool> scopedThreadPool(threadpool = new QThreadPool());
             QScopedPointer<QTemporaryDir> tmpDirectory(tmpDirectoryPath().isEmpty() ? new QTemporaryDir : new QTemporaryDir(tmpDirectoryPath()));
             if (!tmpDirectory->isValid())
-                throw Exception(TmpDirInvalid, tr("Unable to create temporary directory"));
+                throw tr("Unable to create temporary directory");
             m_currentTmpDirectoryPath = tmpDirectory->path();
             m_tmpFileCounter = 0;
 
@@ -88,7 +88,7 @@ void Packager::generate()
             }
 
             delete task;
-            latentTaskInfos[i] = NULL;
+            latentTaskInfos[i] = nullptr;
         }
         latentTaskInfos.clear();
 
@@ -111,7 +111,7 @@ void Packager::generate()
         for(int i = 0; i < latentTaskInfos.size(); ++i)
         {
             TaskInfo * task = latentTaskInfos[i];
-            if(task != NULL)
+            if(task != nullptr)
                 delete task;
         }
         latentTaskInfos.clear();
@@ -208,16 +208,6 @@ void Packager::generate_rm(const QString &path)
     operations.append(operation);
 }
 
-QString Packager::generate_hash(const QString & srcFilename)
-{
-    QCryptographicHash hashMaker(QCryptographicHash::Sha1);
-    QFile srcFile(srcFilename);
-    if(!srcFile.open(QFile::ReadOnly))
-        throw Exception(FileSignatureFailed, tr("Unable to open file : %1").arg(srcFilename));
-    hashMaker.addData(&srcFile);
-    return QString(hashMaker.result().toHex());
-}
-
 void Packager::generate_recursion(QString path, const QFileInfoList & newFiles, const QFileInfoList & oldFiles)
 {
     int newPos = 0, newLen = newFiles.size();
@@ -303,7 +293,6 @@ void Packager::generate_recursion(QString path, const QFileInfoList & newFiles, 
 
     }
 
-    if(Log::isTraceEnabled())
-        Log::trace(QString("generate_recursion done"));
+    LOG_TRACE(tr("generate_recursion done"));
 }
 

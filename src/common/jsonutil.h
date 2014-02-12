@@ -6,6 +6,7 @@
 #include <QJsonObject>
 
 namespace JsonUtil {
+    QJsonObject fromJsonFile(const QString &filename);
     QJsonObject fromJson(const QByteArray & json);
     QJsonObject asObject(const QJsonValue &value);
     QJsonArray asArray(const QJsonValue &value);

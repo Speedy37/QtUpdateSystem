@@ -17,17 +17,17 @@ void Files::loadFiles1(const QJsonObject object)
     m_files.clear();
 
     const QJsonObject files = JsonUtil::asObject(object, QStringLiteral("files"));
-    QJsonObject::const_iterator i = files.constBegin();
-    while (i != files.constEnd())
+    QJsonObject::const_iterator it = files.constBegin();
+    while (it != files.constEnd())
     {
         QVector<File> filesInPath;
-        const QJsonArray filesInPathArray = JsonUtil::asArray(i.value());
+        const QJsonArray filesInPathArray = JsonUtil::asArray(it.value());
         filesInPath.resize(filesInPathArray.size());
         for(int i = 0; i < filesInPathArray.size(); ++i)
         {
             filesInPath[i].fromJsonObject(JsonUtil::asObject(filesInPathArray[i]));
         }
-        m_files.insert(i.key(), filesInPath);
+        m_files.insert(it.key(), filesInPath);
     }
 }
 
@@ -50,7 +50,7 @@ QJsonObject Files::toJsonObject() const
         ++i;
     }
 
-    object.insert(QStringLiteral("version"), "1");
+    object.insert(QStringLiteral("version"), QStringLiteral("1"));
     object.insert(QStringLiteral("files"), files);
 
     return object;

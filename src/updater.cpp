@@ -160,14 +160,7 @@ void Updater::onInfoFinished()
 
         LOG_INFO(tr("Remote informations downloaded"));
 
-        {
-            QJsonObject object = JsonUtil::fromJson(m_currentRequest->readAll());
-            QString version = JsonUtil::asString(object, QStringLiteral("version"));
-            if(version != "1")
-                throw tr("Unsupported version");
-
-            m_remoteRevision.fromJsonObject(JsonUtil::asObject(object, QStringLiteral("current")));
-        }
+        m_remoteRevision.fromJsonObject(JsonUtil::fromJson(m_currentRequest->readAll()));
 
         LOG_INFO(tr("Remote informations analyzed"));
 

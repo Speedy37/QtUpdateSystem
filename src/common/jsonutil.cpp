@@ -3,8 +3,19 @@
 #include <QJsonParseError>
 #include <QJsonDocument>
 #include <QObject>
+#include <QFile>
 
 namespace JsonUtil {
+
+QJsonObject fromJsonFile(const QString &filename)
+{
+    QFile file(filename);
+    if(file.open(QFile::ReadOnly | QFile::Text))
+    {
+        return JsonUtil::fromJson(file.readAll());
+    }
+    throw(QObject::tr("Unable to read file %1").arg(filename));
+}
 
 QJsonObject fromJson(const QByteArray &json)
 {

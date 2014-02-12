@@ -5,6 +5,8 @@
 #include <QMap>
 #include <QTime>
 
+static const QString Packages::FileName = QStringLiteral("packages");
+
 void Packages::addPackage(const Package &package)
 {
     m_packages.append(package);
@@ -14,7 +16,7 @@ void Packages::fromJsonObject(const QJsonObject & object)
 {
     const QString version = JsonUtil::asString(object, QStringLiteral("version"));
     if(version == "1")
-        fromJsonObject1(object);
+        fromJsonArrayV1(JsonUtil::asArray(object, QStringLiteral("packages")));
     else
         throw(QObject::tr("Unsupported version %1").arg(version));
 }
@@ -22,30 +24,34 @@ void Packages::fromJsonObject(const QJsonObject & object)
 QJsonObject Packages::toJsonObject() const
 {
     QJsonObject object;
-    QJsonArray packages;
-
-    for(int i = 0; i < m_packages.size(); ++i)
-    {
-        packages.append(m_packages[i].toJsonObject());
-    }
 
     object.insert(QStringLiteral("version"), QStringLiteral("1"));
-    object.insert(QStringLiteral("packages"), packages);
+    object.insert(QStringLiteral("packages"), toJsonArrayV1());
 
     return object;
 }
 
-void Packages::fromJsonObject1(const QJsonObject object)
+void Packages::fromJsonArrayV1(const QJsonArray &packages)
 {
-    const QJsonArray packages = JsonUtil::asArray(object, QStringLiteral("packages"));
-
     m_packages.resize(packages.size());
 
     for(int i = 0; i < packages.size(); ++i)
     {
         Package & package = m_packages[i];
-        package.fromJsonObject(JsonUtil::asObject(packages[i]));
+        package.fromJsonObjectV1(JsonUtil::asObject(packages[i]));
     }
+}
+
+QJsonArray Packages::toJsonArrayV1() const
+{
+    QJsonArray packages;
+
+    for(int i = 0; i < m_packages.size(); ++i)
+    {
+        packages.append(m_packages[i].toJsonObjectV1());
+    }
+
+    return packages;
 }
 
 class Edge;
@@ -59,8 +65,8 @@ public:
     {
         this->name = name;
         parcouru = LLONG_MAX;
-        previousNode = NULL;
-        previousPackage = NULL;
+        previousNode = nullptr;
+        previousPackage = nullptr;
         done = false;
     }
 
@@ -144,7 +150,7 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
         }
 
         bestParcouru = LLONG_MAX;
-        node = NULL;
+        node = nullptr;
         foreach(Node * n, nodes)
         {
             if(!n->done && n->parcouru < bestParcouru)
@@ -154,13 +160,13 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
             }
         }
     }
-    while(node != NULL);
+    while(node != nullptr);
 
     if(node == endNode)
     {
         while(node != startNode)
         {
-            Q_ASSERT(node != NULL);
+            Q_ASSERT(node != nullptr);
             path.prepend(*node->previousPackage);
             node = node->previousNode;
         }

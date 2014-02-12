@@ -10,21 +10,12 @@
 
 PackageMetadata::PackageMetadata()
 {
-
+    m_size = -1;
 }
 
 PackageMetadata::~PackageMetadata()
 {
     clearOperations();
-}
-
-void PackageMetadata::fromJsonObject(const QJsonObject &object)
-{
-    QString version = JsonUtil::asString(object, QStringLiteral("version"));
-    if(version == "1")
-        loadMetadata1(object);
-    else
-        throw(QObject::tr("Unsupported version %1").arg(version));
 }
 
 void PackageMetadata::setup(const QString &updateDir, const QString &tmpUpdateDir)
@@ -37,26 +28,41 @@ void PackageMetadata::setup(const QString &updateDir, const QString &tmpUpdateDi
     }
 }
 
-void PackageMetadata::loadMetadata1(const QJsonObject & object)
+void PackageMetadata::fromJsonObject(const QJsonObject &object, bool loadOperations, bool loadPackage)
 {
-    const QJsonArray operations = JsonUtil::asArray(object, QStringLiteral("operations"));
+    QString version = JsonUtil::asString(object, QStringLiteral("version"));
 
-    m_size = JsonUtil::asInt64String(object, QStringLiteral("size"));
-    if(m_size != m_package.size)
-        LOG_WARN(QObject::tr("Metadata size %1 != %2 Packages size").arg(m_size).arg(m_package.size));
+    if(version == "1")
+    {
+        if(loadOperations)
+            operationsFromJsonArrayV1(JsonUtil::asArray(object, QStringLiteral("operations")));
+        if(loadPackage)
+            m_package.fromJsonObjectV1(JsonUtil::asObject(object, QStringLiteral("package")));
+    }
+    else
+    {
+        throw(QObject::tr("Unsupported version %1").arg(version));
+    }
+}
 
-    m_to = JsonUtil::asString(object, QStringLiteral("to"));
-    if(m_to != m_package.to)
-        LOG_WARN(QObject::tr("Metadata to %1 != %2 Packages to").arg(m_to).arg(m_package.to));
+QJsonObject PackageMetadata::toJsonObject() const
+{
+    QJsonObject object;
 
-    m_from = object.value(QStringLiteral("from")).toString();
-    if(m_from != m_package.from)
-        LOG_WARN(QObject::tr("Metadata from %1 != %2 Packages from").arg(m_from).arg(m_package.from));
+    object.insert(QStringLiteral("version"), QStringLiteral("1"));
+    object.insert(QStringLiteral("operations"), operationsToJsonArrayV1());
+    object.insert(QStringLiteral("package"), m_package.toJsonObjectV1());
 
+    return object;
+}
+
+void PackageMetadata::operationsFromJsonArrayV1(const QJsonArray &operations)
+{
     clearOperations();
 
     try
     {
+        m_operations.resize(operations.size());
         for(int i = 0; i < operations.size(); ++i)
         {
             QJsonObject jsonOperation = JsonUtil::asObject(operations[i]);
@@ -74,7 +80,7 @@ void PackageMetadata::loadMetadata1(const QJsonObject & object)
                 throw(tr("'action' \"%1\" is not supported").arg(action));
 
             m_operations[i] = op;
-            op->load1(jsonOperation);
+            op->fromJsonObjectV1(jsonOperation);
         }
     }
     catch(...)
@@ -84,14 +90,26 @@ void PackageMetadata::loadMetadata1(const QJsonObject & object)
     }
 }
 
+QJsonArray PackageMetadata::operationsToJsonArrayV1() const
+{
+    QJsonArray array;
+
+    for(int i = 0; i < m_operations.size(); ++i)
+    {
+        array.append(m_operations[i]->toJsonObjectV1());
+    }
+
+    return array;
+}
+
 void PackageMetadata::clearOperations()
 {
     for(int i = 0; i < m_operations.size(); ++i)
     {
-        if(m_operation[i] != NULL)
+        if(m_operation[i] != nullptr)
         {
             delete m_operations[i];
-            m_operations[i] = NULL;
+            m_operations[i] = nullptr;
         }
     }
     m_operations.clear();

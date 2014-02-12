@@ -25,7 +25,6 @@ SOURCES += \
     src/packager.cpp \
     src/common/files.cpp \
     src/common/file.cpp \
-    src/common/exception.cpp \
     src/updater.cpp \
     QtLog/qtlog.cpp \
     src/common/packages.cpp \
@@ -48,7 +47,6 @@ HEADERS +=\
     src/packager.h \
     src/common/files.h \
     src/common/file.h \
-    src/common/exception.h \
     src/updater.h \
     QtLog/qtlog.h \
     src/common/packages.h \

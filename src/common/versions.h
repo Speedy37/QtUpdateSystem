@@ -3,22 +3,26 @@
 
 #include <QVector>
 #include <QJsonObject>
+#include <QJsonArray>
 #include "version.h"
 
 class Versions
 {
 public:
     void addVersion(const QString& revision, const QString &description = QString());
+    QVector<Version> versions() const;
+
     void fromJsonObject(const QJsonObject &object);
     QJsonObject toJsonObject() const;
-    const QVector<Version> versions() const;
+
+    void fromJsonArrayV1(const QJsonArray &versions);
+    QJsonArray toJsonArrayV1() const;
 
 private:
     QVector<Version> m_versions;
-    void fromJsonObject1(const QJsonObject object);
 };
 
-inline const QVector<Version> Versions::versions() const
+inline QVector<Version> Versions::versions() const
 {
     return m_versions;
 }

@@ -9,14 +9,15 @@ class Operation;
 class Package
 {
 public:
+    Package();
     QString to;
     QString from;
     qint64 size;
 
     QString url() const;
     QString metadataUrl() const;
-    void fromJsonObject(const QJsonObject &packageObject);
-    QJsonObject toJsonObject() const;
+    void fromJsonObjectV1(const QJsonObject &packageObject);
+    QJsonObject toJsonObjectV1() const;
 };
 
 inline QString Package::metadataUrl() const

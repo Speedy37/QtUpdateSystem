@@ -4,12 +4,15 @@
 #include "package.h"
 #include <QVector>
 
+class Operation;
+
 class PackageMetadata
 {
 public:
     PackageMetadata();
     ~PackageMetadata();
 
+    static const QString FileExtension;
     QString dataUrl() const;
     QString metadataUrl() const;
     QString to() const;
@@ -17,16 +20,18 @@ public:
     qint64 size() const;
     QVector<Operation *> operations() const;
     Operation *operation(int i) const;
+    Package package() const;
     void setPackage(const Package & package);
-    void fromJsonObject(const QJsonObject &object);
     void setup(const QString &updateDir, const QString &tmpUpdateDir);
 
-private:
-    void loadMetadata1(const QJsonObject &object);
-    void clearOperations();
+    void fromJsonObject(const QJsonObject &object, bool loadOperations = true, bool loadPackage = true);
+    QJsonObject toJsonObject() const;
 
-    qint64 m_size;
-    QString m_to, m_from;
+    void operationsFromJsonArrayV1(const QJsonArray &operations);
+    QJsonArray operationsToJsonArrayV1() const;
+
+private:
+    void clearOperations();
     Package m_package;
     QVector<Operation *> m_operations;
 
@@ -45,17 +50,17 @@ inline QString PackageMetadata::metadataUrl() const
 
 inline QString PackageMetadata::to() const
 {
-    return m_to;
+    return m_package.to;
 }
 
 inline QString PackageMetadata::from() const
 {
-    return m_from;
+    return m_package.from;
 }
 
 inline qint64 PackageMetadata::size() const
 {
-    return m_size;
+    return m_package.size;
 }
 
 inline QVector<Operation *> PackageMetadata::operations() const
@@ -66,6 +71,11 @@ inline QVector<Operation *> PackageMetadata::operations() const
 inline Operation* PackageMetadata::operation(int i) const
 {
     return m_operations.value(i);
+}
+
+inline Package PackageMetadata::package() const
+{
+    return m_package;
 }
 
 inline void PackageMetadata::setPackage(const Package &package)

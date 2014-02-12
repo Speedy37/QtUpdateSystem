@@ -2,6 +2,8 @@
 #define PACKAGEMANAGER_H
 
 #include "common/packages.h"
+#include "common/package.h"
+#include "common/packagemetadata.h"
 #include <QObject>
 #include <QVector>
 
@@ -24,13 +26,16 @@ public:
     QString directory() const;
     void setDirectory(const QString &directory);
 
-    const Packages &packages() const;
     Packages packages();
     void addPackage(const QString &packageFullName);
+    void addPackage(const PackageMetadata &packageMetadata);
+    void addPackage(const Package &package);
 
+    QString currentRevision() const;
     void setCurrentRevision(const QString &revision);
+
 private:
-    QString m_directory;
+    QString m_directory, m_currentRevision;
     Packages m_packages;
 };
 
@@ -39,14 +44,29 @@ inline QString PackageManager::directory() const
     return m_directory;
 }
 
-inline const Packages &PackageManager::packages() const
+inline Packages PackageManager::packages()
 {
     return m_packages;
 }
 
-inline Packages PackageManager::packages()
+inline void PackageManager::addPackage(const PackageMetadata &packageMetadata)
 {
-    return m_packages;
+    addPackage(packageMetadata.package());
+}
+
+inline void PackageManager::addPackage(const Package &package)
+{
+    m_packages.addPackage(package);
+}
+
+inline QString PackageManager::currentRevision() const
+{
+    return m_currentRevision;
+}
+
+inline void PackageManager::setCurrentRevision(const QString &revision)
+{
+    m_currentRevision = revision;
 }
 
 #endif // PACKAGEMANAGER_H

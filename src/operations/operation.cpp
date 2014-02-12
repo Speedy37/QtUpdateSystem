@@ -51,21 +51,21 @@ void Operation::apply()
     }
 }
 
-void Operation::load1(const QJsonObject &object)
+void Operation::fromJsonObjectV1(const QJsonObject &object)
 {
     m_path = object.value(PATH).toString();
 }
 
-QJsonObject Operation::save1()
+QJsonObject Operation::toJsonObjectV1()
 {
     QJsonObject object;
 
-    save1(object);
+    toJsonObjectV1(object);
 
     return object;
 }
 
-void Operation::save1(QJsonObject &object)
+void Operation::toJsonObjectV1(QJsonObject &object)
 {
     object.insert(ACTION, action());
     object.insert(PATH, m_path);
