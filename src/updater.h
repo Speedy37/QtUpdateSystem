@@ -70,6 +70,7 @@ signals:
 private slots:
     void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
     void actionFailed(const QString &msg);
+    void updateSucceeded();
 
 signals:
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
@@ -78,6 +79,7 @@ signals:
 
 private:
     QNetworkReply *get(const QString &what);
+    void setIniCurrentVersion(const QString &version);
     void clearError();
     void failure(const QString & msg);
     void setState(State newState);

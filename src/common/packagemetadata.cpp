@@ -10,7 +10,7 @@
 
 PackageMetadata::PackageMetadata()
 {
-    m_size = -1;
+
 }
 
 PackageMetadata::~PackageMetadata()
@@ -77,7 +77,7 @@ void PackageMetadata::operationsFromJsonArrayV1(const QJsonArray &operations)
             else if(action == QLatin1String("PATCH"))
                 op = new PatchOperation();
             else
-                throw(tr("'action' \"%1\" is not supported").arg(action));
+                throw(QObject::tr("'action' \"%1\" is not supported").arg(action));
 
             m_operations[i] = op;
             op->fromJsonObjectV1(jsonOperation);
@@ -106,7 +106,7 @@ void PackageMetadata::clearOperations()
 {
     for(int i = 0; i < m_operations.size(); ++i)
     {
-        if(m_operation[i] != nullptr)
+        if(m_operations[i] != nullptr)
         {
             delete m_operations[i];
             m_operations[i] = nullptr;

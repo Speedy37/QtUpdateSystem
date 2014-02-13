@@ -37,6 +37,7 @@ signals:
     void downloadFinished();
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void failure(const QString &reason);
+    void updateSucceeded();
     void finished();
 
 private:

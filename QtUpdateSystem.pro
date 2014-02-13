@@ -31,7 +31,8 @@ SOURCES += \
     src/common/packages.cpp \
     src/common/jsonutil.cpp \
     src/common/packagemetadata.cpp \
-    src/common/versions.cpp
+    src/common/versions.cpp \
+    src/packager/packagertask.cpp
 
 HEADERS +=\
     src/qtupdatesystem_global.h \
@@ -53,7 +54,8 @@ HEADERS +=\
     src/common/packages.h \
     src/common/jsonutil.h \
     src/common/packagemetadata.h \
-    src/common/versions.h
+    src/common/versions.h \
+    src/packager/packagertask.h
 
 unix {
     target.path = /usr/lib

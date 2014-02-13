@@ -3,15 +3,10 @@
 
 #include "qtupdatesystem_global.h"
 #include "common/packagemetadata.h"
-#include "packager/taskinfo.h"
+#include "packager/packagertask.h"
+#include <vector>
 #include <QString>
-#include <QDir>
-#include <QFile>
-#include <QTextStream>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QRunnable>
-#include <QVector>
+#include <QFileInfoList>
 
 class QThreadPool;
 class QTemporaryDir;
@@ -53,20 +48,10 @@ private:
     QString m_tmpDirectoryPath;
 
 private:
-    QJsonArray operations;
-    QVector<TaskInfo*> latentTaskInfos;
-
-    QThreadPool * threadpool;
-    QString m_currentTmpDirectoryPath, m_errorString;
-    int m_tmpFileCounter;
     QFileInfoList dirList(const QDir &dir);
-    QString newTmpFilename();
-    void appendFileContent(QFile & file, TaskInfo *task);
-    void generate_recursion(QString path, const QFileInfoList &newFiles, const QFileInfoList &oldFiles);
-    void generate_addfile(const QString &path, QFileInfo &newFile);
-    void generate_patchfile(QString path, QFileInfo &newFileInfo, QFileInfo &oldFileInfo);
-    void generate_rmdir(QString path, QFileInfo &pathInfo);
-    void generate_rm(const QString & path);
+    std::vector<PackagerTask> m_tasks;
+    void compareDirectories(QString path, const QFileInfoList &newFiles, const QFileInfoList &oldFiles);
+    void addRemoveDirTask(QString path, QFileInfo &pathInfo);
     static QString generate_hash(const QString &srcFilename);
 };
 
@@ -132,11 +117,6 @@ inline QString Packager::tmpDirectoryPath()
 inline void Packager::setTmpDirectoryPath(const QString &tmpDirectoryPath)
 {
     m_tmpDirectoryPath = tmpDirectoryPath;
-}
-
-inline QString Packager::errorString() const
-{
-    return m_errorString;
 }
 
 #endif // PACKAGER_H

@@ -6,6 +6,11 @@
 
 const QString RemoveDirectoryOperation::Action = QStringLiteral("rmdir");
 
+void RemoveDirectoryOperation::create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory)
+{
+
+}
+
 Operation::Status RemoveDirectoryOperation::localDataStatus()
 {
     QFileInfo dirInfo(localFilename());

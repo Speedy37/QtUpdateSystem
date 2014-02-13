@@ -135,6 +135,12 @@ QString Updater::iniCurrentVersion() const
     return (settings.value(QStringLiteral("Revision")).toString());
 }
 
+void Updater::setIniCurrentVersion(const QString &version)
+{
+    QSettings settings(updateDirectory()+QStringLiteral("status.ini"), QSettings::IniFormat);
+    settings.setValue(QStringLiteral("Revision"), version);
+}
+
 void Updater::checkForUpdates()
 {
     if(isIdle())
@@ -206,6 +212,7 @@ void Updater::update()
         QThread * thread = new QThread(this);
         downloader->moveToThread(thread);
         connect(downloader, &DownloadManager::finished, this, &Updater::updateFinished);
+        connect(downloader, &DownloadManager::updateSucceeded, this, &Updater::updateSucceeded);
         connect(downloader, &DownloadManager::finished, thread, &QThread::quit);
         connect(thread, &QThread::started, downloader, &DownloadManager::update);
         connect(thread, &QThread::destroyed, downloader, &DownloadManager::deleteLater);
@@ -217,17 +224,11 @@ void Updater::update()
     }
 }
 
-void Updater::onUpdateFinished(bool success)
+void Updater::updateSucceeded()
 {
-    if(success)
-    {
-        QSettings settings(updateDirectory()+QStringLiteral("status.ini"), QSettings::IniFormat);
-        settings.setValue(Updater::String::Revision, remoteRevision());
-        setLocalRevision(remoteRevision());
-        setState(Uptodate);
-    }
-    Log::info(tr("Update finished"));
-    emit updateFinished(success);
+    setIniCurrentVersion(remoteRevision());
+    m_localRevision = remoteRevision();
+    setState(Uptodate);
 }
 
 void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)

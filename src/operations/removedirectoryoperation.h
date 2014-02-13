@@ -7,6 +7,7 @@ class RemoveDirectoryOperation : public Operation
 {
 public:
     static const QString Action;
+    void create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory);
 protected:
     virtual Status localDataStatus() Q_DECL_OVERRIDE;
     virtual void applyData() Q_DECL_OVERRIDE;

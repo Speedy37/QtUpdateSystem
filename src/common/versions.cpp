@@ -15,7 +15,7 @@ void Versions::fromJsonObject(const QJsonObject & object)
 {
     const QString version = JsonUtil::asString(object, QStringLiteral("version"));
     if(version == "1")
-        loadPackages1(JsonUtil::asArray(object, QStringLiteral("versions")));
+        fromJsonArrayV1(JsonUtil::asArray(object, QStringLiteral("versions")));
     else
         throw(QObject::tr("Unsupported version %1").arg(version));
 }
