@@ -9,6 +9,7 @@ FileManager::FileManager(QObject *parent) :
 void FileManager::prepareOperation(Operation *operation)
 {
     operation->checkLocalData();
+    emit operationPrepared(operation);
 }
 
 void FileManager::applyOperation(Operation *operation)

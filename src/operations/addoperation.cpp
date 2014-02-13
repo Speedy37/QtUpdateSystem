@@ -46,9 +46,9 @@ void AddOperation::create(const QString &path, const QString &oldFilename, const
         m_finalSize = file.size();
     }
 
-    m_dataFile.setFileName(tmpDirectory+"add_"+m_finalSha1);
-    QFile metadataFile(m_dataFile.fileName() + PackageMetadata::FileExtension);
-    if(m_dataFile.exists() && metadataFile.exists())
+    QFile dataFile(tmpDirectory+"add_"+m_finalSha1);
+    QFile metadataFile(dataFile.fileName() + PackageMetadata::FileExtension);
+    if(dataFile.exists() && metadataFile.exists())
     {
         if (metadataFile.open(QFile::ReadOnly | QFile::Text))
         {
@@ -67,8 +67,8 @@ void AddOperation::create(const QString &path, const QString &oldFilename, const
         }
     }
 
-    if(!m_dataFile.open(QFile::WriteOnly | QFile::Truncate))
-        throw QObject::tr("Unable to open file %1 for writing").arg(m_dataFile.fileName());
+    if(!dataFile.open(QFile::WriteOnly | QFile::Truncate))
+        throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
 
     if (!metadataFile.open(QFile::WriteOnly | QFile::Truncate | QFile::Text))
         throw QObject::tr("Unable to open file %1 for writing").arg(metadataFile.fileName());
@@ -94,8 +94,8 @@ void AddOperation::create(const QString &path, const QString &oldFilename, const
         while((read = compressor.read(buffer, sizeof(buffer))) > 0)
         {
             sha1Hash.addData(buffer, read);
-            if(m_dataFile.write(buffer, read) != read)
-                throw QObject::tr("Failed to write to %1").arg(m_dataFile.fileName());
+            if(dataFile.write(buffer, read) != read)
+                throw QObject::tr("Failed to write to %1").arg(dataFile.fileName());
         }
     }
 
@@ -106,12 +106,12 @@ void AddOperation::create(const QString &path, const QString &oldFilename, const
     }
 
     m_sha1 = QString(sha1Hash.result().toHex());
-    m_size = m_dataFile.size();
+    m_size = dataFile.size();
 
-    if(!m_dataFile.flush())
+    if(!dataFile.flush())
         throw QObject::tr("Unable to flush all compressed data");
 
-    m_dataFile.close();
+    dataFile.close();
 
     // Writing metadata
     {

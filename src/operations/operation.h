@@ -26,13 +26,18 @@ public:
         LocalFileInvalid,
         ApplyFailed
     };
+    enum DownloadStatus {
+        Unknown,
+        Downloading,
+        Downloaded,
+        Abort
+    };
 
     Operation();
     qint64 offset() const;
     qint64 size() const;
 
     QString dataFilename() const;
-    QFile *dataFile(); // DownloadManager thread
     void setDataFilename(const QString &dataFilename);
 
     QString localFilename() const;
@@ -45,6 +50,7 @@ public:
 
     QString errorString() const;
     Status status() const;
+    DownloadStatus downloadStatus() const;
     void checkLocalData(); // FileManager thread
     void apply(); // FileManager thread
 
@@ -53,7 +59,7 @@ public:
     QJsonObject toJsonObjectV1();
 
 private:
-    QString m_localFilename;
+    QString m_localFilename, m_dataFilename;
 
 protected:
     virtual Status localDataStatus() = 0; // FileManager thread
@@ -63,7 +69,6 @@ protected:
 
     qint64 m_offset, m_size;
     QString m_path, m_sha1, m_errorString;
-    QFile m_dataFile;
     Status m_status;
 };
 
@@ -79,17 +84,12 @@ inline qint64 Operation::size() const
 
 inline QString Operation::dataFilename() const
 {
-    return m_dataFile.fileName();
-}
-
-inline QFile *Operation::dataFile()
-{
-    return &m_dataFile;
+    return m_dataFilename;
 }
 
 inline void Operation::setDataFilename(const QString &dataFilename)
 {
-    m_dataFile.setFileName(dataFilename);
+    m_dataFilename = dataFilename;
 }
 
 inline QString Operation::localFilename() const

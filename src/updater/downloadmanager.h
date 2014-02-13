@@ -18,7 +18,6 @@ class DownloadManager : public QObject
     Q_OBJECT
 public:
     DownloadManager(Updater *updater);
-
 public slots:
     void update();
 
@@ -28,7 +27,7 @@ private slots:
     void updatePackageMetadataFinished();
     void updateDataDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void updateDataFinished();
-    void operationPrepared(Operation *);
+    void operationPrepared(Operation *op);
     void operationApplied(Operation *);
     void applyFinished();
 
@@ -44,7 +43,7 @@ private:
     void updateDataSetupOperationFile();
     void updatePackageLoop();
     void updateDataReadAll();
-    QNetworkReply *get(const QString &what, qint64 startPosition = 0);
+    QNetworkReply *get(const QString &what, qint64 startPosition = 0, qint64 endPosition = 0);
 
 private:
     enum Failure
@@ -62,18 +61,25 @@ private:
     QNetworkAccessManager *m_manager;
     QNetworkReply *packagesListRequest, *metadataRequest, *dataRequest;
 
+    // Apply
+    FileManager *m_filemanager;
+
     // Packages
     int downloadPathPos;
     QVector<Package> downloadPath;
 
-    // Data download/application
-    PackageMetadata metadata;
-    QMap<QString, Failure> failures;
-    Operation *operation;
-    int operationIndex;
-    qint64 offset;
+    // Package download/application
+    PackageMetadata metadata; ///< Informations about the package currently downloaded
+    QMap<QString, Failure> failures; ///< Map<Path, Reason> of failures
+    Operation *operation; ///< Current operation in download
+    QFile file;
+    int preparedOperationCount;
+    int operationIndex; ///< Index in metadata of the current operation
+    qint64 offset; ///< Current download offset relative to operation->offset()
+    qint64 downloadSpeed; ///< Current download speed in bits/s
 
-    FileManager *m_filemanager;
+    // Disables the use of copy constructors and assignment operators
+    Q_DISABLE_COPY(DownloadManager)
 };
 
 #endif // DOWNLOADMANAGER_H

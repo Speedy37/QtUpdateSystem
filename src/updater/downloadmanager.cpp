@@ -14,6 +14,7 @@ DownloadManager::DownloadManager(Updater *updater)
     : QObject()
 {
     // Make a safe copy of important properties
+    // This is "required" because this class if run in it's own thread and allow it to be independant at almost no cost
     m_updateDirectory = updater->updateDirectory();
     m_updateTmpDirectory = updater->updateTmpDirectory();
     m_updateUrl = updater->updateUrl();
@@ -25,6 +26,7 @@ DownloadManager::DownloadManager(Updater *updater)
     m_manager = new QNetworkAccessManager(this);
     connect(m_manager, &QNetworkAccessManager::authenticationRequired, this, &DownloadManager::authenticationRequired);
 
+    // Create the file manager and assign it to a new thread
     m_filemanager = new FileManager();
     QThread * thread = new QThread(this);
     m_filemanager->moveToThread(thread);
@@ -43,12 +45,28 @@ DownloadManager::DownloadManager(Updater *updater)
     thread->start();
 }
 
+/**
+   \brief Start the update sequence
+   update() : Get packages list
+    -> updatePackagesListRequestFinished() : Compute shortest path
+    -> updatePackageLoop() : iterate over package path
+        -> updatePackageMetadataFinished() : load metadata & start package download
+        -> updateDataFinished() : finish package application
+   \sa updatePackagesListRequestFinished()
+ */
 void DownloadManager::update()
 {
     packagesListRequest = get(QStringLiteral("packages"));
     connect(packagesListRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackagesListRequestFinished);
 }
 
+/**
+   \brief Handle the downloaded packages list
+   Parse the packages list
+   Compute the shortest path
+   Start the update loop (updatePackageLoop())
+   \sa updatePackageLoop()
+ */
 void DownloadManager::updatePackagesListRequestFinished()
 {
     try
@@ -75,6 +93,12 @@ void DownloadManager::updatePackagesListRequestFinished()
     }
 }
 
+/**
+   \brief Iterate over the packages path to reach RemoteRevision
+   Find the next package to download & apply
+   Start the download of the package metadata
+   \sa updatePackageMetadataFinished()
+ */
 void DownloadManager::updatePackageLoop()
 {
     if(downloadPathPos < downloadPath.size())
@@ -91,6 +115,12 @@ void DownloadManager::updatePackageLoop()
     }
 }
 
+/**
+   \brief Handle the download package metadata
+   Parse package metadata's
+   Ask the file manager to take care of pre-apply job
+   Start the package download
+ */
 void DownloadManager::updatePackageMetadataFinished()
 {
     try
@@ -103,27 +133,104 @@ void DownloadManager::updatePackageMetadataFinished()
         metadata.fromJsonObject(JsonUtil::fromJson(metadataRequest->readAll()));
         metadata.setup(m_updateDirectory, m_updateTmpDirectory);
 
+        operationIndex = 0;
+        operation = nullptr;
+        preparedOperationCount = 0;
         foreach(Operation * op, metadata.operations())
         {
+            // Ask the file manager to take care of pre-apply job
+            // Jobs are automatically queued by Qt signals & slots
             emit operationLoaded(op);
         }
 
-        LOG_INFO(tr("Metadata analyzed and prepared"));
-
-        operationIndex = 0;
-        updateDataSetupOperationFile();
-
-        dataRequest = get(metadata.dataUrl(), 0);
-        connect(dataRequest, SIGNAL(downloadProgress(qint64,qint64)), SLOT(updateDataDownloadProgress(qint64,qint64)));
-        connect(dataRequest, SIGNAL(finished()), SLOT(updateDataFinished()));
-
-        LOG_INFO(tr("Downloading data"));
     }
     catch(const QString & msg)
     {
         LOG_ERROR(tr("Update failed %1").arg(msg));
         emit failure(msg);
     }
+}
+
+/**
+   \brief Filemanager has done is pre-work about this operation
+   If the operation download isn't necessary, determine if skipping it is worthless
+ */
+void DownloadManager::operationPrepared(Operation *preparedOperation)
+{
+    Q_ASSERT(preparedOperation == metadata.operation(preparedOperationCount));
+    ++preparedOperationCount;
+    if(preparedOperation->status() == Operation::DownloadRequired)
+    {
+        if(operation == nullptr)
+        {
+            // No download is in progress, start a new one
+            Q_ASSERT(operationIndex + 1 == preparedOperationCount);
+
+            operation = metadata.operation(operationIndex);
+            int i = operationIndex + 1;
+            while(i < preparedOperationCount && metadata.operation(i)->status() == Operation::DownloadRequired)
+                ++i;
+            qint64 endOffset = -1;
+            if(i < preparedOperationCount && metadata.operation(i)->status() != Operation::DownloadRequired)
+                endOffset = metadata.operation(i)->offset();
+
+            dataRequest = get(metadata.dataUrl(), operation->offset(), endOffset);
+            connect(dataRequest, SIGNAL(downloadProgress(qint64,qint64)), SLOT(updateDataDownloadProgress(qint64,qint64)));
+            connect(dataRequest, SIGNAL(finished()), SLOT(updateDataFinished()));
+        }
+    }
+    else if(operation != nullptr)
+    {
+        if(operationIndex < preparedOperationCount && operation->status() != Operation::DownloadRequired)
+        {
+            // Compute the amount of data that can be skipped from download
+            qint64 notRequiredSize = operation->size() - offset;
+            int i = operationIndex + 1;
+            while(i < preparedOperationCount && metadata.operation(i)->status() != Operation::DownloadRequired)
+            {
+                notRequiredSize += metadata.operation(i)->size();
+                ++i;
+            }
+            if(worthless(notRequiredSize))
+            {
+                if(preparedOperation->status() == Operation::ApplyRequired)
+                    emit operationDownloaded(preparedOperation);
+
+                // Stop the download here
+                dataRequest->abort();
+
+                // Find the next download start point
+                updateDataNextOperation();
+            }
+        }
+    }
+}
+
+void DownloadManager::updateDataNextOperation()
+{
+    ++operationIndex;
+    int i = operationIndex;
+    qint64 notRequiredSize = 0;
+    while(i < preparedOperationCount && metadata.operation(i)->status() != Operation::DownloadRequired)
+    {
+        notRequiredSize += metadata.operation(i)->size();
+        ++i;
+    }
+    if(worthless(notRequiredSize))
+    {
+        dataRequest->abort();
+        updateDataSetupOperationFile();
+
+        dataRequest = get(metadata.dataUrl(), 0);
+        connect(dataRequest, SIGNAL(downloadProgress(qint64,qint64)), SLOT(updateDataDownloadProgress(qint64,qint64)));
+        connect(dataRequest, SIGNAL(finished()), SLOT(updateDataFinished()));
+        // Stop the download here
+        // Restart the download at i if i < preparedOperationCount
+        // Otherwise wait for the fileManager to
+        operationIndex = i;
+    }
+    operation = metadata.operation(operationIndex);
+    updateDataSetupOperationFile();
 }
 
 void DownloadManager::updateDataDownloadProgress(qint64 bytesReceived, qint64 bytesTotal)
@@ -170,14 +277,23 @@ void DownloadManager::updateDataFinished()
     }
 }
 
+
 void DownloadManager::updateDataSetupOperationFile()
 {
-    operation = metadata.operation(operationIndex);
+    if(file.isOpen())
+    {
+        if(!file.flush())
+            throw(tr("Unable to flush all data %1").arg(file.fileName()));
+        file.close();
+    }
+
+    offset = 0;
+
     if(operation != nullptr)
     {
-        offset = 0;
-        if(!operation->dataFile()->open(QFile::WriteOnly | QFile::Truncate))
-            throw(tr("Unable to open datafile for writing : %1").arg(operation->dataFilename()));
+        file.setFileName(operation->dataFilename());
+        if(!file.open(QFile::WriteOnly | QFile::Truncate))
+            throw(tr("Unable to open datafile for writing : %1").arg(file.fileName()));
     }
 }
 
@@ -196,7 +312,7 @@ void DownloadManager::updateDataReadAll()
         writeSize = qMin(size, operation->size() - offset);
         if(writeSize > 0)
         {
-            operation->dataFile()->write(data, writeSize);
+            file.write(data, writeSize);
             offset += writeSize;
             data += writeSize;
             size -= writeSize;
@@ -204,19 +320,25 @@ void DownloadManager::updateDataReadAll()
         if(offset == operation->size())
         {
             emit operationDownloaded(operation);
-            ++operationIndex;
-            updateDataSetupOperationFile();
+            updateDataNextOperation();
         }
     }
 }
 
-
-QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition)
+QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition, qint64 endPosition)
 {
     QNetworkRequest request(QUrl(m_updateUrl.arg(what)));
+
     if(startPosition > 0)
     {
-        request.setRawHeader("Range", QStringLiteral("bytes=%1-").arg(startPosition).toLatin1());
+        if(endPosition > 0)
+        {
+            request.setRawHeader("Range", QStringLiteral("bytes=%1-%2").arg(startPosition).arg(endPosition).toLatin1());
+        }
+        else
+        {
+            request.setRawHeader("Range", QStringLiteral("bytes=%1-").arg(startPosition).toLatin1());
+        }
     }
 
     QNetworkReply *reply = m_manager->get(request);
