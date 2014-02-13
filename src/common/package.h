@@ -10,6 +10,7 @@ class Package
 {
 public:
     Package();
+    Package(const QString &to, const QString &from, qint64 size);
     QString to;
     QString from;
     qint64 size;

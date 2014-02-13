@@ -3,7 +3,7 @@
 
 #include "package.h"
 #include <QVector>
-#include <memory>
+#include <QSharedPointer>
 
 class Operation;
 
@@ -19,8 +19,11 @@ public:
     QString to() const;
     QString from() const;
     qint64 size() const;
-    QVector<Operation *> operations() const;
-    Operation *operation(int i) const;
+
+    QVector<QSharedPointer<Operation>> operations() const;
+    QSharedPointer<Operation> operation(int i) const;
+    void addOperation(QSharedPointer<Operation> operation);
+
     Package package() const;
     void setPackage(const Package & package);
     void setup(const QString &updateDir, const QString &tmpUpdateDir);
@@ -32,9 +35,8 @@ public:
     QJsonArray operationsToJsonArrayV1() const;
 
 private:
-    void clearOperations();
     Package m_package;
-    QVector<Operation*> m_operations;
+    QVector<QSharedPointer<Operation>> m_operations;
 
     Q_DISABLE_COPY(PackageMetadata)
 };
@@ -64,14 +66,19 @@ inline qint64 PackageMetadata::size() const
     return m_package.size;
 }
 
-inline QVector<Operation*> PackageMetadata::operations() const
+inline QVector<QSharedPointer<Operation>> PackageMetadata::operations() const
 {
     return m_operations;
 }
 
-inline Operation* PackageMetadata::operation(int i) const
+inline QSharedPointer<Operation> PackageMetadata::operation(int i) const
 {
     return m_operations.value(i);
+}
+
+inline void PackageMetadata::addOperation(QSharedPointer<Operation> operation)
+{
+    m_operations.append(operation);
 }
 
 inline Package PackageMetadata::package() const

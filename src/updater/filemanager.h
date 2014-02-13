@@ -2,6 +2,7 @@
 #define UPDATER_FILEMANAGER_H
 
 #include <QObject>
+#include <QSharedPointer>
 
 class Operation;
 
@@ -12,13 +13,13 @@ public:
     explicit FileManager(QObject *parent = 0);
 
 signals:
-    void operationPrepared(Operation * operation);
-    void operationApplied(Operation * operation);
+    void operationPrepared(QSharedPointer<Operation> operation);
+    void operationApplied(QSharedPointer<Operation> operation);
     void applyFinished();
 
 public slots:
-    void prepareOperation(Operation * operation);
-    void applyOperation(Operation * operation);
+    void prepareOperation(QSharedPointer<Operation> operation);
+    void applyOperation(QSharedPointer<Operation> operation);
     void downloadFinished();
 };
 

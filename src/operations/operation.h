@@ -28,9 +28,10 @@ public:
     };
 
     Operation();
-    virtual ~Operation();
+    virtual ~Operation() {}
 
     qint64 offset() const;
+    void setOffset(qint64 offset);
     qint64 size() const;
 
     QString dataFilename() const;
@@ -70,6 +71,11 @@ protected:
 inline qint64 Operation::offset() const
 {
     return m_offset;
+}
+
+inline void Operation::setOffset(qint64 offset)
+{
+    m_offset = offset;
 }
 
 inline qint64 Operation::size() const

@@ -10,11 +10,8 @@
 #include <QAuthenticator>
 #include <QThread>
 
-DownloadManager::DownloadManager(Updater *updater)
-    : QObject()
+DownloadManager::DownloadManager(Updater *updater) : QObject()
 {
-    dataRequest = nullptr;
-
     // Make a safe copy of important properties
     // This is "required" because this class if run in it's own thread and allow it to be independant at almost no cost
     m_updateDirectory = updater->updateDirectory();
@@ -142,9 +139,9 @@ void DownloadManager::updatePackageMetadataFinished()
         metadata.setup(m_updateDirectory, m_updateTmpDirectory);
 
         operationIndex = 0;
-        operation = nullptr;
+        operation.clear();
         preparedOperationCount = 0;
-        foreach(Operation * op, metadata.operations())
+        foreach(QSharedPointer<Operation> op, metadata.operations())
         {
             // Ask the file manager to take care of pre-apply job
             // Jobs are automatically queued by Qt signals & slots
@@ -163,7 +160,7 @@ void DownloadManager::updatePackageMetadataFinished()
    \brief Filemanager has done is pre-work about this operation
    If the operation download isn't necessary, determine if skipping it is useful
  */
-void DownloadManager::operationPrepared(Operation *preparedOperation)
+void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperation)
 {
     Q_ASSERT(preparedOperation == metadata.operation(preparedOperationCount));
     ++preparedOperationCount;
@@ -226,6 +223,17 @@ void DownloadManager::operationPrepared(Operation *preparedOperation)
     }
 }
 
+void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperation)
+{
+    Q_UNUSED(appliedOperation);
+    // Operation applied
+}
+
+void DownloadManager::applyFinished()
+{
+    // package apply finished
+}
+
 bool DownloadManager::isSkipDownloadUseful(qint64 skippableSize)
 {
     return skippableSize > 1024*1024; // 1MB
@@ -281,7 +289,7 @@ bool DownloadManager::tryContinueDownload(qint64 skippableSize)
             ++operationIndex;
         }
 
-        operation = nullptr;
+        operation.clear();
 
         return false;//< Download has been stopped
     }

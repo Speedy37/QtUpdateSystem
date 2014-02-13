@@ -12,7 +12,7 @@
 #include <QThreadPool>
 #include <QTemporaryDir>
 #include <QScopedPointer>
-#include <QTime>
+#include <QElapsedTimer>
 #include <QJsonArray>
 
 Packager::Packager(QObject *parent) : QObject(parent)
@@ -35,7 +35,9 @@ void Packager::generate()
 {
     try
     {
-        QTime t;
+        QElapsedTimer globalTimer, stepTimer;
+        globalTimer.start();
+        stepTimer = globalTimer;
 
         LOG_TRACE(tr("Checking packager configuration..."));
 
@@ -65,8 +67,7 @@ void Packager::generate()
         if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
             throw tr("Unable to create new delta metadata file");
 
-        LOG_TRACE(tr("Packager configuration valid"));
-
+        LOG_TRACE(tr("Packager configuration checked in %1").arg(stepTimer.restart()));
 
         LOG_TRACE(tr("Comparing directories %1 against %2").arg(newDirectoryPath(), oldDirectoryPath()));
         {
@@ -75,11 +76,10 @@ void Packager::generate()
             m_tasks.clear();
             compareDirectories(QStringLiteral(""), newFiles, oldFiles);
         }
-        LOG_TRACE(tr("Directory comparison done"));
+        LOG_TRACE(tr("Directory comparison done in %1").arg(stepTimer.restart()));
 
         LOG_TRACE(tr("Creating operations..."));
         {
-            t.start();
             QThreadPool threadPool;
             for(size_t i = 0; i < m_tasks.size(); ++i)
             {
@@ -92,37 +92,53 @@ void Packager::generate()
             }
             threadPool.waitForDone();
         }
-        LOG_INFO(tr("Operations created in %1 ms").arg(t.elapsed()));
+        LOG_INFO(tr("Operations created in %1").arg(stepTimer.restart()));
 
         LOG_TRACE(tr("Creating final delta file..."));
+        PackageMetadata metadata;
         {
-            t.start();
             qint64 totalSize = 0;
-            qint64 offset;
+            qint64 read;
+            char buffer[8096];
+            QFile operationFile;
             for(size_t i = 0; i < m_tasks.size(); ++i)
             {
                 PackagerTask & task = m_tasks[i];
                 if(!task.errorString.isNull())
                     throw task.errorString;
 
+                if(task.operation->size() > 0)
+                {
+                    operationFile.setFileName(task.operation->dataFilename());
+                    if(!operationFile.open(QFile::ReadOnly))
+                        throw tr("Unable to open %1").arg(operationFile.fileName());
 
+                    while((read = operationFile.read(buffer, sizeof(buffer))) > 0)
+                    {
+                        if(deltaFile.write(buffer, read) != read)
+                             throw tr("Unable to write %1").arg(deltaFile.fileName());
+                    }
 
-                totalSize += task.operation->size();
+                    operationFile.close();
+                    task.operation->setOffset(totalSize);
+                    totalSize += task.operation->size();
+                }
+                metadata.addOperation(task.operation);
             }
+            metadata.setPackage(Package(newRevisionName(), oldRevisionName(), totalSize));
+
+            if(!deltaFile.flush())
+                 throw tr("Unable to flush %1").arg(deltaFile.fileName());
+
+            deltaFile.close();
         }
-        LOG_INFO(tr("Final delta file created in %1 ms").arg(t.elapsed()));
+        LOG_INFO(tr("Final delta file created in %1").arg(stepTimer.restart()));
 
-        // Writing metadata header
-//        QJsonObject json;
-//        json.insert(QStringLiteral("version"), QStringLiteral("1"));
-//        json.insert(QStringLiteral("operations"), operations);
-//        json.insert(QStringLiteral("revision"), newRevisionName());
-//        json.insert(QStringLiteral("size"), QString::number(deltaFile.size()));
-//        if(!oldRevisionName().isEmpty())
-//            json.insert(QStringLiteral("patchfor"), oldRevisionName());
-//        metadataFile.write(QJsonDocument(json).toJson(QJsonDocument::Indented));
+        LOG_INFO(tr("Writing metadata"));
+        metadataFile.write(QJsonDocument(metadata.toJsonObject()).toJson(QJsonDocument::Indented));
+        LOG_INFO(tr("Metadata written in %1").arg(stepTimer.restart()));
 
-        LOG_INFO(tr("Delta creation succeded"));
+        LOG_INFO(tr("Delta creation succeded in %1").arg(globalTimer.elapsed()));
     }
     catch (const QString & reason)
     {

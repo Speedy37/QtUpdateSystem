@@ -8,6 +8,8 @@
 
 #include <qtlog.h>
 
+const QString PackageMetadata::FileExtension = ".metadata";
+
 PackageMetadata::PackageMetadata()
 {
 
@@ -15,16 +17,15 @@ PackageMetadata::PackageMetadata()
 
 PackageMetadata::~PackageMetadata()
 {
-    clearOperations();
+
 }
 
 void PackageMetadata::setup(const QString &updateDir, const QString &tmpUpdateDir)
 {
     for(int i = 0; i < m_operations.size(); ++i)
     {
-        Operation *operation = m_operations[i];
-        operation->setDataFilename(QString("%1Operation%2").arg(tmpUpdateDir, i));
-        operation->setUpdateDirectory(updateDir);
+        m_operations[i]->setDataFilename(QString("%1Operation%2").arg(tmpUpdateDir, i));
+        m_operations[i]->setUpdateDirectory(updateDir);
     }
 }
 
@@ -58,7 +59,7 @@ QJsonObject PackageMetadata::toJsonObject() const
 
 void PackageMetadata::operationsFromJsonArrayV1(const QJsonArray &operations)
 {
-    clearOperations();
+    m_operations.clear();
 
     try
     {
@@ -79,13 +80,13 @@ void PackageMetadata::operationsFromJsonArrayV1(const QJsonArray &operations)
             else
                 throw(QObject::tr("'action' \"%1\" is not supported").arg(action));
 
-            m_operations[i] = op;
+            m_operations[i] = QSharedPointer<Operation>(op);
             op->fromJsonObjectV1(jsonOperation);
         }
     }
     catch(...)
     {
-        clearOperations();
+        m_operations.clear();
         throw;
     }
 }
@@ -100,18 +101,5 @@ QJsonArray PackageMetadata::operationsToJsonArrayV1() const
     }
 
     return array;
-}
-
-void PackageMetadata::clearOperations()
-{
-    for(int i = 0; i < m_operations.size(); ++i)
-    {
-        if(m_operations[i] != nullptr)
-        {
-            delete m_operations[i];
-            m_operations[i] = nullptr;
-        }
-    }
-    m_operations.clear();
 }
 

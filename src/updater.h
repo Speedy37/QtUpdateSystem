@@ -69,7 +69,6 @@ signals:
 
 private slots:
     void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
-    void actionFailed(const QString &msg);
     void updateSucceeded();
 
 signals:

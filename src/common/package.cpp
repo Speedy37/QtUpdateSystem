@@ -8,6 +8,13 @@ Package::Package()
     size = -1;
 }
 
+Package::Package(const QString &to, const QString &from, qint64 size)
+{
+    this->to = to;
+    this->from = from;
+    this->size = size;
+}
+
 QString Package::url() const
 {
     if(from.isEmpty())

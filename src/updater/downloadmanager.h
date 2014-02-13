@@ -27,13 +27,13 @@ private slots:
     void updatePackageMetadataFinished();
     void updateDataReadyRead();
     void updateDataFinished();
-    void operationPrepared(Operation *op);
-    void operationApplied(Operation *);
+    void operationPrepared(QSharedPointer<Operation> preparedOperation);
+    void operationApplied(QSharedPointer<Operation> appliedOperation);
     void applyFinished();
 
 signals:
-    void operationLoaded(Operation * operation);
-    void operationDownloaded(Operation * operation);
+    void operationLoaded(QSharedPointer<Operation> operation);
+    void operationDownloaded(QSharedPointer<Operation> operation);
     void downloadFinished();
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void failure(const QString &reason);
@@ -78,7 +78,7 @@ private:
 
     // Package download/application
     PackageMetadata metadata; ///< Informations about the package currently downloaded
-    Operation *operation; ///< Current operation in download
+    QSharedPointer<Operation> operation; ///< Current operation in download
     QFile file;
     int preparedOperationCount;
     int operationIndex; ///< Index in metadata of the current operation

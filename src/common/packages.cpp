@@ -3,7 +3,7 @@
 
 #include <qtlog.h>
 #include <QMap>
-#include <QTime>
+#include <QElapsedTimer>
 
 const QString Packages::FileName = QStringLiteral("packages");
 
@@ -93,7 +93,7 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
     if(from == to)
         return QVector<Package>();
 
-    QTime t;
+    QElapsedTimer t;
     t.start();
 
     // Build the graph
