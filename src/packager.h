@@ -51,6 +51,7 @@ private:
     QFileInfoList dirList(const QDir &dir);
     std::vector<PackagerTask> m_tasks;
     void compareDirectories(QString path, const QFileInfoList &newFiles, const QFileInfoList &oldFiles);
+    void addTask(PackagerTask::Type operationType, QString path, QString newFilename = QString(), QString oldFilename = QString());
     void addRemoveDirTask(QString path, QFileInfo &pathInfo);
     static QString generate_hash(const QString &srcFilename);
 };

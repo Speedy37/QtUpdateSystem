@@ -31,9 +31,8 @@ void AddOperation::fromJsonObjectV1(const QJsonObject &object)
     m_finalSha1 = JsonUtil::asString(object, FINALSHA1);
 }
 
-void AddOperation::create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory)
+void AddOperation::create(const QString &path, const QString &newFilename, const QString &tmpDirectory)
 {
-    Q_UNUSED(oldFilename);
     m_path = path;
 
     // Final file informations
@@ -239,9 +238,9 @@ void AddOperation::applyData()
     }
 }
 
-void AddOperation::toJsonObjectV1(QJsonObject &object)
+void AddOperation::fillJsonObjectV1(QJsonObject &object)
 {
-    Operation::toJsonObjectV1(object);
+    Operation::fillJsonObjectV1(object);
 
     object.insert(DATAOFFSET, QString::number(offset()));
     object.insert(DATASIZE, QString::number(size()));

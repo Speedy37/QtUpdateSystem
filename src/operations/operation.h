@@ -28,6 +28,8 @@ public:
     };
 
     Operation();
+    virtual ~Operation();
+
     qint64 offset() const;
     qint64 size() const;
 
@@ -47,18 +49,18 @@ public:
     void checkLocalData(); // FileManager thread
     void apply(); // FileManager thread
 
-    virtual void create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory) = 0;
     virtual void fromJsonObjectV1(const QJsonObject &object);
     QJsonObject toJsonObjectV1();
 
 private:
     QString m_localFilename, m_dataFilename;
+    Q_DISABLE_COPY(Operation)
 
 protected:
     virtual Status localDataStatus() = 0; // FileManager thread
     virtual void applyData() = 0; // FileManager thread
     virtual QString action() = 0;
-    virtual void toJsonObjectV1(QJsonObject & object);
+    virtual void fillJsonObjectV1(QJsonObject & object);
 
     qint64 m_offset, m_size;
     QString m_path, m_sha1, m_errorString;

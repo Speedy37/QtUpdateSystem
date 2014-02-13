@@ -12,31 +12,44 @@ PackagerTask::PackagerTask(PackagerTask::Type operationType, QString path, QStri
     this->path = path;
     this->oldFilename = oldFilename;
     this->newFilename = newFilename;
-    this->operation = nullptr;
     setAutoDelete(false);
 }
 
-PackagerTask::~PackagerTask() : QRunnable::~QRunnable()
+bool PackagerTask::isRunSlow() const
 {
-    delete operation;
+    return operationType == Add || operationType == Patch;
 }
 
 void PackagerTask::run()
 {
     switch (operationType) {
     case Add:
-        operation = new AddOperation();
-        break;
-    case Patch:
-        operation = new PatchOperation();
-        break;
-    case RemoveFile:
-        operation = new RemoveOperation();
-        break;
-    case RemoveDir:
-        operation = new RemoveDirectoryOperation();
+    {
+        AddOperation * op = new AddOperation();
+        operation = QSharedPointer<Operation>(op);
+        op->create(path, newFilename, tmpDirectory);
         break;
     }
-
-    operation->create(path, oldFilename, newFilename, tmpDirectory);
+    case Patch:
+    {
+        PatchOperation * op = new PatchOperation();
+        operation = QSharedPointer<Operation>(op);
+        op->create(path, oldFilename, newFilename, tmpDirectory);
+        break;
+    }
+    case RemoveFile:
+    {
+        RemoveOperation * op = new RemoveOperation();
+        operation = QSharedPointer<Operation>(op);
+        op->create(path);
+        break;
+    }
+    case RemoveDir:
+    {
+        RemoveDirectoryOperation * op = new RemoveDirectoryOperation();
+        operation = QSharedPointer<Operation>(op);
+        op->create(path);
+        break;
+    }
+    }
 }

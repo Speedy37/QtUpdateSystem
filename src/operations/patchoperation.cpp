@@ -157,9 +157,9 @@ void PatchOperation::applyData()
     }
 }
 
-void PatchOperation::toJsonObjectV1(QJsonObject &object)
+void PatchOperation::fillJsonObjectV1(QJsonObject &object)
 {
-    AddOperation::toJsonObjectV1(object);
+    AddOperation::fillJsonObjectV1(object);
 
     object.insert(LOCALSIZE, QString::number(m_localSize));
     object.insert(LOCALSHA1, m_localSha1);
@@ -173,6 +173,14 @@ void PatchOperation::fromJsonObjectV1(const QJsonObject &object)
     m_localSize = JsonUtil::asInt64String(object, LOCALSHA1);
     m_localSha1 = JsonUtil::asString(object, LOCALSHA1);
     m_patchtype = JsonUtil::asString(object, PATCHTYPE);
+}
+
+void PatchOperation::create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory)
+{
+    Q_UNUSED(path);
+    Q_UNUSED(oldFilename);
+    Q_UNUSED(newFilename);
+    Q_UNUSED(tmpDirectory);
 }
 
 QString PatchOperation::action()

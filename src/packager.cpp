@@ -1,4 +1,5 @@
 #include "packager.h"
+#include "operations/operation.h"
 
 #include <qtlog.h>
 #include <QCryptographicHash>
@@ -12,6 +13,7 @@
 #include <QTemporaryDir>
 #include <QScopedPointer>
 #include <QTime>
+#include <QJsonArray>
 
 Packager::Packager(QObject *parent) : QObject(parent)
 {
@@ -79,11 +81,14 @@ void Packager::generate()
         {
             t.start();
             QThreadPool threadPool;
-            for(unsigned i = 0; i < m_tasks.size(); ++i)
+            for(size_t i = 0; i < m_tasks.size(); ++i)
             {
                 PackagerTask & task = m_tasks[i];
                 task.tmpDirectory = tmpDirectoryPath();
-                threadPool.start(&task);
+                if(task.isRunSlow())
+                    threadPool.start(&task);
+                else
+                    task.run();
             }
             threadPool.waitForDone();
         }
@@ -92,13 +97,17 @@ void Packager::generate()
         LOG_TRACE(tr("Creating final delta file..."));
         {
             t.start();
-            for(unsigned i = 0; i < m_tasks.size(); ++i)
+            qint64 totalSize = 0;
+            qint64 offset;
+            for(size_t i = 0; i < m_tasks.size(); ++i)
             {
                 PackagerTask & task = m_tasks[i];
                 if(!task.errorString.isNull())
                     throw task.errorString;
 
-                //appendFileContent(deltaFile, task);
+
+
+                totalSize += task.operation->size();
             }
         }
         LOG_INFO(tr("Final delta file created in %1 ms").arg(t.elapsed()));
@@ -132,6 +141,7 @@ QFileInfoList Packager::dirList(const QDir & dir)
     return list;
 }
 
+
 void Packager::addRemoveDirTask(QString path, QFileInfo &pathInfo)
 {
     QFileInfoList files = dirList(QDir(pathInfo.absoluteFilePath()));
@@ -144,10 +154,10 @@ void Packager::addRemoveDirTask(QString path, QFileInfo &pathInfo)
         }
         else
         {
-            m_tasks.emplace_back(PackagerTask(PackagerTask::RemoveFile, path+QLatin1Char('/')+file.fileName()));
+            addTask(PackagerTask::RemoveFile, path+QLatin1Char('/')+file.fileName());
         }
     }
-    m_tasks.emplace_back(PackagerTask(PackagerTask::RemoveDir, path));
+    addTask(PackagerTask::RemoveDir, path);
 }
 
 void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, const QFileInfoList & oldFiles)
@@ -178,7 +188,7 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
             if(newFile.isFile())
             {
                 // Add newFile
-                m_tasks.emplace_back(PackagerTask(PackagerTask::Add, path+newFile.fileName(), QString(), newFile.filePath()));
+                addTask(PackagerTask::Add, path+newFile.fileName(), newFile.filePath());
             }
             else if(newFile.isDir())
             {
@@ -193,7 +203,7 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
             if(oldFile.isDir())
                 addRemoveDirTask(path + oldFile.fileName(), oldFile);
             else
-                m_tasks.emplace_back(PackagerTask(PackagerTask::RemoveFile, path + newFile.fileName()));
+                addTask(PackagerTask::RemoveFile, path + newFile.fileName());
             ++oldPos;
         }
         else // diff == 0
@@ -205,19 +215,19 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
                     // RMD + ADD
                     addRemoveDirTask(path + oldFile.fileName(), oldFile);
                     //m_tasks.emplace_back(PackagerTask(PackagerTask::RemoveDir, path + newFile.fileName(), QString(), newFile.filePath()));
-                    m_tasks.emplace_back(PackagerTask(PackagerTask::Add, path + newFile.fileName(), QString(), newFile.filePath()));
+                    addTask(PackagerTask::Add, path + newFile.fileName(), newFile.filePath());
                 }
                 else
                 {
                     // Make diff
-                    m_tasks.emplace_back(PackagerTask(PackagerTask::Patch, path + newFile.fileName(), oldFile.filePath(), newFile.filePath()));
+                    addTask(PackagerTask::Patch, path + newFile.fileName(), newFile.filePath(), oldFile.filePath());
                 }
             }
             else if(newFile.isDir())
             {
                 if(!oldFile.isDir())
                 {
-                    m_tasks.emplace_back(PackagerTask(PackagerTask::RemoveFile, path + newFile.fileName()));
+                    addTask(PackagerTask::RemoveFile, path + newFile.fileName());
                     compareDirectories(path + newFile.fileName() + QLatin1Char('/'),
                                        dirList(QDir(newFile.filePath())),
                                        QFileInfoList());
@@ -237,5 +247,10 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
     }
 
     LOG_TRACE(tr("generate_recursion done"));
+}
+
+void Packager::addTask(PackagerTask::Type operationType, QString path, QString newFilename, QString oldFilename)
+{
+    m_tasks.push_back(PackagerTask(operationType, path, oldFilename, newFilename));
 }
 

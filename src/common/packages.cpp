@@ -5,7 +5,7 @@
 #include <QMap>
 #include <QTime>
 
-static const QString Packages::FileName = QStringLiteral("packages");
+const QString Packages::FileName = QStringLiteral("packages");
 
 void Packages::addPackage(const Package &package)
 {

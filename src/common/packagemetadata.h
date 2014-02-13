@@ -3,6 +3,7 @@
 
 #include "package.h"
 #include <QVector>
+#include <memory>
 
 class Operation;
 
@@ -33,7 +34,7 @@ public:
 private:
     void clearOperations();
     Package m_package;
-    QVector<Operation *> m_operations;
+    QVector<Operation*> m_operations;
 
     Q_DISABLE_COPY(PackageMetadata)
 };
@@ -63,7 +64,7 @@ inline qint64 PackageMetadata::size() const
     return m_package.size;
 }
 
-inline QVector<Operation *> PackageMetadata::operations() const
+inline QVector<Operation*> PackageMetadata::operations() const
 {
     return m_operations;
 }

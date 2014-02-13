@@ -60,12 +60,12 @@ QJsonObject Operation::toJsonObjectV1()
 {
     QJsonObject object;
 
-    toJsonObjectV1(object);
+    fillJsonObjectV1(object);
 
     return object;
 }
 
-void Operation::toJsonObjectV1(QJsonObject &object)
+void Operation::fillJsonObjectV1(QJsonObject &object)
 {
     object.insert(ACTION, action());
     object.insert(PATH, m_path);

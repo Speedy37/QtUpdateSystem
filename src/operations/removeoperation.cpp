@@ -6,9 +6,9 @@
 
 const QString RemoveOperation::Action = QStringLiteral("rm");
 
-void RemoveOperation::create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory)
+void RemoveOperation::create(const QString &path)
 {
-
+    m_path = path;
 }
 
 Operation::Status RemoveOperation::localDataStatus()

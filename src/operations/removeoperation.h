@@ -7,7 +7,7 @@ class RemoveOperation : public Operation
 {
 public:
     static const QString Action;
-    virtual void create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory);
+    void create(const QString &path);
 protected:
     virtual Status localDataStatus() Q_DECL_OVERRIDE;
     virtual void applyData() Q_DECL_OVERRIDE;
