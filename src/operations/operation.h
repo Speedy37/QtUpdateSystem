@@ -26,12 +26,6 @@ public:
         LocalFileInvalid,
         ApplyFailed
     };
-    enum DownloadStatus {
-        Unknown,
-        Downloading,
-        Downloaded,
-        Abort
-    };
 
     Operation();
     qint64 offset() const;
@@ -50,7 +44,6 @@ public:
 
     QString errorString() const;
     Status status() const;
-    DownloadStatus downloadStatus() const;
     void checkLocalData(); // FileManager thread
     void apply(); // FileManager thread
 

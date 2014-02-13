@@ -8,8 +8,8 @@ const QString ACTION = QStringLiteral("action");
 
 Operation::Operation()
 {
-    m_offset = -1;
-    m_size = -1;
+    m_offset = 0;
+    m_size = 0;
     m_status = Unknown;
 }
 

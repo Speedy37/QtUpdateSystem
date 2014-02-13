@@ -25,7 +25,7 @@ private slots:
     void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
     void updatePackagesListRequestFinished();
     void updatePackageMetadataFinished();
-    void updateDataDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void updateDataReadyRead();
     void updateDataFinished();
     void operationPrepared(Operation *op);
     void operationApplied(Operation *);
@@ -43,12 +43,17 @@ private:
     void updateDataSetupOperationFile();
     void updatePackageLoop();
     void updateDataReadAll();
+    void updateDataStartDownload();
+    void updateDataStopDownload();
+    bool tryContinueDownload(qint64 skippableSize);
+    bool isSkipDownloadUseful(qint64 skippableSize);
     QNetworkReply *get(const QString &what, qint64 startPosition = 0, qint64 endPosition = 0);
 
 private:
     enum Failure
     {
-        DownloadFailed
+        DownloadFailed,
+        LocalFileInvalid
     };
 
     // Configuration
@@ -67,10 +72,11 @@ private:
     // Packages
     int downloadPathPos;
     QVector<Package> downloadPath;
+    QMap<QString, Failure> failures; ///< Map<Path, Reason> of failures
+    qint64 downloadGlobalOffset, downloadGlobalSize;
 
     // Package download/application
     PackageMetadata metadata; ///< Informations about the package currently downloaded
-    QMap<QString, Failure> failures; ///< Map<Path, Reason> of failures
     Operation *operation; ///< Current operation in download
     QFile file;
     int preparedOperationCount;
