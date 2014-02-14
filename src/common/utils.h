@@ -5,5 +5,7 @@
 
 namespace Utils {
     QString cleanPath(const QString &pathName);
+    QString xdeltaProgram;
+    QString lzmaProgram;
 }
 #endif // UTILS_H

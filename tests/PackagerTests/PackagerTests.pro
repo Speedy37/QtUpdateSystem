@@ -5,8 +5,7 @@ TARGET = tst_packagertest
 CONFIG   += console
 CONFIG   -= app_bundle
 
-linux-llvm:QMAKE_CXXFLAGS += -std=c++11
-win32-g++:QMAKE_CXXFLAGS += -std=c++11
+CONFIG += c++11
 
 TEMPLATE = app
 
@@ -38,11 +37,3 @@ DEPENDPATH += $$PWD/../../QtLog
 
 target.path = $$OUT_PWD/Install
 INSTALLS += target
-
-copylzma.commands = $(COPY_FILE) $$shell_path($$PWD/../../lzma.exe) $$shell_path($$OUT_PWD/lzma.exe)
-copyxdelta.commands += $(COPY_FILE) $$shell_path($$PWD/../../xdelta3.exe) $$shell_path($$OUT_PWD/xdelta3.exe)
-first.depends = $(first) copylzma copyxdelta
-export(first.depends)
-export(copylzma.commands)
-export(copyxdelta.commands)
-QMAKE_EXTRA_TARGETS += first copylzma copyxdelta
