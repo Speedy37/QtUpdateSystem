@@ -20,7 +20,7 @@ public:
     QString from() const;
     qint64 size() const;
 
-    QVector<QSharedPointer<Operation>> operations() const;
+    QVector< QSharedPointer<Operation> > operations() const;
     QSharedPointer<Operation> operation(int i) const;
     void addOperation(QSharedPointer<Operation> operation);
 
@@ -36,7 +36,7 @@ public:
 
 private:
     Package m_package;
-    QVector<QSharedPointer<Operation>> m_operations;
+    QVector< QSharedPointer<Operation> > m_operations;
 
     Q_DISABLE_COPY(PackageMetadata)
 };

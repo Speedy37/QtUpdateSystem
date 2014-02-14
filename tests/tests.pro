@@ -1,2 +1,3 @@
 TEMPLATE = subdirs
-SUBDIRS += PackagerTests
+SUBDIRS += PackagerTests \
+    PackageManagerTests

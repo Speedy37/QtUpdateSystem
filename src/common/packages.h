@@ -8,7 +8,6 @@
 class Packages
 {
 public:
-    static const QString FileName;
     void addPackage(const Package & package);
     const QVector<Package> packages() const;
 

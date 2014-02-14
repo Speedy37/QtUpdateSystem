@@ -1,17 +1,18 @@
 QT       += testlib
 QT       -= gui
 
-TARGET = tst_packagertest
+TARGET = tst_packagemanagertests
 CONFIG   += console
 CONFIG   -= app_bundle
 
-linux-llvm:QMAKE_CXXFLAGS += -std=c++11
-win32-g++:QMAKE_CXXFLAGS += -std=c++11
-
 TEMPLATE = app
 
-SOURCES += tst_packagertest.cpp
+
+SOURCES += tst_packagemanagertests.cpp
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
+
+linux-llvm:QMAKE_CXXFLAGS += -std=c++11
+win32-g++:QMAKE_CXXFLAGS += -std=c++11
 
 win32:CONFIG(release, debug|release) {
     subdir = release/

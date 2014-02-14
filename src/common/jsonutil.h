@@ -4,8 +4,10 @@
 #include <QString>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QJsonDocument>
 
 namespace JsonUtil {
+    void toJsonFile(const QString &filename, const QJsonObject &object, QJsonDocument::JsonFormat format = QJsonDocument::Indented);
     QJsonObject fromJsonFile(const QString &filename);
     QJsonObject fromJson(const QByteArray & json);
     QJsonObject asObject(const QJsonValue &value);

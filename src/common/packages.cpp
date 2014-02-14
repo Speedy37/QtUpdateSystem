@@ -5,8 +5,6 @@
 #include <QMap>
 #include <QElapsedTimer>
 
-const QString Packages::FileName = QStringLiteral("packages");
-
 void Packages::addPackage(const Package &package)
 {
     m_packages.append(package);
@@ -100,14 +98,14 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
     QMap<QString, Node*> nodes;
     Node * startNode = new Node(from);
     Node * endNode = new Node(to);
-    Edge * edges = new Edge[m_packages.length()];
+    Edge * edges = new Edge[m_packages.size()];
     {
         Edge * edge;
         QMap<QString, Node*>::iterator fromNodeIt, toNodeIt;
         Package * package;
         nodes.insert(from, startNode);
         nodes.insert(to, endNode);
-        for(int i = 0; i < m_packages.length(); ++i)
+        for(int i = 0; i < m_packages.size(); ++i)
         {
             package = &(m_packages[i]);
             edge = &(edges[i]);
