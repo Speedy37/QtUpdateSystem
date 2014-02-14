@@ -69,13 +69,13 @@ void PackageMetadata::operationsFromJsonArrayV1(const QJsonArray &operations)
             QJsonObject jsonOperation = JsonUtil::asObject(operations[i]);
             QString action = JsonUtil::asString(jsonOperation, QStringLiteral("action"));
             Operation * op;
-            if(action == QLatin1String("RM"))
+            if(action == RemoveOperation::Action)
                 op = new RemoveOperation();
-            else if(action == QLatin1String("RMDIR"))
+            else if(action == RemoveDirectoryOperation::Action)
                 op = new RemoveDirectoryOperation();
-            else if(action == QLatin1String("ADD"))
+            else if(action == AddOperation::Action)
                 op = new AddOperation();
-            else if(action == QLatin1String("PATCH"))
+            else if(action == PatchOperation::Action)
                 op = new PatchOperation();
             else
                 throw(QObject::tr("'action' \"%1\" is not supported").arg(action));

@@ -1,6 +1,5 @@
 #include "addoperation.h"
 #include "../common/jsonutil.h"
-#include "../common/packagemetadata.h"
 #include <qtlog.h>
 #include <QFile>
 #include <QFileInfo>
@@ -9,26 +8,31 @@
 
 const QString AddOperation::Action = QStringLiteral("add");
 
-const QString DATAOFFSET = QStringLiteral("dataOffset");
-const QString DATASIZE = QStringLiteral("dataSize");
-const QString DATASHA1 = QStringLiteral("dataSha1");
-const QString DATACOMPRESSION = QStringLiteral("dataCompression");
-const QString FINALSIZE = QStringLiteral("finalSize");
-const QString FINALSHA1 = QStringLiteral("finalSha1");
+const QString AddOperation::DataOffset = QStringLiteral("dataOffset");
+const QString AddOperation::DataSize = QStringLiteral("dataSize");
+const QString AddOperation::DataSha1 = QStringLiteral("dataSha1");
+const QString AddOperation::DataCompression = QStringLiteral("dataCompression");
+const QString AddOperation::FinalSize = QStringLiteral("finalSize");
+const QString AddOperation::FinalSha1 = QStringLiteral("finalSha1");
 
 const QString COMPRESSION_LZMA = QStringLiteral("lzma");
 const QString COMPRESSION_NONE = QStringLiteral("none");
+
+AddOperation::AddOperation() : Operation()
+{
+    m_finalSize = 0;
+}
 
 void AddOperation::fromJsonObjectV1(const QJsonObject &object)
 {
     Operation::fromJsonObjectV1(object);
 
-    m_offset = JsonUtil::asInt64String(object, DATAOFFSET);
-    m_size = JsonUtil::asInt64String(object, DATASIZE);
-    m_sha1 = JsonUtil::asString(object, DATASHA1);
-    m_compression = JsonUtil::asString(object, DATACOMPRESSION);
-    m_finalSize = JsonUtil::asInt64String(object, FINALSIZE);
-    m_finalSha1 = JsonUtil::asString(object, FINALSHA1);
+    m_offset = JsonUtil::asInt64String(object, DataOffset);
+    m_size = JsonUtil::asInt64String(object, DataSize);
+    m_sha1 = JsonUtil::asString(object, DataSha1);
+    m_compression = JsonUtil::asString(object, DataCompression);
+    m_finalSize = JsonUtil::asInt64String(object, FinalSize);
+    m_finalSha1 = JsonUtil::asString(object, FinalSha1);
 }
 
 void AddOperation::create(const QString &path, const QString &newFilename, const QString &tmpDirectory)
@@ -47,7 +51,7 @@ void AddOperation::create(const QString &path, const QString &newFilename, const
 
     setDataFilename(tmpDirectory+"add_"+m_finalSha1);
     QFile dataFile(dataFilename());
-    QFile metadataFile(dataFilename() + PackageMetadata::FileExtension);
+    QFile metadataFile(dataFilename() + ".metadata");
     if(dataFile.exists() && metadataFile.exists())
     {
         if (metadataFile.open(QFile::ReadOnly | QFile::Text))
@@ -55,15 +59,16 @@ void AddOperation::create(const QString &path, const QString &newFilename, const
             try
             {
                 QJsonObject object = JsonUtil::fromJson(metadataFile.readAll());
-                m_size = JsonUtil::asInt64String(object, DATASIZE);
-                m_sha1 = JsonUtil::asString(object, DATASHA1);
-                m_compression = JsonUtil::asString(object, DATACOMPRESSION);
+                m_size = JsonUtil::asInt64String(object, DataSize);
+                m_sha1 = JsonUtil::asString(object, DataSha1);
+                m_compression = JsonUtil::asString(object, DataCompression);
                 return;
             }
             catch(const QString &msg)
             {
                 Q_UNUSED(msg);
             }
+            metadataFile.close();
         }
     }
 
@@ -71,7 +76,7 @@ void AddOperation::create(const QString &path, const QString &newFilename, const
         throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
 
     if (!metadataFile.open(QFile::WriteOnly | QFile::Truncate | QFile::Text))
-        throw QObject::tr("Unable to open file %1 for writing").arg(metadataFile.fileName());
+        throw QObject::tr("Unable to open file %1 for writing : %2").arg(metadataFile.fileName(), metadataFile.errorString());
 
     QProcess compressor;
     QStringList arguments;
@@ -116,9 +121,10 @@ void AddOperation::create(const QString &path, const QString &newFilename, const
     // Writing metadata
     {
         QJsonObject object;
-        object.insert(DATASIZE, m_size);
-        object.insert(DATASHA1, m_sha1);
-        object.insert(DATACOMPRESSION, m_compression);
+        object.insert(Path, m_path);
+        object.insert(DataSize, QString::number(m_size));
+        object.insert(DataSha1, m_sha1);
+        object.insert(DataCompression, m_compression);
         if(metadataFile.write(QJsonDocument(object).toJson()) == -1)
             throw QObject::tr("Unable to write metadata");
 
@@ -243,15 +249,15 @@ void AddOperation::fillJsonObjectV1(QJsonObject &object)
 {
     Operation::fillJsonObjectV1(object);
 
-    object.insert(DATAOFFSET, QString::number(offset()));
-    object.insert(DATASIZE, QString::number(size()));
-    object.insert(DATASHA1, sha1());
-    object.insert(DATACOMPRESSION, m_compression);
-    object.insert(FINALSIZE, QString::number(m_finalSize));
-    object.insert(FINALSHA1, m_finalSha1);
+    object.insert(DataOffset, QString::number(offset()));
+    object.insert(DataSize, QString::number(size()));
+    object.insert(DataSha1, sha1());
+    object.insert(DataCompression, m_compression);
+    object.insert(FinalSize, QString::number(m_finalSize));
+    object.insert(FinalSha1, m_finalSha1);
 }
 
-QString AddOperation::action()
+QString AddOperation::action() const
 {
     return Action;
 }

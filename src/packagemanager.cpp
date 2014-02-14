@@ -1,5 +1,6 @@
 #include "packagemanager.h"
 #include "common/jsonutil.h"
+#include "common/utils.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -19,9 +20,7 @@ bool PackageManager::isValid() const
 
 void PackageManager::setDirectory(const QString &directory)
 {
-    m_directory = directory;
-    if(!m_directory.endsWith(QDir::separator()))
-        m_directory += QDir::separator();
+    m_directory = Utils::cleanPath(directory);
 
     try
     {

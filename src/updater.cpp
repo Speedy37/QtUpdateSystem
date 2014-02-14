@@ -1,5 +1,6 @@
 #include "updater.h"
 #include "common/jsonutil.h"
+#include "common/utils.h"
 #include <qtlog.h>
 #include <QNetworkReply>
 #include <QDir>
@@ -242,15 +243,11 @@ void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authentica
 void Updater::setUpdateDirectory(const QString &updateDirectory)
 {
     Q_ASSERT(isIdle());
-    m_updateDirectory = updateDirectory;
-    if(!m_updateDirectory.endsWith(QChar('/')))
-        m_updateDirectory += QChar('/');
+    m_updateDirectory = Utils::cleanPath(updateDirectory);
 }
 
 void Updater::setUpdateTmpDirectory(const QString &updateTmpDirectory)
 {
     Q_ASSERT(isIdle());
-    m_updateTmpDirectory = updateTmpDirectory;
-    if(!m_updateTmpDirectory.endsWith(QDir::separator()))
-        m_updateTmpDirectory += QDir::separator();
+    m_updateTmpDirectory = Utils::cleanPath(updateTmpDirectory);
 }

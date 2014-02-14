@@ -1,4 +1,5 @@
 #include "packagertask.h"
+#include <qtlog.h>
 #include "../operations/operation.h"
 #include "../operations/addoperation.h"
 #include "../operations/patchoperation.h"
@@ -22,34 +23,39 @@ bool PackagerTask::isRunSlow() const
 
 void PackagerTask::run()
 {
-    switch (operationType) {
-    case Add:
+    try
     {
-        AddOperation * op = new AddOperation();
-        operation = QSharedPointer<Operation>(op);
-        op->create(path, newFilename, tmpDirectory);
-        break;
-    }
-    case Patch:
-    {
-        PatchOperation * op = new PatchOperation();
-        operation = QSharedPointer<Operation>(op);
-        op->create(path, oldFilename, newFilename, tmpDirectory);
-        break;
-    }
-    case RemoveFile:
-    {
-        RemoveOperation * op = new RemoveOperation();
-        operation = QSharedPointer<Operation>(op);
-        op->create(path);
-        break;
-    }
-    case RemoveDir:
-    {
-        RemoveDirectoryOperation * op = new RemoveDirectoryOperation();
-        operation = QSharedPointer<Operation>(op);
-        op->create(path);
-        break;
-    }
+        switch (operationType) {
+        case Add:
+        {
+            AddOperation * op = new AddOperation();
+            operation = QSharedPointer<Operation>(op);
+            op->create(path, newFilename, tmpDirectory);
+            break;
+        }
+        case Patch:
+        {
+            PatchOperation * op = new PatchOperation();
+            operation = QSharedPointer<Operation>(op);
+            op->create(path, oldFilename, newFilename, tmpDirectory);
+            break;
+        }
+        case RemoveFile:
+        {
+            RemoveOperation * op = new RemoveOperation();
+            operation = QSharedPointer<Operation>(op);
+            op->create(path, oldFilename);
+            break;
+        }
+        case RemoveDir:
+        {
+            RemoveDirectoryOperation * op = new RemoveDirectoryOperation();
+            operation = QSharedPointer<Operation>(op);
+            op->create(path);
+            break;
+        }
+        }
+    } catch(const QString &msg) {
+        errorString = msg;
     }
 }

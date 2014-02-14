@@ -1,21 +1,26 @@
 #include "patchoperation.h"
-
 #include "../common/jsonutil.h"
 #include <qtlog.h>
+#include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QJsonDocument>
 
 const QString PatchOperation::Action = QStringLiteral("patch");
 
-const QString LOCALSIZE = QStringLiteral("localSize");
-const QString LOCALSHA1 = QStringLiteral("localSha1");
-const QString PATCHTYPE = QStringLiteral("patchType");
+const QString PatchOperation::LocalSize = QStringLiteral("localSize");
+const QString PatchOperation::LocalSha1 = QStringLiteral("localSha1");
+const QString PatchOperation::PathType = QStringLiteral("patchType");
 
 const QString COMPRESSION_LZMA = QStringLiteral("lzma");
 const QString COMPRESSION_NONE = QStringLiteral("none");
 
 const QString PATCHTYPE_XDELTA = QStringLiteral("xdelta");
 
+PatchOperation::PatchOperation() : AddOperation()
+{
+    m_localSize = 0;
+}
 
 Operation::Status PatchOperation::localDataStatus()
 {
@@ -161,29 +166,157 @@ void PatchOperation::fillJsonObjectV1(QJsonObject &object)
 {
     AddOperation::fillJsonObjectV1(object);
 
-    object.insert(LOCALSIZE, QString::number(m_localSize));
-    object.insert(LOCALSHA1, m_localSha1);
-    object.insert(PATCHTYPE, m_patchtype);
+    object.insert(LocalSize, QString::number(m_localSize));
+    object.insert(LocalSha1, m_localSha1);
+    object.insert(PathType, m_patchtype);
 }
 
 void PatchOperation::fromJsonObjectV1(const QJsonObject &object)
 {
     AddOperation::fromJsonObjectV1(object);
 
-    m_localSize = JsonUtil::asInt64String(object, LOCALSHA1);
-    m_localSha1 = JsonUtil::asString(object, LOCALSHA1);
-    m_patchtype = JsonUtil::asString(object, PATCHTYPE);
+    m_localSize = JsonUtil::asInt64String(object, LocalSize);
+    m_localSha1 = JsonUtil::asString(object, LocalSha1);
+    m_patchtype = JsonUtil::asString(object, PathType);
 }
 
 void PatchOperation::create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory)
 {
-    Q_UNUSED(path);
-    Q_UNUSED(oldFilename);
-    Q_UNUSED(newFilename);
-    Q_UNUSED(tmpDirectory);
+    m_path = path;
+
+    // New file informations
+    {
+        QFile file(newFilename);
+        if(!file.exists(newFilename))
+            throw QObject::tr("File %1 doesn't exists").arg(newFilename);
+
+        m_finalSha1 = sha1(&file);
+        m_finalSize = file.size();
+    }
+
+    // Old file informations
+    {
+        QFile file(oldFilename);
+        if(!file.exists(oldFilename))
+            throw QObject::tr("File %1 doesn't exists").arg(oldFilename);
+
+        m_localSha1 = sha1(&file);
+        m_localSize = file.size();
+    }
+
+    if(m_localSize == m_finalSize && m_finalSha1 == m_finalSha1)
+    {
+        m_status = CreateUseless;
+        return;
+    }
+
+    setDataFilename(tmpDirectory + "patch_" + m_finalSha1 + "_" + m_localSha1);
+    QFile dataFile(dataFilename());
+    QFile metadataFile(dataFilename() + ".metadata");
+    if(dataFile.exists() && metadataFile.exists())
+    {
+        if (metadataFile.open(QFile::ReadOnly | QFile::Text))
+        {
+            try
+            {
+                QJsonObject object = JsonUtil::fromJson(metadataFile.readAll());
+                m_size = JsonUtil::asInt64String(object, DataSize);
+                m_sha1 = JsonUtil::asString(object, DataSha1);
+                m_compression = JsonUtil::asString(object, DataCompression);
+                m_patchtype = JsonUtil::asString(object, PathType);
+                return;
+            }
+            catch(const QString &msg)
+            {
+                Q_UNUSED(msg);
+            }
+            metadataFile.close();
+        }
+    }
+
+
+    if(!dataFile.open(QFile::WriteOnly | QFile::Truncate))
+        throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
+
+    if (!metadataFile.open(QFile::WriteOnly | QFile::Truncate | QFile::Text))
+        throw QObject::tr("Unable to open file %1 for writing : %2").arg(metadataFile.fileName(), metadataFile.errorString());
+
+    m_compression = COMPRESSION_LZMA;
+    m_patchtype = PATCHTYPE_XDELTA;
+
+    QProcess compressor, xdelta;
+    QStringList xdeltaArguments;
+    QStringList compressorArguments;
+
+    xdeltaArguments << "-e" << "-c" << "-s" << oldFilename << newFilename;
+    xdelta.setStandardOutputProcess(&compressor);
+#ifdef Q_OS_WIN
+    compressorArguments << "e" << "-si" << "-so";
+    xdelta.start(QStringLiteral("xdelta3.exe"), xdeltaArguments);
+    compressor.start(QStringLiteral("lzma.exe"), compressorArguments);
+#endif
+
+    if(!xdelta.waitForStarted())
+        throw QObject::tr("Unable to start %1").arg(xdelta.program());
+
+    if(!compressor.waitForStarted())
+        throw QObject::tr("Unable to start %1").arg(compressor.program());
+
+    QCryptographicHash sha1Hash(QCryptographicHash::Sha1);
+    char buffer[8192];
+    qint64 read;
+    while(compressor.waitForReadyRead())
+    {
+        while((read = compressor.read(buffer, sizeof(buffer))) > 0)
+        {
+            sha1Hash.addData(buffer, read);
+            if(dataFile.write(buffer, read) != read)
+                throw QObject::tr("Failed to write to %1").arg(dataFile.fileName());
+        }
+    }
+
+    if(!waitForFinished(xdelta))
+    {
+        LOG_ERROR(QString(xdelta.readAllStandardError()));
+        throw QObject::tr("%1 failed").arg(xdelta.program());
+    }
+
+    if(!waitForFinished(compressor))
+    {
+        LOG_ERROR(QString(compressor.readAllStandardError()));
+        throw QObject::tr("Ccompression by %1 failed").arg(compressor.program());
+    }
+
+    m_sha1 = QString(sha1Hash.result().toHex());
+    m_size = dataFile.size();
+
+    if(!dataFile.flush())
+        throw QObject::tr("Unable to flush all compressed data");
+
+    dataFile.close();
+
+    Q_ASSERT(sha1(&dataFile) == m_sha1);
+
+    // Writing metadata
+    {
+        QJsonObject object;
+        object.insert(Path, m_path);
+        object.insert(DataSize, QString::number(m_size));
+        object.insert(DataSha1, m_sha1);
+        object.insert(DataCompression, m_compression);
+        object.insert(PathType, m_patchtype);
+
+        if(metadataFile.write(QJsonDocument(object).toJson()) == -1)
+            throw QObject::tr("Unable to write metadata");
+
+        if(!metadataFile.flush())
+            throw QObject::tr("Unable to flush metadata");
+
+        metadataFile.close();
+    }
 }
 
-QString PatchOperation::action()
+QString PatchOperation::action() const
 {
     return Action;
 }

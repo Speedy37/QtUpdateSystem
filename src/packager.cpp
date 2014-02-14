@@ -104,8 +104,12 @@ void Packager::generate()
             for(size_t i = 0; i < m_tasks.size(); ++i)
             {
                 PackagerTask & task = m_tasks[i];
+
                 if(!task.errorString.isNull())
                     throw task.errorString;
+
+                if(task.operation->status() == Operation::CreateUseless)
+                    continue;
 
                 if(task.operation->size() > 0)
                 {
@@ -170,7 +174,7 @@ void Packager::addRemoveDirTask(QString path, QFileInfo &pathInfo)
         }
         else
         {
-            addTask(PackagerTask::RemoveFile, path+QLatin1Char('/')+file.fileName());
+            addTask(PackagerTask::RemoveFile, path+QLatin1Char('/')+file.fileName(), QString(), file.filePath());
         }
     }
     addTask(PackagerTask::RemoveDir, path);
@@ -219,7 +223,7 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
             if(oldFile.isDir())
                 addRemoveDirTask(path + oldFile.fileName(), oldFile);
             else
-                addTask(PackagerTask::RemoveFile, path + newFile.fileName());
+                addTask(PackagerTask::RemoveFile, path + oldFile.fileName(), QString(), oldFile.filePath());
             ++oldPos;
         }
         else // diff == 0
@@ -243,7 +247,7 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
             {
                 if(!oldFile.isDir())
                 {
-                    addTask(PackagerTask::RemoveFile, path + newFile.fileName());
+                    addTask(PackagerTask::RemoveFile, path + oldFile.fileName(), QString(), oldFile.filePath());
                     compareDirectories(path + newFile.fileName() + QLatin1Char('/'),
                                        dirList(QDir(newFile.filePath())),
                                        QFileInfoList());

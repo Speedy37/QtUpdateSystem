@@ -1,4 +1,5 @@
 #include "removeoperation.h"
+#include "../common/jsonutil.h"
 
 #include <qtlog.h>
 #include <QFileInfo>
@@ -6,8 +7,19 @@
 
 const QString RemoveOperation::Action = QStringLiteral("rm");
 
-void RemoveOperation::create(const QString &path)
+RemoveOperation::RemoveOperation() : Operation()
 {
+    m_localSize = 0;
+}
+
+void RemoveOperation::create(const QString &path, const QString &oldFilename)
+{
+    QFile file(oldFilename);
+    if(!file.exists(oldFilename))
+        throw QObject::tr("File %1 doesn't exists").arg(oldFilename);
+
+    m_localSha1 = sha1(&file);
+    m_localSize = file.size();
     m_path = path;
 }
 
@@ -41,7 +53,22 @@ void RemoveOperation::applyData()
     }
 }
 
-QString RemoveOperation::action()
+void RemoveOperation::fromJsonObjectV1(const QJsonObject &object)
+{
+    Operation::fromJsonObjectV1(object);
+
+    m_localSize = JsonUtil::asInt64String(object, QStringLiteral("localSize"));
+    m_localSha1 = JsonUtil::asString(object, QStringLiteral("localSha1"));
+}
+
+void RemoveOperation::fillJsonObjectV1(QJsonObject &object)
+{
+    Operation::fillJsonObjectV1(object);
+
+    object.insert("localSize", QString::number(m_localSize));
+    object.insert("localSha1", m_localSha1);
+}
+QString RemoveOperation::action() const
 {
     return Action;
 }

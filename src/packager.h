@@ -3,10 +3,12 @@
 
 #include "qtupdatesystem_global.h"
 #include "common/packagemetadata.h"
+#include "common/utils.h"
 #include "packager/packagertask.h"
 #include <vector>
 #include <QString>
 #include <QFileInfoList>
+#include <QDir>
 
 class QThreadPool;
 class QTemporaryDir;
@@ -68,7 +70,7 @@ inline QString Packager::newRevisionName() const
 
 inline void Packager::setNewSource(const QString &newDirectoryPath, const QString &newRevisionName)
 {
-    m_newDirectoryPath = newDirectoryPath;
+    m_newDirectoryPath = Utils::cleanPath(newDirectoryPath);
     m_newRevisionName = newRevisionName;
 }
 
@@ -84,7 +86,7 @@ inline QString Packager::oldRevisionName() const
 
 inline void Packager::setOldSource(const QString &oldDirectoryPath, const QString &oldRevisionName)
 {
-    m_oldDirectoryPath = oldDirectoryPath;
+    m_oldDirectoryPath = Utils::cleanPath(oldDirectoryPath);
     m_oldRevisionName = oldRevisionName;
 }
 
@@ -117,7 +119,7 @@ inline QString Packager::tmpDirectoryPath()
 
 inline void Packager::setTmpDirectoryPath(const QString &tmpDirectoryPath)
 {
-    m_tmpDirectoryPath = tmpDirectoryPath;
+    m_tmpDirectoryPath = Utils::cleanPath(tmpDirectoryPath);
 }
 
 #endif // PACKAGER_H

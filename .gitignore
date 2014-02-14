@@ -18,3 +18,11 @@ moc_*.cpp
 qrc_*.cpp
 Makefile
 *-build-*
+*.vcxproj
+*.filters
+*.user
+Makefile.Debug
+*.suo
+*.sdf
+Makefile.Release
+*.pdb

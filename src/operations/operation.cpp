@@ -3,8 +3,7 @@
 #include <QFile>
 #include <QCryptographicHash>
 
-const QString PATH = QStringLiteral("path");
-const QString ACTION = QStringLiteral("action");
+const QString Operation::Path = QStringLiteral("path");
 
 Operation::Operation()
 {
@@ -53,7 +52,7 @@ void Operation::apply()
 
 void Operation::fromJsonObjectV1(const QJsonObject &object)
 {
-    m_path = object.value(PATH).toString();
+    m_path = object.value(Path).toString();
 }
 
 QJsonObject Operation::toJsonObjectV1()
@@ -67,6 +66,6 @@ QJsonObject Operation::toJsonObjectV1()
 
 void Operation::fillJsonObjectV1(QJsonObject &object)
 {
-    object.insert(ACTION, action());
-    object.insert(PATH, m_path);
+    object.insert(QStringLiteral("action"), action());
+    object.insert(Path, m_path);
 }
