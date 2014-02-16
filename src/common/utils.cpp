@@ -4,11 +4,11 @@
 namespace Utils {
 
 #ifdef Q_OS_LINUX
-    QString xdeltaProgram = QStringLiteral("xdelta3");
-    QString lzmaProgram = QStringLiteral("lzma");
+    QString xdelta = QStringLiteral("xdelta3");
+    QString lzma = QStringLiteral("lzma");
 #elif defined(Q_OS_WIN)
-    QString xdeltaProgram = QStringLiteral("xdelta3.exe");
-    QString lzmaProgram = QStringLiteral("lzma.exe");
+    QString xdelta = QStringLiteral("xdelta3.exe");
+    QString lzma = QStringLiteral("lzma.exe");
 #endif
 
 QString cleanPath(const QString &pathName)
@@ -22,6 +22,26 @@ QString cleanPath(const QString &pathName)
         cleaned += '/';
 
     return cleaned;
+}
+
+QString Utils::xdeltaProgram()
+{
+    return xdelta;
+}
+
+void Utils::setXdeltaProgram(const QString &program)
+{
+    xdelta = program;
+}
+
+QString Utils::lzmaProgram()
+{
+    return lzma;
+}
+
+void Utils::setLzmaProgram(const QString &program)
+{
+    lzma = program;
 }
 
 }

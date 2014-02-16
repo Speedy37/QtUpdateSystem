@@ -15,11 +15,16 @@ Package::Package(const QString &to, const QString &from, qint64 size)
     this->size = size;
 }
 
-QString Package::url() const
+QString Package::repositoryPackageName(const QString &from, const QString &to)
 {
     if(from.isEmpty())
         return QStringLiteral("complete_%1").arg(to);
     return QStringLiteral("patch%1_%2").arg(from, to);
+}
+
+QString Package::url() const
+{
+    return repositoryPackageName(from, to);
 }
 
 void Package::fromJsonObjectV1(const QJsonObject &packageObject)
@@ -40,4 +45,9 @@ QJsonObject Package::toJsonObjectV1() const
     packageObject.insert(QStringLiteral("size"), QString::number(size));
 
     return packageObject;
+}
+
+bool Package::operator==(const Package &other)
+{
+    return other.from == from && other.to == to && other.size == size;
 }

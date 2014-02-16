@@ -1,4 +1,6 @@
 #include "packager.h"
+#include "common/utils.h"
+#include "common/package.h"
 #include "operations/operation.h"
 
 #include <qtlog.h>
@@ -18,6 +20,18 @@
 Packager::Packager(QObject *parent) : QObject(parent)
 {
 
+}
+
+/**
+   \brief Generate a new patch from old source to new source for the given repository
+   You don't need to setup deltaFilename and deltaMetaDataFilename
+   \param repositoryPath Directory of the repository
+ */
+void Packager::generateForRepository(const QString &repositoryPath)
+{
+    setDeltaFilename(Utils::cleanPath(repositoryPath) + Package::repositoryPackageName(oldRevisionName(), newRevisionName()));
+    setDeltaMetadataFilename(QString());
+    generate();
 }
 
 /**
@@ -61,7 +75,7 @@ void Packager::generate()
         if(!deltaFile.open(QFile::WriteOnly))
             throw tr("Unable to create new delta file");
 
-        QFile metadataFile(deltaMetaDataFilename());
+        QFile metadataFile(deltaMetadataFilename());
         if(metadataFile.exists())
             throw tr("Delta metadata file already exists");
         if(!metadataFile.open(QFile::WriteOnly | QFile::Text))

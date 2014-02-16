@@ -9,8 +9,6 @@
 class Versions : public QVector<Version>
 {
 public:
-    void addVersion(const QString& revision, const QString &description = QString());
-
     void fromJsonObject(const QJsonObject &object);
     QJsonObject toJsonObject() const;
 

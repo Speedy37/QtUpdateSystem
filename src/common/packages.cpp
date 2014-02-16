@@ -5,11 +5,6 @@
 #include <QMap>
 #include <QElapsedTimer>
 
-void Packages::addPackage(const Package &package)
-{
-    m_packages.append(package);
-}
-
 void Packages::fromJsonObject(const QJsonObject & object)
 {
     const QString version = JsonUtil::asString(object, QStringLiteral("version"));
@@ -31,11 +26,11 @@ QJsonObject Packages::toJsonObject() const
 
 void Packages::fromJsonArrayV1(const QJsonArray &packages)
 {
-    m_packages.resize(packages.size());
+    resize(packages.size());
 
     for(int i = 0; i < packages.size(); ++i)
     {
-        Package & package = m_packages[i];
+        Package & package = (*this)[i];
         package.fromJsonObjectV1(JsonUtil::asObject(packages[i]));
     }
 }
@@ -44,9 +39,9 @@ QJsonArray Packages::toJsonArrayV1() const
 {
     QJsonArray packages;
 
-    for(int i = 0; i < m_packages.size(); ++i)
+    for(int i = 0; i < size(); ++i)
     {
-        packages.append(m_packages[i].toJsonObjectV1());
+        packages.append(at(i).toJsonObjectV1());
     }
 
     return packages;
@@ -98,16 +93,16 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
     QMap<QString, Node*> nodes;
     Node * startNode = new Node(from);
     Node * endNode = new Node(to);
-    Edge * edges = new Edge[m_packages.size()];
+    Edge * edges = new Edge[size()];
     {
         Edge * edge;
         QMap<QString, Node*>::iterator fromNodeIt, toNodeIt;
         Package * package;
         nodes.insert(from, startNode);
         nodes.insert(to, endNode);
-        for(int i = 0; i < m_packages.size(); ++i)
+        for(int i = 0; i < size(); ++i)
         {
-            package = &(m_packages[i]);
+            package = &((*this)[i]);
             edge = &(edges[i]);
 
             fromNodeIt = nodes.find(package->from.isEmpty() ? from : package->from);
@@ -173,6 +168,11 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
     else
     {
         LOG_WARN(QObject::tr("No path found from %1 to %2").arg(from, to));
+    }
+
+    foreach(Node * n, nodes)
+    {
+        delete n;
     }
 
     delete[] edges;

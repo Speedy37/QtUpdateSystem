@@ -3,14 +3,6 @@
 
 #include <qtlog.h>
 
-void Versions::addVersion(const QString &revision, const QString &description)
-{
-    Version version;
-    version.revision = revision;
-    version.description = description;
-    append(version);
-}
-
 void Versions::fromJsonObject(const QJsonObject & object)
 {
     const QString version = JsonUtil::asString(object, QStringLiteral("version"));

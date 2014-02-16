@@ -7,6 +7,7 @@
 class Version
 {
 public:
+    Version(const QString &revision = QString(), const QString &description = QString());
     QString revision;
     QString description;
     void fromJsonObject(const QJsonObject &object);

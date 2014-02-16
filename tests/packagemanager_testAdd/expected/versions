@@ -1,0 +1,13 @@
+{
+    "version": "1",
+    "versions": [
+        {
+            "description": "",
+            "revision": "REV1"
+        },
+        {
+            "description": "",
+            "revision": "REV2"
+        }
+    ]
+}

@@ -1,5 +1,6 @@
 #include "patchoperation.h"
 #include "../common/jsonutil.h"
+#include "../common/utils.h"
 #include <qtlog.h>
 #include <QFile>
 #include <QFileInfo>
@@ -94,7 +95,7 @@ void PatchOperation::applyData()
             decompressor.setStandardOutputProcess(&xdelta);
 #ifdef Q_OS_WIN
             decompressorArguments << "d" << dataFilename() << "-so";
-            decompressor.start(QStringLiteral("lzma.exe"), decompressorArguments);
+            decompressor.start(Utils::lzmaProgram(), decompressorArguments);
 #endif
             hasCompression = true;
         }
@@ -102,7 +103,7 @@ void PatchOperation::applyData()
         {
             throw QObject::tr("Unsupported compression %1").arg(m_compression);
         }
-        xdelta.start(QStringLiteral("xdelta3.exe"), xdeltaArguments);
+        xdelta.start(Utils::xdeltaProgram(), xdeltaArguments);
 
         if(hasCompression && !decompressor.waitForStarted())
             throw QObject::tr("Unable to start %1").arg(decompressor.program());
@@ -252,8 +253,8 @@ void PatchOperation::create(const QString &path, const QString &oldFilename, con
     xdelta.setStandardOutputProcess(&compressor);
 #ifdef Q_OS_WIN
     compressorArguments << "e" << "-si" << "-so";
-    xdelta.start(QStringLiteral("xdelta3.exe"), xdeltaArguments);
-    compressor.start(QStringLiteral("lzma.exe"), compressorArguments);
+    xdelta.start(Utils::xdeltaProgram(), xdeltaArguments);
+    compressor.start(Utils::lzmaProgram(), compressorArguments);
 #endif
 
     if(!xdelta.waitForStarted())

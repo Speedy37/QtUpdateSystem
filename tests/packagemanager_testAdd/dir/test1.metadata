@@ -1,0 +1,50 @@
+{
+    "operations": [
+        {
+            "action": "add",
+            "dataCompression": "lzma",
+            "dataOffset": "0",
+            "dataSha1": "bdf2c9061b46dbbcce1381903ecdb75d256f97d3",
+            "dataSize": "935",
+            "finalSha1": "36e994f96c731a1159e4460cf34bc0293c0f2dcd",
+            "finalSize": "1950",
+            "path": "patch_same.txt"
+        },
+        {
+            "action": "add",
+            "dataCompression": "lzma",
+            "dataOffset": "935",
+            "dataSha1": "590d540f2ac5b0337c5d9b86828be2d36c6c873c",
+            "dataSize": "1214",
+            "finalSha1": "daf8427625ebdf124e618b1b3e118e108ceb6fec",
+            "finalSize": "2713",
+            "path": "path_diff.txt"
+        },
+        {
+            "action": "add",
+            "dataCompression": "lzma",
+            "dataOffset": "2149",
+            "dataSha1": "16a7af6e3a201e7d6d7075558c6e80513b09b46b",
+            "dataSize": "794",
+            "finalSha1": "f03bf4f88e18dc56cb963759e4ed73c8d3063b36",
+            "finalSize": "1520",
+            "path": "path_diff2.txt"
+        },
+        {
+            "action": "add",
+            "dataCompression": "lzma",
+            "dataOffset": "2943",
+            "dataSha1": "727cd549a60e00899b4ac85196016a97457a233b",
+            "dataSize": "694",
+            "finalSha1": "cb55c59f799791ae7c0a1130436eb8471166ed97",
+            "finalSize": "1392",
+            "path": "rmfile.txt"
+        }
+    ],
+    "package": {
+        "from": "",
+        "size": "3637",
+        "to": "REV1"
+    },
+    "version": "1"
+}

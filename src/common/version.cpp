@@ -3,6 +3,12 @@
 
 #include <QObject>
 
+Version::Version(const QString &revision, const QString &description)
+{
+    this->revision = revision;
+    this->description = description;
+}
+
 void Version::fromJsonObject(const QJsonObject &object)
 {
     QString version = JsonUtil::asString(object, QStringLiteral("version"));

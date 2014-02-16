@@ -10,7 +10,7 @@ void toJsonFile(const QString &filename, const QJsonObject &object, QJsonDocumen
 {
     QFile file(filename);
     if(!file.open(QFile::WriteOnly | QFile::Text))
-        throw(QObject::tr("Unable to write file %1 %2").arg(filename));
+        throw(QObject::tr("Unable to write file %1 %2").arg(filename, file.errorString()));
     file.write(QJsonDocument(object).toJson(format));
 }
 
