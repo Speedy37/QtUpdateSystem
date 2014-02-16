@@ -3,12 +3,12 @@
 
 #include <QtTest>
 
-class TestPackageManager : public QObject
+class TestRepository : public QObject
 {
     Q_OBJECT
 
 public:
-    TestPackageManager() {}
+    TestRepository() {}
 
 private Q_SLOTS:
     void initTestCase();

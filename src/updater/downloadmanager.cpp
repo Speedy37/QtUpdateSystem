@@ -10,13 +10,17 @@
 #include <QAuthenticator>
 #include <QThread>
 
+Q_DECLARE_METATYPE(QSharedPointer<Operation>)
+
 DownloadManager::DownloadManager(Updater *updater) : QObject()
 {
+    qRegisterMetaType< QSharedPointer<Operation> >();
+
     // Make a safe copy of important properties
     // This is "required" because this class if run in it's own thread and allow it to be independant at almost no cost
-    m_updateDirectory = updater->updateDirectory();
-    m_updateTmpDirectory = updater->updateTmpDirectory();
-    m_updateUrl = updater->updateUrl();
+    m_updateDirectory = updater->localRepository();
+    m_updateTmpDirectory = updater->tmpDirectory();
+    m_updateUrl = updater->remoteRepository();
     m_localRevision = updater->localRevision();
     m_remoteRevision = updater->remoteRevision();
     m_username = updater->username();
@@ -33,12 +37,13 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
     connect(this, &DownloadManager::operationLoaded, m_filemanager, &FileManager::prepareOperation);
     connect(m_filemanager, &FileManager::operationPrepared, this, &DownloadManager::operationPrepared);
 
-    connect(this, &DownloadManager::operationDownloaded, m_filemanager, &FileManager::applyOperation);
+    connect(this, &DownloadManager::operationReadyToApply, m_filemanager, &FileManager::applyOperation);
     connect(m_filemanager, &FileManager::operationApplied, this, &DownloadManager::operationApplied);
 
     connect(this, &DownloadManager::downloadFinished, m_filemanager, &FileManager::downloadFinished);
     connect(m_filemanager, &FileManager::applyFinished, this, &DownloadManager::applyFinished);
 
+    connect(this, &DownloadManager::finished, thread, &QThread::quit);
     connect(this, &DownloadManager::destroyed, m_filemanager, &FileManager::deleteLater);
     connect(thread, &QThread::destroyed, m_filemanager, &FileManager::deleteLater);
     thread->start();
@@ -55,6 +60,7 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
  */
 void DownloadManager::update()
 {
+    LOG_INFO(tr("update"));
     packagesListRequest = get(QStringLiteral("packages"));
     connect(packagesListRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackagesListRequestFinished);
 }
@@ -116,7 +122,16 @@ void DownloadManager::updatePackageLoop()
     }
     else
     {
-        LOG_INFO(tr("Main update finished, checking for errors"));
+        if(failures.size() > 0)
+        {
+            LOG_INFO(tr("Some parts of the update have gone wrong, fixing..."));
+
+        }
+        else
+        {
+            LOG_INFO(tr("Update finished without error"));
+            emit finished();
+        }
     }
 }
 
@@ -138,9 +153,17 @@ void DownloadManager::updatePackageMetadataFinished()
         metadata.fromJsonObject(JsonUtil::fromJson(metadataRequest->readAll()));
         metadata.setup(m_updateDirectory, m_updateTmpDirectory);
 
+        if(metadata.operationCount() == 0)
+        {
+            // nothing to do
+        }
+
         operationIndex = 0;
         operation.clear();
         preparedOperationCount = 0;
+        appliedOperationCount = 0;
+        failedOperationCount = 0;
+
         foreach(QSharedPointer<Operation> op, metadata.operations())
         {
             // Ask the file manager to take care of pre-apply job
@@ -168,8 +191,9 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
     if(operationIndex >= preparedOperationCount)
     {
         // preparedOperation have already been downloaded
-        if(preparedOperation->status() == Operation::DownloadRequired || preparedOperation->status() == Operation::ApplyRequired)
-            emit operationDownloaded(preparedOperation);
+        if(preparedOperation->status() == Operation::ApplyRequired ||
+           preparedOperation->status() == Operation::DownloadRequired)
+            emit operationReadyToApply(preparedOperation);
     }
     else if(preparedOperation->status() == Operation::DownloadRequired)
     {
@@ -197,7 +221,9 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
 
             // Queue apply of the current operation if it's possible
             if(operation == preparedOperation && operation->status() == Operation::ApplyRequired)
-                emit operationDownloaded(operation);
+            {
+                emit operationReadyToApply(operation);
+            }
 
             // preparedOperation can influence the current download
             // test if it's worth continuing the current download
@@ -212,9 +238,11 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
 
         // Queue apply of the current operatin if it's possible
         if(preparedOperation->status() == Operation::ApplyRequired)
-            emit operationDownloaded(preparedOperation);
+            emit operationReadyToApply(preparedOperation);
 
         ++operationIndex;
+        if(operationIndex == metadata.operationCount())
+            emit downloadFinished();
     }
 
     if(preparedOperation->status() == Operation::LocalFileInvalid)
@@ -225,13 +253,16 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
 
 void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperation)
 {
-    Q_UNUSED(appliedOperation);
-    // Operation applied
+    if(appliedOperation->status() != Operation::Valid)
+    {
+        failures.insert(appliedOperation->path(), ApplyFailed);
+    }
 }
 
 void DownloadManager::applyFinished()
 {
-    // package apply finished
+    ++downloadPathPos;
+    updatePackageLoop();
 }
 
 bool DownloadManager::isSkipDownloadUseful(qint64 skippableSize)
@@ -284,10 +315,12 @@ bool DownloadManager::tryContinueDownload(qint64 skippableSize)
             }
             else if(operation->status() == Operation::ApplyRequired)
             {
-                emit operationDownloaded(operation);
+                emit operationReadyToApply(operation);
             }
             ++operationIndex;
         }
+        if(operationIndex == metadata.operationCount())
+            emit downloadFinished();
 
         operation.clear();
 
@@ -317,6 +350,18 @@ void DownloadManager::updateDataReadyRead()
     QByteArray bytes = dataRequest->readAll();
     const char * data = bytes.constData();
     qint64 writeSize, size = bytes.size();
+
+    if(downloadSeek > 0)
+    {
+        if(size <= downloadSeek)
+        {
+            downloadSeek -= size;
+            return;
+        }
+        data += downloadSeek;
+        size -= downloadSeek;
+        downloadSeek = 0;
+    }
 
     downloadGlobalOffset += size;
     emit downloadProgress(downloadGlobalOffset, downloadGlobalSize);
@@ -349,7 +394,7 @@ void DownloadManager::updateDataReadyRead()
 
             if(operationIndex < preparedOperationCount && operation->status() == Operation::DownloadRequired)
             {
-                emit operationDownloaded(operation);
+                emit operationReadyToApply(operation);
             }
 
             // Find what to do next
@@ -365,7 +410,7 @@ void DownloadManager::updateDataReadyRead()
                 }
                 else if(operation->status() == Operation::ApplyRequired)
                 {
-                    emit operationDownloaded(operation);
+                    emit operationReadyToApply(operation);
                 }
 
                 if(operation->size() > 0)
@@ -389,7 +434,11 @@ void DownloadManager::updateDataReadyRead()
                 ++operationIndex;
             }
 
-            if(operationIndex >= preparedOperationCount)
+            if(operationIndex == metadata.operationCount())
+            {
+                emit downloadFinished();
+            }
+            else if(operationIndex >= preparedOperationCount)
             {
                 // We don't know yet if it's worth continuing the download
                 // operationPrepared with preparedOperationCount <= operationIndex will occur
@@ -405,7 +454,7 @@ void DownloadManager::updateDataReadyRead()
  */
 void DownloadManager::updateDataFinished()
 {
-    if(operationIndex < metadata.operations().size())
+    if(operationIndex < metadata.operationCount())
     {
         // This is never expected, even in the case the download chunk was limited,
         // because the updateDataReadyRead function should have aborted the reply
@@ -421,8 +470,8 @@ void DownloadManager::updateDataFinished()
         }
 
         // Restart download
-        updateDataStopDownload();
-        updateDataStartDownload();
+        //updateDataStopDownload();
+        //updateDataStartDownload();
 
     }
 }
@@ -479,7 +528,8 @@ void DownloadManager::updateDataStopDownload()
 
 QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition, qint64 endPosition)
 {
-    QNetworkRequest request(QUrl(m_updateUrl.arg(what)));
+    QUrl url(m_updateUrl + what);
+    QNetworkRequest request(url);
 
     if(startPosition > 0)
     {
@@ -493,8 +543,11 @@ QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition, q
         }
     }
 
+    LOG_TRACE(tr("get(%1,%2,%3)").arg(what).arg(startPosition).arg(endPosition));
     QNetworkReply *reply = m_manager->get(request);
     connect(reply, SIGNAL(finished()), reply, SLOT(deleteLater()));
+
+    downloadSeek = startPosition > 0 && url.isLocalFile() ? startPosition : 0;
 
     return reply;
 }

@@ -1,15 +1,15 @@
 #ifndef TST_UPDATER_H
 #define TST_UPDATER_H
 
-#include <QObject>
+#include <QtTest>
 
 class TestUpdater : public QObject
 {
     Q_OBJECT
 public:
-    TestUpdater();
+    TestUpdater() {}
 
-public slots:
+private Q_SLOTS:
     void checkForUpdates();
 
 };

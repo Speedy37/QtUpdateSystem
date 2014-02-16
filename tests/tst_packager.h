@@ -8,7 +8,7 @@ class TestPackager : public QObject
     Q_OBJECT
 
 public:
-    TestPackager();
+    TestPackager() {}
 
 private Q_SLOTS:
     void packageTest1NewOld();

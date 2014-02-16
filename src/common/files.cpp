@@ -36,7 +36,7 @@ QJsonObject Files::toJsonObject() const
     QJsonObject object;
     QJsonObject files;
 
-    QMap<QString, QVector<File>>::const_iterator i = m_files.constBegin();
+    QMap< QString, QVector<File> >::const_iterator i = m_files.constBegin();
     while (i != m_files.constEnd())
     {
         const QVector<File> & filesInPath = i.value();

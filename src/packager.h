@@ -21,8 +21,8 @@ private:
 
 public:
     Packager(QObject * parent = 0);
-    void generateForRepository(const QString &repositoryPath);
-    void generate();
+    PackageMetadata generateForRepository(const QString &repositoryPath);
+    PackageMetadata generate();
 
     QString newDirectoryPath() const;
     QString newRevisionName() const;

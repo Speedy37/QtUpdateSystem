@@ -147,20 +147,18 @@ Operation::Status AddOperation::localDataStatus()
 
         LOG_WARN(QObject::tr("File %1 already exists and will be overwrited").arg(path()));
     }
-    else
-    {
-        file.setFileName(dataFilename());
-        if(file.exists())
-        {
-            // Check downloaded data file content
-            if(file.size() == size() && sha1(&file) == sha1())
-            {
-                LOG_INFO(QObject::tr("File %1 data is valid").arg(path()));
-                return ApplyRequired;
-            }
 
-            LOG_WARN(QObject::tr("File %1 data is invalid and will be downloaded again").arg(path()));
+    file.setFileName(dataFilename());
+    if(file.exists())
+    {
+        // Check downloaded data file content
+        if(file.size() == size() && sha1(&file) == sha1())
+        {
+            LOG_INFO(QObject::tr("File %1 data is valid").arg(path()));
+            return ApplyRequired;
         }
+
+        LOG_WARN(QObject::tr("File %1 data is invalid and will be downloaded again").arg(path()));
     }
 
     return DownloadRequired;

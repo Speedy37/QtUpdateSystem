@@ -27,11 +27,11 @@ Packager::Packager(QObject *parent) : QObject(parent)
    You don't need to setup deltaFilename and deltaMetaDataFilename
    \param repositoryPath Directory of the repository
  */
-void Packager::generateForRepository(const QString &repositoryPath)
+PackageMetadata Packager::generateForRepository(const QString &repositoryPath)
 {
     setDeltaFilename(Utils::cleanPath(repositoryPath) + Package::repositoryPackageName(oldRevisionName(), newRevisionName()));
     setDeltaMetadataFilename(QString());
-    generate();
+    return generate();
 }
 
 /**
@@ -45,123 +45,118 @@ void Packager::generateForRepository(const QString &repositoryPath)
     \li Save package metadata
    \endlist
  */
-void Packager::generate()
+PackageMetadata Packager::generate()
 {
-    try
+    QElapsedTimer globalTimer, stepTimer;
+    globalTimer.start();
+    stepTimer = globalTimer;
+
+    LOG_TRACE(tr("Checking packager configuration..."));
+
+    if(newDirectoryPath().isEmpty())
+        throw tr("New directory path is empty");
+
+    if(newRevisionName().isEmpty())
+        throw tr("New revision name is empty");
+
+    QDir oldDir(oldDirectoryPath());
+    if(!oldDir.exists() && !oldDirectoryPath().isEmpty())
+        throw tr("Old directory doesn't exists");
+
+    QDir newDir(newDirectoryPath());
+    if(!newDir.exists())
+        throw tr("New directory doesn't exists");
+
+    QFile deltaFile(deltaFilename());
+    if(deltaFile.exists())
+        throw tr("Delta file already exists");
+    if(!deltaFile.open(QFile::WriteOnly))
+        throw tr("Unable to create new delta file");
+
+    QFile metadataFile(deltaMetadataFilename());
+    if(metadataFile.exists())
+        throw tr("Delta metadata file already exists");
+    if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
+        throw tr("Unable to create new delta metadata file");
+
+    LOG_TRACE(tr("Packager configuration checked in %1").arg(stepTimer.restart()));
+
+    LOG_TRACE(tr("Comparing directories %1 against %2").arg(newDirectoryPath(), oldDirectoryPath()));
     {
-        QElapsedTimer globalTimer, stepTimer;
-        globalTimer.start();
-        stepTimer = globalTimer;
+        QFileInfoList newFiles = dirList(newDir);
+        QFileInfoList oldFiles = oldDirectoryPath().isNull() ? QFileInfoList() : dirList(oldDir);
+        m_tasks.clear();
+        compareDirectories(QStringLiteral(""), newFiles, oldFiles);
+    }
+    LOG_TRACE(tr("Directory comparison done in %1").arg(stepTimer.restart()));
 
-        LOG_TRACE(tr("Checking packager configuration..."));
-
-        if(newDirectoryPath().isEmpty())
-            throw tr("New directory path is empty");
-
-        if(newRevisionName().isEmpty())
-            throw tr("New revision name is empty");
-
-        QDir oldDir(oldDirectoryPath());
-        if(!oldDir.exists() && !oldDirectoryPath().isEmpty())
-            throw tr("Old directory doesn't exists");
-
-        QDir newDir(newDirectoryPath());
-        if(!newDir.exists())
-            throw tr("New directory doesn't exists");
-
-        QFile deltaFile(deltaFilename());
-        if(deltaFile.exists())
-            throw tr("Delta file already exists");
-        if(!deltaFile.open(QFile::WriteOnly))
-            throw tr("Unable to create new delta file");
-
-        QFile metadataFile(deltaMetadataFilename());
-        if(metadataFile.exists())
-            throw tr("Delta metadata file already exists");
-        if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
-            throw tr("Unable to create new delta metadata file");
-
-        LOG_TRACE(tr("Packager configuration checked in %1").arg(stepTimer.restart()));
-
-        LOG_TRACE(tr("Comparing directories %1 against %2").arg(newDirectoryPath(), oldDirectoryPath()));
+    LOG_TRACE(tr("Creating operations..."));
+    {
+        QThreadPool threadPool;
+        for(size_t i = 0; i < m_tasks.size(); ++i)
         {
-            QFileInfoList newFiles = dirList(newDir);
-            QFileInfoList oldFiles = oldDirectoryPath().isNull() ? QFileInfoList() : dirList(oldDir);
-            m_tasks.clear();
-            compareDirectories(QStringLiteral(""), newFiles, oldFiles);
+            PackagerTask & task = m_tasks[i];
+            task.tmpDirectory = tmpDirectoryPath();
+            if(task.isRunSlow())
+                threadPool.start(&task);
+            else
+                task.run();
         }
-        LOG_TRACE(tr("Directory comparison done in %1").arg(stepTimer.restart()));
+        threadPool.waitForDone();
+    }
+    LOG_INFO(tr("Operations created in %1").arg(stepTimer.restart()));
 
-        LOG_TRACE(tr("Creating operations..."));
+    LOG_TRACE(tr("Creating final delta file..."));
+    PackageMetadata metadata;
+    {
+        qint64 totalSize = 0;
+        qint64 read;
+        char buffer[8096];
+        QFile operationFile;
+        for(size_t i = 0; i < m_tasks.size(); ++i)
         {
-            QThreadPool threadPool;
-            for(size_t i = 0; i < m_tasks.size(); ++i)
+            PackagerTask & task = m_tasks[i];
+
+            if(!task.errorString.isNull())
+                throw task.errorString;
+
+            if(task.operation->status() == Operation::CreateUseless)
+                continue;
+
+            if(task.operation->size() > 0)
             {
-                PackagerTask & task = m_tasks[i];
-                task.tmpDirectory = tmpDirectoryPath();
-                if(task.isRunSlow())
-                    threadPool.start(&task);
-                else
-                    task.run();
-            }
-            threadPool.waitForDone();
-        }
-        LOG_INFO(tr("Operations created in %1").arg(stepTimer.restart()));
+                operationFile.setFileName(task.operation->dataFilename());
+                if(!operationFile.open(QFile::ReadOnly))
+                    throw tr("Unable to open %1").arg(operationFile.fileName());
 
-        LOG_TRACE(tr("Creating final delta file..."));
-        PackageMetadata metadata;
-        {
-            qint64 totalSize = 0;
-            qint64 read;
-            char buffer[8096];
-            QFile operationFile;
-            for(size_t i = 0; i < m_tasks.size(); ++i)
-            {
-                PackagerTask & task = m_tasks[i];
-
-                if(!task.errorString.isNull())
-                    throw task.errorString;
-
-                if(task.operation->status() == Operation::CreateUseless)
-                    continue;
-
-                if(task.operation->size() > 0)
+                while((read = operationFile.read(buffer, sizeof(buffer))) > 0)
                 {
-                    operationFile.setFileName(task.operation->dataFilename());
-                    if(!operationFile.open(QFile::ReadOnly))
-                        throw tr("Unable to open %1").arg(operationFile.fileName());
-
-                    while((read = operationFile.read(buffer, sizeof(buffer))) > 0)
-                    {
-                        if(deltaFile.write(buffer, read) != read)
-                             throw tr("Unable to write %1").arg(deltaFile.fileName());
-                    }
-
-                    operationFile.close();
-                    task.operation->setOffset(totalSize);
-                    totalSize += task.operation->size();
+                    if(deltaFile.write(buffer, read) != read)
+                         throw tr("Unable to write %1").arg(deltaFile.fileName());
                 }
-                metadata.addOperation(task.operation);
+
+                operationFile.close();
+                task.operation->setOffset(totalSize);
+                totalSize += task.operation->size();
             }
-            metadata.setPackage(Package(newRevisionName(), oldRevisionName(), totalSize));
-
-            if(!deltaFile.flush())
-                 throw tr("Unable to flush %1").arg(deltaFile.fileName());
-
-            deltaFile.close();
+            metadata.addOperation(task.operation);
         }
-        LOG_INFO(tr("Final delta file created in %1").arg(stepTimer.restart()));
+        metadata.setPackage(Package(newRevisionName(), oldRevisionName(), totalSize));
 
-        LOG_INFO(tr("Writing metadata"));
-        metadataFile.write(QJsonDocument(metadata.toJsonObject()).toJson(QJsonDocument::Indented));
-        LOG_INFO(tr("Metadata written in %1").arg(stepTimer.restart()));
+        if(!deltaFile.flush())
+             throw tr("Unable to flush %1").arg(deltaFile.fileName());
 
-        LOG_INFO(tr("Delta creation succeded in %1").arg(globalTimer.elapsed()));
+        deltaFile.close();
     }
-    catch (const QString & reason)
-    {
-        LOG_INFO(tr("Delta creation failed %1").arg(reason));
-    }
+    LOG_INFO(tr("Final delta file created in %1").arg(stepTimer.restart()));
+
+    LOG_INFO(tr("Writing metadata"));
+    metadataFile.write(QJsonDocument(metadata.toJsonObject()).toJson(QJsonDocument::Indented));
+    LOG_INFO(tr("Metadata written in %1").arg(stepTimer.restart()));
+
+    LOG_INFO(tr("Delta creation succeded in %1").arg(globalTimer.elapsed()));
+
+    return metadata;
 }
 
 QFileInfoList Packager::dirList(const QDir & dir)

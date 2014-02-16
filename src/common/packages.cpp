@@ -128,6 +128,8 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
 
     do
     {
+        node->done = true;
+
         if(node == endNode)
             break;
 

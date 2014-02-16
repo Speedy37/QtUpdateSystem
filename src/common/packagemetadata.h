@@ -1,13 +1,13 @@
 #ifndef PACKAGEMETADATA_H
 #define PACKAGEMETADATA_H
 
+#include "../qtupdatesystem_global.h"
+#include "../operations/operation.h"
 #include "package.h"
 #include <QVector>
 #include <QSharedPointer>
 
-class Operation;
-
-class PackageMetadata
+class QTUPDATESYSTEMSHARED_EXPORT PackageMetadata
 {
 public:
     PackageMetadata();
@@ -22,6 +22,7 @@ public:
 
     QVector< QSharedPointer<Operation> > operations() const;
     QSharedPointer<Operation> operation(int i) const;
+    int operationCount() const;
     void addOperation(QSharedPointer<Operation> operation);
 
     Package package() const;
@@ -37,8 +38,6 @@ public:
 private:
     Package m_package;
     QVector< QSharedPointer<Operation> > m_operations;
-
-    Q_DISABLE_COPY(PackageMetadata)
 };
 
 inline QString PackageMetadata::dataUrl() const
@@ -66,7 +65,7 @@ inline qint64 PackageMetadata::size() const
     return m_package.size;
 }
 
-inline QVector<QSharedPointer<Operation>> PackageMetadata::operations() const
+inline QVector< QSharedPointer<Operation> > PackageMetadata::operations() const
 {
     return m_operations;
 }
@@ -74,6 +73,11 @@ inline QVector<QSharedPointer<Operation>> PackageMetadata::operations() const
 inline QSharedPointer<Operation> PackageMetadata::operation(int i) const
 {
     return m_operations.value(i);
+}
+
+inline int PackageMetadata::operationCount() const
+{
+    return m_operations.size();
 }
 
 inline void PackageMetadata::addOperation(QSharedPointer<Operation> operation)

@@ -124,7 +124,7 @@ Updater::~Updater()
 
 QNetworkReply* Updater::get(const QString & what)
 {
-    QNetworkRequest request(QUrl(updateUrl().arg(what)));
+    QNetworkRequest request(QUrl(remoteRepository() + what));
     QNetworkReply *reply = m_manager->get(request);
     connect(reply, SIGNAL(finished()), reply, SLOT(deleteLater()));
     return reply;
@@ -132,13 +132,13 @@ QNetworkReply* Updater::get(const QString & what)
 
 QString Updater::iniCurrentVersion() const
 {
-    QSettings settings(updateDirectory()+QStringLiteral("status.ini"), QSettings::IniFormat);
+    QSettings settings(localRepository()+QStringLiteral("status.ini"), QSettings::IniFormat);
     return (settings.value(QStringLiteral("Revision")).toString());
 }
 
 void Updater::setIniCurrentVersion(const QString &version)
 {
-    QSettings settings(updateDirectory()+QStringLiteral("status.ini"), QSettings::IniFormat);
+    QSettings settings(localRepository()+QStringLiteral("status.ini"), QSettings::IniFormat);
     settings.setValue(QStringLiteral("Revision"), version);
 }
 
@@ -240,13 +240,13 @@ void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authentica
         authenticator->setUser(m_username);
 }
 
-void Updater::setUpdateDirectory(const QString &updateDirectory)
+void Updater::setLocalRepository(const QString &updateDirectory)
 {
     Q_ASSERT(isIdle());
     m_updateDirectory = Utils::cleanPath(updateDirectory);
 }
 
-void Updater::setUpdateTmpDirectory(const QString &updateTmpDirectory)
+void Updater::setTmpDirectory(const QString &updateTmpDirectory)
 {
     Q_ASSERT(isIdle());
     m_updateTmpDirectory = Utils::cleanPath(updateTmpDirectory);

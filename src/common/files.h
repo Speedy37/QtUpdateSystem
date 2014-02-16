@@ -16,7 +16,7 @@ public:
     void loadFiles(const QJsonObject &object);
     QJsonObject toJsonObject() const;
 private:
-    QMap<QString, QVector<File>> m_files;
+    QMap< QString, QVector<File> > m_files;
     void loadFiles1(const QJsonObject object);
 };
 

@@ -33,7 +33,7 @@ private slots:
 
 signals:
     void operationLoaded(QSharedPointer<Operation> operation);
-    void operationDownloaded(QSharedPointer<Operation> operation);
+    void operationReadyToApply(QSharedPointer<Operation> operation);
     void downloadFinished();
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void failure(const QString &reason);
@@ -54,7 +54,8 @@ private:
     enum Failure
     {
         DownloadFailed,
-        LocalFileInvalid
+        LocalFileInvalid,
+        ApplyFailed
     };
 
     // Configuration
@@ -81,7 +82,10 @@ private:
     QSharedPointer<Operation> operation; ///< Current operation in download
     QFile file;
     int preparedOperationCount;
+    int appliedOperationCount;
+    int failedOperationCount;
     int operationIndex; ///< Index in metadata of the current operation
+    qint64 downloadSeek; ///< If seeking the download can't be done server side (ie, it's a file)
     qint64 offset; ///< Current download offset relative to operation->offset()
     qint64 downloadSpeed; ///< Current download speed in bits/s
 
