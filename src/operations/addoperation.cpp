@@ -1,5 +1,6 @@
 #include "addoperation.h"
 #include "../common/jsonutil.h"
+#include "../common/utils.h"
 #include <qtlog.h>
 #include <QFile>
 #include <QFileInfo>
@@ -82,11 +83,7 @@ void AddOperation::create(const QString &path, const QString &newFilename, const
     QStringList arguments;
     arguments << "e" << "-so" << newFilename;
     m_compression = COMPRESSION_LZMA;
-#ifdef Q_OS_WIN
-    compressor.start(QStringLiteral("lzma.exe"), arguments);
-#elif defined(Q_OS_LINUX)
-    compressor.start(QStringLiteral("./lzma"), arguments);
-#endif
+    compressor.start(Utils::lzmaProgram(), arguments);
 
     if(!compressor.waitForStarted())
         throw QObject::tr("Unable to start %1").arg(compressor.program());
@@ -199,7 +196,7 @@ void AddOperation::applyData()
         QStringList arguments;
 #ifdef Q_OS_WIN
         arguments << "d" << dataFilename() << "-so";
-        decompressor.start(QStringLiteral("lzma.exe"), arguments);
+        decompressor.start(Utils::lzmaProgram(), arguments);
 #endif
 
         if(!decompressor.waitForStarted())

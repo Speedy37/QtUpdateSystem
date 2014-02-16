@@ -7,6 +7,7 @@
 class Version
 {
 public:
+    Version(const QString &revision = QString(), const QString &description = QString());
     QString revision;
     QString description;
     void fromJsonObject(const QJsonObject &object);
@@ -14,6 +15,7 @@ public:
 
     void fromJsonObjectV1(const QJsonObject &object);
     QJsonObject toJsonObjectV1() const;
+    bool operator==(const Version &other);
 };
 
 #endif // VERSION_H

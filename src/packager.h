@@ -21,6 +21,7 @@ private:
 
 public:
     Packager(QObject * parent = 0);
+    void generateForRepository(const QString &repositoryPath);
     void generate();
 
     QString newDirectoryPath() const;
@@ -34,8 +35,8 @@ public:
     QString deltaFilename() const;
     void setDeltaFilename(const QString &deltaFilename);
 
-    QString deltaMetaDataFilename() const;
-    void setDeltaMetaDataFilename(const QString &deltaMetaDataFilename);
+    QString deltaMetadataFilename() const;
+    void setDeltaMetadataFilename(const QString &deltaMetadataFilename);
 
     QString tmpDirectoryPath();
     void setTmpDirectoryPath(const QString &tmpDirectoryPath);
@@ -46,7 +47,7 @@ private:
     // Configurable attributes
     QString m_oldDirectoryPath, m_oldRevisionName;
     QString m_newDirectoryPath, m_newRevisionName;
-    QString m_deltaFilename, m_deltaMetaDataFilename;
+    QString m_deltaFilename, m_deltaMetadataFilename;
     QString m_tmpDirectoryPath;
 
 private:
@@ -100,16 +101,16 @@ inline void Packager::setDeltaFilename(const QString &deltaFilename)
     m_deltaFilename = deltaFilename;
 }
 
-inline QString Packager::deltaMetaDataFilename() const
+inline QString Packager::deltaMetadataFilename() const
 {
-    if(m_deltaMetaDataFilename.isNull())
+    if(m_deltaMetadataFilename.isNull())
         return deltaFilename() + PackageMetadata::FileExtension;
-    return m_deltaMetaDataFilename;
+    return m_deltaMetadataFilename;
 }
 
-inline void Packager::setDeltaMetaDataFilename(const QString &deltaMetaDataFilename)
+inline void Packager::setDeltaMetadataFilename(const QString &deltaMetaDataFilename)
 {
-    m_deltaMetaDataFilename = deltaMetaDataFilename;
+    m_deltaMetadataFilename = deltaMetaDataFilename;
 }
 
 inline QString Packager::tmpDirectoryPath()

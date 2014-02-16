@@ -3,6 +3,12 @@
 
 #include <QObject>
 
+Version::Version(const QString &revision, const QString &description)
+{
+    this->revision = revision;
+    this->description = description;
+}
+
 void Version::fromJsonObject(const QJsonObject &object)
 {
     QString version = JsonUtil::asString(object, QStringLiteral("version"));
@@ -36,4 +42,9 @@ QJsonObject Version::toJsonObjectV1() const
     object.insert(QStringLiteral("description"), description);
 
     return object;
+}
+
+bool Version::operator==(const Version &other)
+{
+    return revision == other.revision;
 }

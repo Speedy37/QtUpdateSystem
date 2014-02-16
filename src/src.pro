@@ -7,8 +7,8 @@ TEMPLATE = lib
 DEFINES += QTUPDATESYSTEM_LIBRARY LZMA_API_STATIC QTLOG_STATIC
 
 Release:DEFINES += NOLOGDEBUG NOLOGTRACE
-linux-llvm:QMAKE_CXXFLAGS += -std=c++11
-win32-g++:QMAKE_CXXFLAGS += -std=c++11
+
+CONFIG += c++11
 
 INCLUDEPATH += ../QtLog/
 
@@ -22,7 +22,6 @@ SOURCES += \
     operations/removeoperation.cpp \
     common/package.cpp \
     common/version.cpp \
-    packagemanager.cpp \
     packager.cpp \
     common/files.cpp \
     common/file.cpp \
@@ -32,7 +31,8 @@ SOURCES += \
     common/packagemetadata.cpp \
     common/versions.cpp \
     packager/packagertask.cpp \
-    common/utils.cpp
+    common/utils.cpp \
+    repository.cpp
 
 HEADERS +=\
     qtupdatesystem_global.h \
@@ -45,7 +45,6 @@ HEADERS +=\
     operations/removeoperation.h \
     common/package.h \
     common/version.h \
-    packagemanager.h \
     packager.h \
     common/files.h \
     common/file.h \
@@ -55,7 +54,8 @@ HEADERS +=\
     common/packagemetadata.h \
     common/versions.h \
     packager/packagertask.h \
-    common/utils.h
+    common/utils.h \
+    repository.h
 
 unix {
     target.path = /usr/lib

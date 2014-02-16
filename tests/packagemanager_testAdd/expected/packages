@@ -1,0 +1,15 @@
+{
+    "packages": [
+        {
+            "from": "",
+            "size": "3637",
+            "to": "REV1"
+        },
+        {
+            "from": "REV1",
+            "size": "1241",
+            "to": "REV2"
+        }
+    ],
+    "version": "1"
+}

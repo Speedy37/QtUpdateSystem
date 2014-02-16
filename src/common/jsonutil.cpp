@@ -1,11 +1,18 @@
 #include "jsonutil.h"
 
 #include <QJsonParseError>
-#include <QJsonDocument>
 #include <QObject>
 #include <QFile>
 
 namespace JsonUtil {
+
+void toJsonFile(const QString &filename, const QJsonObject &object, QJsonDocument::JsonFormat format)
+{
+    QFile file(filename);
+    if(!file.open(QFile::WriteOnly | QFile::Text))
+        throw(QObject::tr("Unable to write file %1 %2").arg(filename, file.errorString()));
+    file.write(QJsonDocument(object).toJson(format));
+}
 
 QJsonObject fromJsonFile(const QString &filename)
 {

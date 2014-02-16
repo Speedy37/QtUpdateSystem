@@ -3,14 +3,6 @@
 
 #include <qtlog.h>
 
-void Versions::addVersion(const QString &revision, const QString &description)
-{
-    Version version;
-    version.revision = revision;
-    version.description = description;
-    m_versions.append(version);
-}
-
 void Versions::fromJsonObject(const QJsonObject & object)
 {
     const QString version = JsonUtil::asString(object, QStringLiteral("version"));
@@ -32,11 +24,11 @@ QJsonObject Versions::toJsonObject() const
 
 void Versions::fromJsonArrayV1(const QJsonArray &versions)
 {
-    m_versions.resize(versions.size());
+    resize(versions.size());
 
     for(int i = 0; i < versions.size(); ++i)
     {
-        Version & version = m_versions[i];
+        Version & version = (*this)[i];
         version.fromJsonObjectV1(JsonUtil::asObject(versions[i]));
     }
 }
@@ -45,9 +37,9 @@ QJsonArray Versions::toJsonArrayV1() const
 {
     QJsonArray versions;
 
-    for(int i = 0; i < m_versions.size(); ++i)
+    for(int i = 0; i < size(); ++i)
     {
-        versions.append(m_versions[i].toJsonObjectV1());
+        versions.append(at(i).toJsonObjectV1());
     }
 
     return versions;
