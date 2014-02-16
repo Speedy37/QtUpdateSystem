@@ -34,14 +34,14 @@ public:
     QString remoteRevision() const;
     Version remoteVersion() const;
 
-    QString updateDirectory() const;
-    void setUpdateDirectory(const QString &updateDirectory);
+    QString localRepository() const;
+    void setLocalRepository(const QString &localRepository);
 
-    QString updateTmpDirectory() const;
-    void setUpdateTmpDirectory(const QString &updateTmpDirectory);
+    QString tmpDirectory() const;
+    void setTmpDirectory(const QString &tmpDirectory);
 
-    QString updateUrl() const;
-    void setUpdateUrl(const QString &updateUrl);
+    QString remoteRepository() const;
+    void setRemoteRepository(const QString &remoteRepository);
 
     QString username() const;
     QString password() const;
@@ -125,22 +125,22 @@ inline Version Updater::remoteVersion() const
     return m_remoteRevision;
 }
 
-inline QString Updater::updateDirectory() const
+inline QString Updater::localRepository() const
 {
     return m_updateDirectory;
 }
 
-inline QString Updater::updateTmpDirectory() const
+inline QString Updater::tmpDirectory() const
 {
     return m_updateTmpDirectory;
 }
 
-inline QString Updater::updateUrl() const
+inline QString Updater::remoteRepository() const
 {
     return m_updateUrl;
 }
 
-inline void Updater::setUpdateUrl(const QString &updateUrl)
+inline void Updater::setRemoteRepository(const QString &updateUrl)
 {
     Q_ASSERT(isIdle());
     m_updateUrl = updateUrl;

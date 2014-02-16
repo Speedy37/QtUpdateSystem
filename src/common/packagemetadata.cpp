@@ -24,7 +24,7 @@ void PackageMetadata::setup(const QString &updateDir, const QString &tmpUpdateDi
 {
     for(int i = 0; i < m_operations.size(); ++i)
     {
-        m_operations[i]->setDataFilename(QString("%1Operation%2").arg(tmpUpdateDir, i));
+        m_operations[i]->setDataFilename(QString("%1Operation%2").arg(tmpUpdateDir).arg(i));
         m_operations[i]->setUpdateDirectory(updateDir);
     }
 }

@@ -14,8 +14,7 @@ void FileManager::prepareOperation(QSharedPointer<Operation> operation)
 
 void FileManager::applyOperation(QSharedPointer<Operation> operation)
 {
-    if(operation->status() == Operation::DownloadRequired || operation->status() == Operation::ApplyRequired)
-        operation->apply();
+    operation->apply();
 }
 
 void FileManager::downloadFinished()

@@ -11,11 +11,13 @@ TEMPLATE = app
 
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
 
-SOURCES += tst_packagemanager.cpp \
+SOURCES += \
     tst_packager.cpp \
     main.cpp \
     tst_updater.cpp \
-    utils.cpp
+    utils.cpp \
+    tst_updatechain.cpp \
+    tst_repository.cpp
 
 win32:CONFIG(release, debug|release) {
     subdir = release/
@@ -44,8 +46,9 @@ target.path = $$OUT_PWD/Install
 INSTALLS += target
 
 HEADERS += \
-    tst_packagemanager.h \
     tst_packager.h \
     tst_updater.h \
-    utils.h
+    utils.h \
+    tst_updatechain.h \
+    tst_repository.h
 

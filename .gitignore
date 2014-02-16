@@ -26,3 +26,6 @@ Makefile.Debug
 *.sdf
 Makefile.Release
 *.pdb
+tests/updatechain_testNew/tmp/
+tests/updatechain_testNew/repo/
+tests/updatechain_testNew/local_repo/

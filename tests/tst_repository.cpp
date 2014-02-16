@@ -1,13 +1,13 @@
-#include "tst_packagemanager.h"
+#include "tst_repository.h"
 #include "utils.h"
 #include <repository.h>
 #include <QString>
 
 const QString testDir = QString(SRCDIR);
-const QString testNew = testDir + "packagemanager_testNew";
-const QString testAdd = testDir + "packagemanager_testAdd";
+const QString testNew = testDir + "repository_testNew";
+const QString testAdd = testDir + "repository_testAdd";
 
-void TestPackageManager::initTestCase()
+void TestRepository::initTestCase()
 {
     QFile::remove(testAdd + "/dir/versions");
     QFile::remove(testAdd + "/dir/packages");
@@ -20,11 +20,11 @@ void TestPackageManager::initTestCase()
         QFAIL("Unable to copy init/current to dir/current");
 }
 
-void TestPackageManager::cleanupTestCase()
+void TestRepository::cleanupTestCase()
 {
 }
 
-void TestPackageManager::testNewRepository()
+void TestRepository::testNewRepository()
 {
     QString dir = testNew + "\\dir";
     Repository pm;
@@ -64,7 +64,7 @@ void TestPackageManager::testNewRepository()
     }
 }
 
-void TestPackageManager::testAddPackage()
+void TestRepository::testAddPackage()
 {
     Repository pm;
     pm.setDirectory(testAdd + "/dir");
@@ -111,7 +111,7 @@ void TestPackageManager::testAddPackage()
     }
 }
 
-void TestPackageManager::testFixRepository()
+void TestRepository::testFixRepository()
 {
     QWARN("test not implemented");
 }

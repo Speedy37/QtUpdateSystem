@@ -7,10 +7,6 @@
 const QString testDir = QString(SRCDIR);
 const QString testNew = "packager_test1";
 
-TestPackager::TestPackager()
-{
-}
-
 void TestPackager::packageTest1NewOld()
 {
     Packager packager;
