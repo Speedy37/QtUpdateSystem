@@ -16,7 +16,8 @@ QString cleanPath(const QString &pathName)
     if(pathName.isEmpty())
         return pathName;
 
-    QString cleaned = QDir::fromNativeSeparators(pathName);
+    QString cleaned = pathName;
+    cleaned.replace('\\', '/');
 
     if(!cleaned.endsWith('/'))
         cleaned += '/';
@@ -24,22 +25,22 @@ QString cleanPath(const QString &pathName)
     return cleaned;
 }
 
-QString Utils::xdeltaProgram()
+QString xdeltaProgram()
 {
     return xdelta;
 }
 
-void Utils::setXdeltaProgram(const QString &program)
+void setXdeltaProgram(const QString &program)
 {
     xdelta = program;
 }
 
-QString Utils::lzmaProgram()
+QString lzmaProgram()
 {
     return lzma;
 }
 
-void Utils::setLzmaProgram(const QString &program)
+void setLzmaProgram(const QString &program)
 {
     lzma = program;
 }
