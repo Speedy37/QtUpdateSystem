@@ -11,7 +11,7 @@ public:
 protected:
     virtual Status localDataStatus() Q_DECL_OVERRIDE;
     virtual void applyData() Q_DECL_OVERRIDE;
-    virtual QString action() const Q_DECL_OVERRIDE;
+    virtual QString type() const Q_DECL_OVERRIDE;
 };
 
 #endif // UPDATER_REMOVEDIRECTORYOPERATION_H

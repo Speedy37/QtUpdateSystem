@@ -111,15 +111,27 @@ const QString UpdateFile = QStringLiteral("UpdateFile");
  */
 const QString UpdateUrlInfo = QStringLiteral("info");
 
-Updater::Updater(QObject *parent) : QObject(parent)
+Updater::Updater(const QString &updateDirectory, QObject *parent) : QObject(parent)
 {
+    // Init
     m_state = Idle;
+    m_updateDirectory = Utils::cleanPath(updateDirectory);
+
+    // Settings
+    m_settings = new QSettings(m_updateDirectory + QStringLiteral("status.ini"), QSettings::IniFormat, this);
+    m_localRevision = m_settings->value(QStringLiteral("Revision")).toString();
+    m_updatingToRevision  = m_settings->value(QStringLiteral("UpdatingTo")).toString();
+
+    // Network
     m_manager = new QNetworkAccessManager(this);
     connect(m_manager, &QNetworkAccessManager::authenticationRequired, this, &Updater::authenticationRequired);
 }
 
+
+#include <QDebug>
 Updater::~Updater()
 {
+    qDebug() << "~Updater in " << QThread::currentThread() << "thread";
 }
 
 QNetworkReply* Updater::get(const QString & what)
@@ -130,25 +142,13 @@ QNetworkReply* Updater::get(const QString & what)
     return reply;
 }
 
-QString Updater::iniCurrentVersion() const
-{
-    QSettings settings(localRepository()+QStringLiteral("status.ini"), QSettings::IniFormat);
-    return (settings.value(QStringLiteral("Revision")).toString());
-}
-
-void Updater::setIniCurrentVersion(const QString &version)
-{
-    QSettings settings(localRepository()+QStringLiteral("status.ini"), QSettings::IniFormat);
-    settings.setValue(QStringLiteral("Revision"), version);
-}
-
 void Updater::checkForUpdates()
 {
     if(isIdle())
     {
         setState(DownloadingInformations);
         clearError();
-        m_localRevision = iniCurrentVersion();
+
         m_currentRequest = get(QStringLiteral("current"));
         connect(m_currentRequest, &QNetworkReply::finished, this, &Updater::onInfoFinished);
     }
@@ -171,7 +171,13 @@ void Updater::onInfoFinished()
 
         LOG_INFO(tr("Remote informations analyzed"));
 
-        if(localRevision() == remoteRevision())
+        if(!m_updatingToRevision.isEmpty())
+        {
+            LOG_INFO(tr("An update was in progress"));
+            setState(UpdateRequired);
+            emit updateRequired();
+        }
+        else if(localRevision() == remoteRevision())
         {
             LOG_INFO(tr("Already at the latest version"));
             setState(AlreadyUptodate);
@@ -200,6 +206,16 @@ void Updater::onInfoFinished()
     emit checkForUpdatesFinished();
 }
 
+class DownloadManagerThread : public QThread
+{
+public:
+    DownloadManagerThread(QObject * parent = 0) : QThread(parent) {}
+    ~DownloadManagerThread()
+    {
+        qDebug() << "~DownloadManagerThread in " << QThread::currentThread() << "thread";
+    }
+};
+
 void Updater::update()
 {
     if(isUpdateAvailable())
@@ -210,13 +226,20 @@ void Updater::update()
         LOG_TRACE(tr("Creating download manager"));
 
         DownloadManager *downloader = new DownloadManager(this);
-        QThread * thread = new QThread(this);
+        QThread * thread = new DownloadManagerThread();
         downloader->moveToThread(thread);
+        //connect(downloader, &DownloadManager::finished, thread, &QThread::quit);
+        //connect(downloader, &DownloadManager::finished, downloader, &DownloadManager::deleteLater);
         connect(downloader, &DownloadManager::finished, this, &Updater::updateFinished);
         connect(downloader, &DownloadManager::updateSucceeded, this, &Updater::updateSucceeded);
-        connect(downloader, &DownloadManager::finished, thread, &QThread::quit);
+        connect(downloader, &DownloadManager::updateFailed, this, &Updater::updateFailed);
+
         connect(thread, &QThread::started, downloader, &DownloadManager::update);
-        connect(thread, &QThread::destroyed, downloader, &DownloadManager::deleteLater);
+
+        // Safe garbage collection but non instantenoues
+        connect(this, &Updater::destroyed, downloader, &DownloadManager::deleteLater);
+        connect(downloader, &DownloadManager::destroyed, thread, &QThread::quit);
+        connect(thread, &QThread::finished, thread, &QThread::deleteLater);
         thread->start();
     }
     else
@@ -227,9 +250,13 @@ void Updater::update()
 
 void Updater::updateSucceeded()
 {
-    setIniCurrentVersion(remoteRevision());
     m_localRevision = remoteRevision();
     setState(Uptodate);
+}
+
+void Updater::updateFailed(const QString &reason)
+{
+
 }
 
 void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)
@@ -238,12 +265,6 @@ void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authentica
         authenticator->setPassword(m_password);
     if(!m_username.isEmpty() && authenticator->user() != m_username)
         authenticator->setUser(m_username);
-}
-
-void Updater::setLocalRepository(const QString &updateDirectory)
-{
-    Q_ASSERT(isIdle());
-    m_updateDirectory = Utils::cleanPath(updateDirectory);
 }
 
 void Updater::setTmpDirectory(const QString &updateTmpDirectory)

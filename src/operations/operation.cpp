@@ -67,6 +67,6 @@ QJsonObject Operation::toJsonObjectV1()
 
 void Operation::fillJsonObjectV1(QJsonObject &object)
 {
-    object.insert(QStringLiteral("action"), action());
+    object.insert(QStringLiteral("type"), type());
     object.insert(Path, m_path);
 }

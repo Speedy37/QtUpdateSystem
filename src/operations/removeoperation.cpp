@@ -68,7 +68,7 @@ void RemoveOperation::fillJsonObjectV1(QJsonObject &object)
     object.insert("localSize", QString::number(m_localSize));
     object.insert("localSha1", m_localSha1);
 }
-QString RemoveOperation::action() const
+QString RemoveOperation::type() const
 {
     return Action;
 }

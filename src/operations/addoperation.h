@@ -23,7 +23,7 @@ protected:
     static const QString FinalSha1;
     virtual Status localDataStatus() Q_DECL_OVERRIDE;
     virtual void applyData() Q_DECL_OVERRIDE;
-    virtual QString action() const Q_DECL_OVERRIDE;
+    virtual QString type() const Q_DECL_OVERRIDE;
     virtual void fillJsonObjectV1(QJsonObject & object) Q_DECL_OVERRIDE;
 
     QString m_compression, m_finalSha1;

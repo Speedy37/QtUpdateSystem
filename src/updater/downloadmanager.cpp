@@ -22,7 +22,7 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
     m_updateTmpDirectory = updater->tmpDirectory();
     m_updateUrl = updater->remoteRepository();
     m_localRevision = updater->localRevision();
-    m_remoteRevision = updater->remoteRevision();
+    m_remoteRevision = updater->updateRevision();
     m_username = updater->username();
     m_password = updater->password();
 
@@ -31,7 +31,7 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
 
     // Create the file manager and assign it to a new thread
     m_filemanager = new FileManager();
-    QThread * thread = new QThread(this);
+    QThread * thread = new QThread();
     m_filemanager->moveToThread(thread);
 
     connect(this, &DownloadManager::operationLoaded, m_filemanager, &FileManager::prepareOperation);
@@ -44,9 +44,16 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
     connect(m_filemanager, &FileManager::applyFinished, this, &DownloadManager::applyFinished);
 
     connect(this, &DownloadManager::finished, thread, &QThread::quit);
+    connect(this, &DownloadManager::finished, m_filemanager, &FileManager::deleteLater);
     connect(this, &DownloadManager::destroyed, m_filemanager, &FileManager::deleteLater);
     connect(thread, &QThread::destroyed, m_filemanager, &FileManager::deleteLater);
     thread->start();
+}
+
+#include <QDebug>
+DownloadManager::~DownloadManager()
+{
+    qDebug() << "~DownloadManager in " << QThread::currentThread() << "thread";
 }
 
 /**
@@ -81,12 +88,13 @@ void DownloadManager::updatePackagesListRequestFinished()
 
         LOG_INFO(tr("Packages list downloaded"));
 
-        Packages packages;
-        packages.fromJsonObject(JsonUtil::fromJson(packagesListRequest->readAll()));
+        m_packages.fromJsonObject(JsonUtil::fromJson(packagesListRequest->readAll()));
 
         LOG_INFO(tr("Remote informations analyzed"));
 
-        downloadPath = packages.findBestPath(m_localRevision, m_remoteRevision);
+        downloadPath = m_packages.findBestPath(m_localRevision, m_remoteRevision);
+        if(downloadPath.isEmpty())
+            throw tr("No download path found from %1 to %2").arg(m_localRevision, m_remoteRevision);
         downloadPathPos = 0;
         downloadGlobalOffset = 0;
         downloadGlobalSize = 0;
@@ -100,7 +108,7 @@ void DownloadManager::updatePackagesListRequestFinished()
     catch(const QString & msg)
     {
         LOG_ERROR(tr("Update failed %1").arg(msg));
-        emit failure(msg);
+        failure(msg);
     }
 }
 
@@ -124,12 +132,55 @@ void DownloadManager::updatePackageLoop()
     {
         if(failures.size() > 0)
         {
-            LOG_INFO(tr("Some parts of the update have gone wrong, fixing..."));
+            if(fixingPath.isEmpty())
+            {
+                // First time we get in this loop
+                LOG_INFO(tr("Some parts of the update have gone wrong, fixing..."));
+                downloadPath = m_packages.findBestPath("", m_remoteRevision);
+                if(downloadPath.isEmpty())
+                    failure(tr("No download path found %1").arg(m_remoteRevision));
+            }
 
+            int fixedFailures = 0;
+            QMap<QString, Failure>::iterator it = failures.begin();
+            while(it != failures.end())
+            {
+                if(it.value() == Fixed)
+                {
+                    ++fixedFailures;
+                }
+                else if(it.value() != NonRecoverable && it.value() != FixInProgress)
+                {
+                    fixingPath = it.key();
+                    it.value() = FixInProgress;
+                    break;
+                }
+                ++it;
+            }
+
+            if(it != failures.end())
+            {
+                downloadPathPos = 0;
+                const Package & package = downloadPath.at(downloadPathPos);
+                metadata.setPackage(package);
+                metadataRequest = get(package.metadataUrl());
+                connect(metadataRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackageMetadataFinished);
+                LOG_INFO(tr("Downloading metadata for %1").arg(package.url()));
+            }
+            else
+            {
+                LOG_INFO(tr("Update finished with %1/%2 fixed errors").arg(fixedFailures).arg(failures.size()));
+                if(fixedFailures == failures.size())
+                    emit updateSucceeded();
+                else
+                    emit updateFailed(tr("Unable to fixes all errors (%1/%2 fixed)").arg(fixedFailures).arg(failures.size()));
+                emit finished();
+            }
         }
         else
         {
             LOG_INFO(tr("Update finished without error"));
+            emit updateSucceeded();
             emit finished();
         }
     }
@@ -155,27 +206,47 @@ void DownloadManager::updatePackageMetadataFinished()
 
         if(metadata.operationCount() == 0)
         {
-            // nothing to do
+            ++downloadPathPos;
+            updatePackageLoop();
+            return;
         }
 
         operationIndex = 0;
         operation.clear();
         preparedOperationCount = 0;
-        appliedOperationCount = 0;
-        failedOperationCount = 0;
 
-        foreach(QSharedPointer<Operation> op, metadata.operations())
+        if(fixingPath.isEmpty())
         {
-            // Ask the file manager to take care of pre-apply job
-            // Jobs are automatically queued by Qt signals & slots
-            emit operationLoaded(op);
+            foreach(QSharedPointer<Operation> op, metadata.operations())
+            {
+                // Ask the file manager to take care of pre-apply job
+                // Jobs are automatically queued by Qt signals & slots
+                emit operationLoaded(op);
+            }
         }
+        else
+        {
+            while(operationIndex < metadata.operationCount())
+            {
+                operation = metadata.operation(operationIndex);
+                if(operation->path() == fixingPath)
+                {
+                    preparedOperationCount = operationIndex + 1;
+                    updateDataSetupOperationFile();
 
+                    dataRequest = get(metadata.dataUrl(), operation->offset(), operation->offset() + operation->size());
+                    connect(dataRequest, &QNetworkReply::readyRead, this, &DownloadManager::updateDataReadyRead);
+                    connect(dataRequest, &QNetworkReply::finished, this, &DownloadManager::updateDataFinished);
+                    break;
+                }
+                ++operationIndex;
+            }
+        }
     }
     catch(const QString & msg)
     {
         LOG_ERROR(tr("Update failed %1").arg(msg));
-        emit failure(msg);
+        failure(msg);
     }
 }
 
@@ -255,7 +326,11 @@ void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperatio
 {
     if(appliedOperation->status() != Operation::Valid)
     {
-        failures.insert(appliedOperation->path(), ApplyFailed);
+        failures.insert(appliedOperation->path(), fixingPath.isEmpty() ? ApplyFailed : NonRecoverable);
+    }
+    else if(!fixingPath.isEmpty())
+    {
+        failures.insert(appliedOperation->path(), Fixed);
     }
 }
 
@@ -263,6 +338,12 @@ void DownloadManager::applyFinished()
 {
     ++downloadPathPos;
     updatePackageLoop();
+}
+
+void DownloadManager::failure(const QString &reason)
+{
+    emit updateFailed(reason);
+    emit finished();
 }
 
 bool DownloadManager::isSkipDownloadUseful(qint64 skippableSize)
@@ -390,6 +471,13 @@ void DownloadManager::updateDataReadyRead()
                 if(!file.flush())
                     throw(tr("Unable to flush all data %1").arg(file.fileName()));
                 file.close();
+            }
+
+            if(!fixingPath.isEmpty())
+            {
+                emit operationReadyToApply(operation);
+                emit downloadFinished();
+                return;
             }
 
             if(operationIndex < preparedOperationCount && operation->status() == Operation::DownloadRequired)

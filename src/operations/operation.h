@@ -62,7 +62,7 @@ protected:
     static const QString Path;
     virtual Status localDataStatus() = 0; // FileManager thread
     virtual void applyData() = 0; // FileManager thread
-    virtual QString action() const = 0;
+    virtual QString type() const = 0;
     virtual void fillJsonObjectV1(QJsonObject & object);
 
     qint64 m_offset, m_size;

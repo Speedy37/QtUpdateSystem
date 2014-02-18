@@ -317,7 +317,7 @@ void PatchOperation::create(const QString &path, const QString &oldFilename, con
     }
 }
 
-QString PatchOperation::action() const
+QString PatchOperation::type() const
 {
     return Action;
 }

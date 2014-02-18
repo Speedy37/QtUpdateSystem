@@ -41,7 +41,7 @@ void RemoveDirectoryOperation::applyData()
     }
 }
 
-QString RemoveDirectoryOperation::action() const
+QString RemoveDirectoryOperation::type() const
 {
     return Action;
 }

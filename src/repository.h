@@ -64,8 +64,6 @@ inline void Repository::addPackage(const PackageMetadata &packageMetadata)
     addPackage(packageMetadata.package());
 }
 
-
-
 inline Versions Repository::versions() const
 {
     return m_versions;

@@ -9,6 +9,7 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 class QAuthenticator;
+class QSettings;
 
 class QTUPDATESYSTEMSHARED_EXPORT Updater : public QObject
 {
@@ -24,7 +25,7 @@ public:
         Updating ///< Updating in progress
     };
 
-    Updater(QObject * parent = 0);
+    Updater(const QString &updateDirectory, QObject * parent = 0);
     ~Updater();
 
     bool isIdle() const;
@@ -32,10 +33,10 @@ public:
 
     QString localRevision() const;
     QString remoteRevision() const;
+    QString updateRevision() const;
     Version remoteVersion() const;
 
     QString localRepository() const;
-    void setLocalRepository(const QString &localRepository);
 
     QString tmpDirectory() const;
     void setTmpDirectory(const QString &tmpDirectory);
@@ -49,8 +50,6 @@ public:
 
     QString errorString() const;
     State state() const;
-
-    QString iniCurrentVersion() const;
 
 public slots:
     void checkForUpdates();
@@ -70,6 +69,7 @@ signals:
 private slots:
     void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
     void updateSucceeded();
+    void updateFailed(const QString &reason);
 
 signals:
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
@@ -78,7 +78,6 @@ signals:
 
 private:
     QNetworkReply *get(const QString &what);
-    void setIniCurrentVersion(const QString &version);
     void clearError();
     void failure(const QString & msg);
     void setState(State newState);
@@ -89,12 +88,13 @@ private:
     QNetworkReply *m_currentRequest, *metadata;
 
     // Config
+    QSettings *m_settings;
     QString m_updateDirectory, m_updateTmpDirectory;
     QString m_updateUrl;
     QString m_username, m_password;
 
     // Informations
-    QString m_localRevision;
+    QString m_localRevision, m_updatingToRevision;
     Version m_remoteRevision;
     QString m_errorString;
     State m_state;
@@ -118,6 +118,11 @@ inline QString Updater::localRevision() const
 inline QString Updater::remoteRevision() const
 {
     return m_remoteRevision.revision;
+}
+
+inline QString Updater::updateRevision() const
+{
+    return m_updatingToRevision.isEmpty() ? remoteRevision() : m_updatingToRevision;
 }
 
 inline Version Updater::remoteVersion() const

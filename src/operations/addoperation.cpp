@@ -252,7 +252,7 @@ void AddOperation::fillJsonObjectV1(QJsonObject &object)
     object.insert(FinalSha1, m_finalSha1);
 }
 
-QString AddOperation::action() const
+QString AddOperation::type() const
 {
     return Action;
 }

@@ -67,18 +67,18 @@ void PackageMetadata::operationsFromJsonArrayV1(const QJsonArray &operations)
         for(int i = 0; i < operations.size(); ++i)
         {
             QJsonObject jsonOperation = JsonUtil::asObject(operations[i]);
-            QString action = JsonUtil::asString(jsonOperation, QStringLiteral("action"));
+            QString type= JsonUtil::asString(jsonOperation, QStringLiteral("type"));
             Operation * op;
-            if(action == RemoveOperation::Action)
+            if(type == RemoveOperation::Action)
                 op = new RemoveOperation();
-            else if(action == RemoveDirectoryOperation::Action)
+            else if(type == RemoveDirectoryOperation::Action)
                 op = new RemoveDirectoryOperation();
-            else if(action == AddOperation::Action)
+            else if(type == AddOperation::Action)
                 op = new AddOperation();
-            else if(action == PatchOperation::Action)
+            else if(type == PatchOperation::Action)
                 op = new PatchOperation();
             else
-                throw(QObject::tr("'action' \"%1\" is not supported").arg(action));
+                throw(QObject::tr("'action' \"%1\" is not supported").arg(type));
 
             m_operations[i] = QSharedPointer<Operation>(op);
             op->fromJsonObjectV1(jsonOperation);

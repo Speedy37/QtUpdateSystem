@@ -106,8 +106,11 @@ void Repository::addPackage(const QString &packageFullName)
             PackageMetadata packageMetadata;
             packageMetadata.fromJsonObject(JsonUtil::fromJson(metadataFile.readAll()), false);
             addPackage(packageMetadata);
+            return;
         }
+        throw tr("Unable to open %1").arg(metadataFile.fileName());
     }
+    throw tr("%1 doesn't exists").arg(metadataFile.fileName());
 }
 
 void Repository::save()
@@ -160,7 +163,7 @@ void Repository::ensurePackageVersionExists(const Package &package)
 void Repository::addPackage(const Package &package)
 {
     if(package.to.isEmpty())
-        return;
+        throw tr("Package invalid, the 'to' property is empty");
     ensurePackageVersionExists(package);
     m_packages.append(package);
 }

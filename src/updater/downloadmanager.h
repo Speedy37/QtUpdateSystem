@@ -3,6 +3,7 @@
 
 #include "../updater.h"
 #include "../common/package.h"
+#include "../common/packages.h"
 #include "../common/packagemetadata.h"
 #include <QFile>
 #include <QObject>
@@ -18,6 +19,7 @@ class DownloadManager : public QObject
     Q_OBJECT
 public:
     DownloadManager(Updater *updater);
+    ~DownloadManager();
 public slots:
     void update();
 
@@ -36,11 +38,12 @@ signals:
     void operationReadyToApply(QSharedPointer<Operation> operation);
     void downloadFinished();
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void failure(const QString &reason);
+    void updateFailed(const QString &reason);
     void updateSucceeded();
     void finished();
 
 private:
+    void failure(const QString &reason);
     void updateDataSetupOperationFile();
     void updatePackageLoop();
     void updateDataReadAll();
@@ -55,7 +58,10 @@ private:
     {
         DownloadFailed,
         LocalFileInvalid,
-        ApplyFailed
+        ApplyFailed,
+        FixInProgress,
+        Fixed,
+        NonRecoverable
     };
 
     // Configuration
@@ -72,6 +78,7 @@ private:
     FileManager *m_filemanager;
 
     // Packages
+    Packages m_packages;
     int downloadPathPos;
     QVector<Package> downloadPath;
     QMap<QString, Failure> failures; ///< Map<Path, Reason> of failures
@@ -80,10 +87,9 @@ private:
     // Package download/application
     PackageMetadata metadata; ///< Informations about the package currently downloaded
     QSharedPointer<Operation> operation; ///< Current operation in download
+    QString fixingPath;
     QFile file;
     int preparedOperationCount;
-    int appliedOperationCount;
-    int failedOperationCount;
     int operationIndex; ///< Index in metadata of the current operation
     qint64 downloadSeek; ///< If seeking the download can't be done server side (ie, it's a file)
     qint64 offset; ///< Current download offset relative to operation->offset()

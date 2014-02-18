@@ -11,6 +11,7 @@ class FileManager : public QObject
     Q_OBJECT
 public:
     explicit FileManager(QObject *parent = 0);
+    ~FileManager();
 
 signals:
     void operationPrepared(QSharedPointer<Operation> operation);
