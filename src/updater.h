@@ -83,6 +83,8 @@ private:
     void setState(State newState);
 
 private:
+    static const QString Revision;
+    static const QString UpdatingTo;
     // Network
     QNetworkAccessManager *m_manager;
     QNetworkReply *m_currentRequest, *metadata;

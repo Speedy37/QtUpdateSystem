@@ -79,26 +79,29 @@ signals:
     void finished();
 
 private:
-    void failure(const QString &reason);
-    void updateDataSetupOperationFile();
-    void updatePackageLoop();
-    void updateDataReadAll();
-    void updateDataStartDownload();
-    void updateDataStopDownload();
-    bool tryContinueDownload(qint64 skippableSize);
-    bool isSkipDownloadUseful(qint64 skippableSize);
-    QNetworkReply *get(const QString &what, qint64 startPosition = 0, qint64 endPosition = 0);
-
-private:
     enum Failure
     {
         DownloadFailed,
         LocalFileInvalid,
+        DownloadRenameFailed,
         ApplyFailed,
         FixInProgress,
         Fixed,
         NonRecoverable
     };
+    void failure(const QString &reason);
+    void failure(const QString &path, Failure reason);
+    void updateDataSetupOperationFile();
+    void updatePackageLoop();
+    void updateDataReadAll();
+    void updateDataStartDownload();
+    void updateDataStopDownload();
+    void nextOperation();
+    bool tryContinueDownload(qint64 skippableSize);
+    bool isSkipDownloadUseful(qint64 skippableSize);
+    QNetworkReply *get(const QString &what, qint64 startPosition = 0, qint64 endPosition = 0);
+
+private:
 
     // Configuration
     bool m_createApplyManifest;

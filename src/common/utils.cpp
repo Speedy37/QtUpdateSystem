@@ -25,6 +25,27 @@ QString cleanPath(const QString &pathName)
     return cleaned;
 }
 
+QString formatMs(qint64 millisec)
+{
+    if(millisec < 1000)
+        return QStringLiteral("%1 ms").arg(millisec);
+
+    double time = millisec/1000.0;
+    if(time < 60.0)
+        return QStringLiteral("%1 seconds").arg(time, 0, 'g', 2);
+
+    time /= 60.0;
+    if(time < 60.0)
+        return QStringLiteral("%1 minutes").arg(time, 0, 'g', 2);
+
+    time /= 60.0;
+    if(time < 24.0)
+        return QStringLiteral("%1 hours").arg(time, 0, 'g', 2);
+
+    time /= 24.0;
+    return QStringLiteral("%1 days").arg(time, 0, 'g', 2);
+}
+
 QString xdeltaProgram()
 {
     return xdelta;

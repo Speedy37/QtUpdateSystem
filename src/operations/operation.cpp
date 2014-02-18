@@ -38,7 +38,7 @@ void Operation::apply()
     try
     {
         m_errorString = QString();
-        Q_ASSERT_X(localDataStatus() == ApplyRequired, __FUNCTION__, m_path.toLatin1());
+        Q_ASSERT_X(localDataStatus() == ApplyRequired, __FUNCTION__, (m_path + m_dataFilename).toLatin1());
         applyData();
         Q_ASSERT(localDataStatus() == Valid);
         m_status = Valid;

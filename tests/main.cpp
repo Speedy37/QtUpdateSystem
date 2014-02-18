@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
 
-    QtLog::setLevel(QtLog::Info);
+    QtLog::setLevel(QtLog::Trace);
 #ifdef Q_OS_WIN
     Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma.exe");
     Utils::setXdeltaProgram(QString(SRCDIR)+ "../xdelta3.exe");

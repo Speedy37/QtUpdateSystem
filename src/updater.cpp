@@ -1,19 +1,14 @@
 #include "updater.h"
 #include "common/jsonutil.h"
 #include "common/utils.h"
+#include "updater/downloadmanager.h"
+
 #include <qtlog.h>
 #include <QNetworkReply>
-#include <QDir>
-#include <QFileInfo>
-#include <QProcess>
 #include <QNetworkAccessManager>
 #include <QDebug>
 #include <QSettings>
-#include <QMutexLocker>
-#include <QAbstractEventDispatcher>
 #include <QAuthenticator>
-#include <QThread>
-#include "updater/downloadmanager.h"
 
 /*!
     \class RemoteUpdate
@@ -101,15 +96,8 @@
     \sa Updater::State
 */
 
-/**
- * @brief Config name of the key that hold the name of the in update file
- */
-const QString UpdateFile = QStringLiteral("UpdateFile");
-
-/**
- * @brief Name of the repository information file
- */
-const QString UpdateUrlInfo = QStringLiteral("info");
+const QString Updater::Revision = QStringLiteral("Revision");
+const QString Updater::UpdatingTo = QStringLiteral("UpdatingTo");
 
 Updater::Updater(const QString &updateDirectory, QObject *parent) : QObject(parent)
 {
@@ -119,8 +107,8 @@ Updater::Updater(const QString &updateDirectory, QObject *parent) : QObject(pare
 
     // Settings
     m_settings = new QSettings(m_updateDirectory + QStringLiteral("status.ini"), QSettings::IniFormat, this);
-    m_localRevision = m_settings->value(QStringLiteral("Revision")).toString();
-    m_updatingToRevision  = m_settings->value(QStringLiteral("UpdatingTo")).toString();
+    m_localRevision = m_settings->value(Revision).toString();
+    m_updatingToRevision  = m_settings->value(UpdatingTo).toString();
 
     // Network
     m_manager = new QNetworkAccessManager(this);
@@ -210,6 +198,8 @@ void Updater::update()
     {
         setState(Updating);
         clearError();
+        m_settings->setValue(UpdatingTo, updateRevision());
+        m_settings->sync();
 
         LOG_TRACE(tr("Creating download manager"));
 
@@ -227,6 +217,9 @@ void Updater::update()
 void Updater::updateSucceeded()
 {
     m_localRevision = remoteRevision();
+    m_settings->setValue(Revision, localRevision());
+    m_settings->remove(UpdatingTo);
+    m_settings->sync();
     setState(Uptodate);
 }
 

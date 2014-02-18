@@ -262,17 +262,31 @@ void DownloadManager::updatePackageMetadataFinished()
    \brief Filemanager has done is pre-work about this operation
    If the operation download isn't necessary, determine if skipping it is useful
  */
+#include <QDebug>
 void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperation)
 {
     Q_ASSERT(preparedOperation == metadata.operation(preparedOperationCount));
+    LOG_TRACE(tr("Operation prepared %1").arg(preparedOperation->path()));
     ++preparedOperationCount;
+    qDebug() << operationIndex << preparedOperationCount << (operation.isNull() ? QString("NULL") : operation->path());
 
     if(operationIndex >= preparedOperationCount)
     {
         // preparedOperation have already been downloaded
-        if(preparedOperation->status() == Operation::ApplyRequired ||
-           preparedOperation->status() == Operation::DownloadRequired)
+        if(preparedOperation->status() == Operation::DownloadRequired)
+        {
+            LOG_TRACE(tr("Operation ready to apply (%1), already downloaded").arg(preparedOperation->path()));
+            if(QFile(operation->dataDownloadFilename()).rename(operation->dataFilename()))
+                emit operationReadyToApply(preparedOperation);
+            else
+                failure(operation->path(), DownloadRenameFailed);
+        }
+        else if(preparedOperation->status() == Operation::ApplyRequired)
+        {
+            QFile::remove(operation->dataDownloadFilename());
+            LOG_TRACE(tr("Operation ready to apply (%1), already downloaded was ready to apply").arg(preparedOperation->path()));
             emit operationReadyToApply(preparedOperation);
+        }
     }
     else if(preparedOperation->status() == Operation::DownloadRequired)
     {
@@ -298,9 +312,10 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
         {
             // We may be able to optimise the download time
 
-            // Queue apply of the current operation if it's possible
+            // Queue apply the current operation if it's possible
             if(operation == preparedOperation && operation->status() == Operation::ApplyRequired)
             {
+                LOG_TRACE(tr("Operation ready to apply (%1), download aborted").arg(operation->path()));
                 emit operationReadyToApply(operation);
             }
 
@@ -317,35 +332,56 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
 
         // Queue apply of the current operatin if it's possible
         if(preparedOperation->status() == Operation::ApplyRequired)
+        {
+            LOG_TRACE(tr("Operation ready to apply (%1), no download required").arg(preparedOperation->path()));
             emit operationReadyToApply(preparedOperation);
+        }
 
-        ++operationIndex;
-        if(operationIndex == metadata.operationCount())
-            emit downloadFinished();
+        nextOperation();
     }
 
     if(preparedOperation->status() == Operation::LocalFileInvalid)
     {
-        failures.insert(preparedOperation->path(), LocalFileInvalid);
+        failure(preparedOperation->path(), LocalFileInvalid);
     }
 }
 
+void DownloadManager::nextOperation()
+{
+    operation = metadata.operation(++operationIndex);
+    if(operationIndex == metadata.operationCount())
+    {
+        LOG_TRACE(tr("downloadFinished, cause operationIndex == metadata.operationCount() == %1").arg(operationIndex));
+        emit downloadFinished();
+    }
+}
+
+
+
 void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperation)
 {
+    LOG_TRACE(tr("Operation applied %1").arg(appliedOperation->path()));
     if(appliedOperation->status() != Operation::Valid)
     {
-        failures.insert(appliedOperation->path(), fixingPath.isEmpty() ? ApplyFailed : NonRecoverable);
+        failure(appliedOperation->path(), fixingPath.isEmpty() ? ApplyFailed : NonRecoverable);
     }
     else if(!fixingPath.isEmpty())
     {
-        failures.insert(appliedOperation->path(), Fixed);
+        failure(appliedOperation->path(), Fixed);
     }
 }
 
 void DownloadManager::applyFinished()
 {
     ++downloadPathPos;
+    LOG_TRACE(tr("Apply %1/%2 finished").arg(downloadPathPos).arg(downloadPath.size()));
     updatePackageLoop();
+}
+
+void DownloadManager::failure(const QString &path, Failure reason)
+{
+    LOG_WARN(tr("Operation failed %1 (%2)").arg(path).arg(reason));
+    failures.insert(path, reason);
 }
 
 void DownloadManager::failure(const QString &reason)
@@ -373,9 +409,17 @@ bool DownloadManager::isSkipDownloadUseful(qint64 skippableSize)
 bool DownloadManager::tryContinueDownload(qint64 skippableSize)
 {
     Q_ASSERT(operation->status() != Operation::DownloadRequired);
+    Q_ASSERT(operationIndex < metadata.operationCount());
 
     // Compute the amount of data that can be skipped
     int i = operationIndex + 1;
+    if(i == metadata.operationCount())
+    {
+        // It was the last download, we can for sure stop the download here
+        updateDataStopDownload();
+        nextOperation();
+        return false;//< Download has been stopped
+    }
     while(i < preparedOperationCount && metadata.operation(i)->status() != Operation::DownloadRequired)
     {
         skippableSize += metadata.operation(i)->size();
@@ -391,27 +435,23 @@ bool DownloadManager::tryContinueDownload(qint64 skippableSize)
         updateDataStopDownload();
 
         // Find the next download start point
-        ++operationIndex;
+        nextOperation();
         while(operationIndex < preparedOperationCount)
         {
-            operation = metadata.operation(operationIndex);
             if(operation->status() == Operation::DownloadRequired)
             {
                 // Restart the download
                 updateDataSetupOperationFile();
                 updateDataStartDownload();
-                return false;//< Download has been stopped
+                break;
             }
             else if(operation->status() == Operation::ApplyRequired)
             {
+                LOG_TRACE(tr("Operation ready to apply (%1), no download required").arg(operation->path()));
                 emit operationReadyToApply(operation);
             }
-            ++operationIndex;
+            nextOperation();
         }
-        if(operationIndex == metadata.operationCount())
-            emit downloadFinished();
-
-        operation.clear();
 
         return false;//< Download has been stopped
     }
@@ -425,7 +465,7 @@ void DownloadManager::updateDataSetupOperationFile()
 
     if(operation != nullptr)
     {
-        file.setFileName(operation->dataFilename());
+        file.setFileName(operation->dataDownloadFilename());
         if(!file.open(QFile::WriteOnly | QFile::Truncate))
             throw(tr("Unable to open datafile for writing : %1").arg(file.fileName()));
     }
@@ -472,6 +512,7 @@ void DownloadManager::updateDataReadyRead()
         if(offset == operation->size())
         {
             // Operation downloaded
+            LOG_TRACE(tr("Operation downloaded %1").arg(operation->path()));
 
             if(file.isOpen())
             {
@@ -480,24 +521,33 @@ void DownloadManager::updateDataReadyRead()
                     throw(tr("Unable to flush all data %1").arg(file.fileName()));
                 file.close();
             }
+            Q_ASSERT(file.size() == operation->size());
 
             if(!fixingPath.isEmpty())
             {
-                emit operationReadyToApply(operation);
+                LOG_TRACE(tr("Operation ready to apply (%1), download done (fixing)").arg(operation->path()));
+                if(file.rename(operation->dataFilename()))
+                    emit operationReadyToApply(operation);
+                else
+                    failure(operation->path(), DownloadRenameFailed);
+                LOG_TRACE(tr("downloadFinished, cause fixingPath == %1").arg(fixingPath));
                 emit downloadFinished();
                 return;
             }
 
             if(operationIndex < preparedOperationCount && operation->status() == Operation::DownloadRequired)
             {
-                emit operationReadyToApply(operation);
+                LOG_TRACE(tr("Operation ready to apply (%1, %2), download done").arg(operation->path(), operation->dataFilename()));
+                if(file.rename(operation->dataFilename()))
+                    emit operationReadyToApply(operation);
+                else
+                    failure(operation->path(), DownloadRenameFailed);
             }
 
             // Find what to do next
-            ++operationIndex;
+            nextOperation();
             while(operationIndex < preparedOperationCount)
             {
-                operation = metadata.operation(operationIndex);
                 if(operation->status() == Operation::DownloadRequired)
                 {
                     // Setup the current operation
@@ -506,11 +556,13 @@ void DownloadManager::updateDataReadyRead()
                 }
                 else if(operation->status() == Operation::ApplyRequired)
                 {
+                    LOG_TRACE(tr("Operation ready to apply (%1), no download required").arg(operation->path()));
                     emit operationReadyToApply(operation);
                 }
 
                 if(operation->size() > 0)
                 {
+                    // operation->status() != Operation::DownloadRequired
                     if(operation->size() < size)
                     {
                         // Consume downloaded data
@@ -527,14 +579,10 @@ void DownloadManager::updateDataReadyRead()
                         }
                     }
                 }
-                ++operationIndex;
+                nextOperation();
             }
 
-            if(operationIndex == metadata.operationCount())
-            {
-                emit downloadFinished();
-            }
-            else if(operationIndex >= preparedOperationCount)
+            if(operationIndex >= preparedOperationCount)
             {
                 // We don't know yet if it's worth continuing the download
                 // operationPrepared with preparedOperationCount <= operationIndex will occur
@@ -610,12 +658,7 @@ void DownloadManager::updateDataStopDownload()
     disconnect(dataRequest, &QNetworkReply::readyRead, this, &DownloadManager::updateDataReadyRead);
     disconnect(dataRequest, &QNetworkReply::finished, this, &DownloadManager::updateDataFinished);
 
-    if(file.isOpen())
-    {
-        if(!file.flush())
-            throw(tr("Unable to flush all data %1").arg(file.fileName()));
-        file.close();
-    }
+    file.close();
 
     dataRequest->abort();
     dataRequest->deleteLater();

@@ -192,10 +192,8 @@ void AddOperation::applyData()
 
         QProcess decompressor;
         QStringList arguments;
-#ifdef Q_OS_WIN
         arguments << "d" << dataFilename() << "-so";
         decompressor.start(Utils::lzmaProgram(), arguments);
-#endif
 
         if(!decompressor.waitForStarted())
             throw QObject::tr("Unable to start %1").arg(decompressor.program());
