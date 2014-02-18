@@ -93,10 +93,8 @@ void PatchOperation::applyData()
         {
             QStringList decompressorArguments;
             decompressor.setStandardOutputProcess(&xdelta);
-#ifdef Q_OS_WIN
             decompressorArguments << "d" << dataFilename() << "-so";
             decompressor.start(Utils::lzmaProgram(), decompressorArguments);
-#endif
             hasCompression = true;
         }
         else
@@ -251,11 +249,9 @@ void PatchOperation::create(const QString &path, const QString &oldFilename, con
 
     xdeltaArguments << "-e" << "-c" << "-s" << oldFilename << newFilename;
     xdelta.setStandardOutputProcess(&compressor);
-#ifdef Q_OS_WIN
     compressorArguments << "e" << "-si" << "-so";
     xdelta.start(Utils::xdeltaProgram(), xdeltaArguments);
     compressor.start(Utils::lzmaProgram(), compressorArguments);
-#endif
 
     if(!xdelta.waitForStarted())
         throw QObject::tr("Unable to start %1").arg(xdelta.program());

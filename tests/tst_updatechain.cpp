@@ -77,8 +77,4 @@ void TestUpdateChain::testNewRepository()
             QVERIFY(spy.wait());
         }
     }
-
-
-    QSignalSpy spy2(&pm, SIGNAL(destroyed()));
-    QVERIFY(spy2.wait());
 }

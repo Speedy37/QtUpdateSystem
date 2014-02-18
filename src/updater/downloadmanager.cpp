@@ -8,7 +8,6 @@
 #include <qtlog.h>
 #include <QNetworkReply>
 #include <QAuthenticator>
-#include <QThread>
 
 Q_DECLARE_METATYPE(QSharedPointer<Operation>)
 
@@ -31,29 +30,38 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
 
     // Create the file manager and assign it to a new thread
     m_filemanager = new FileManager();
-    QThread * thread = new QThread();
-    m_filemanager->moveToThread(thread);
 
-    connect(this, &DownloadManager::operationLoaded, m_filemanager, &FileManager::prepareOperation);
-    connect(m_filemanager, &FileManager::operationPrepared, this, &DownloadManager::operationPrepared);
+    // Create the download thread
+    {
+        OneObjectThread * thread = new OneObjectThread(updater); //< QThread will be garbage collected by QObject parent/childs system
+        thread->manage(this); //< Move itself to new thread and enable safe blocking garbage collection
+        connect(thread, &QThread::started, this, &DownloadManager::update); //< Autostart the update once thread started
+        thread->start();
+    }
+    {
+        OneObjectThread * thread = new OneObjectThread(updater);
+        thread->manage(m_filemanager);
 
-    connect(this, &DownloadManager::operationReadyToApply, m_filemanager, &FileManager::applyOperation);
-    connect(m_filemanager, &FileManager::operationApplied, this, &DownloadManager::operationApplied);
+        connect(this, &DownloadManager::operationLoaded, m_filemanager, &FileManager::prepareOperation);
+        connect(m_filemanager, &FileManager::operationPrepared, this, &DownloadManager::operationPrepared);
 
-    connect(this, &DownloadManager::downloadFinished, m_filemanager, &FileManager::downloadFinished);
-    connect(m_filemanager, &FileManager::applyFinished, this, &DownloadManager::applyFinished);
+        connect(this, &DownloadManager::operationReadyToApply, m_filemanager, &FileManager::applyOperation);
+        connect(m_filemanager, &FileManager::operationApplied, this, &DownloadManager::operationApplied);
 
-    connect(this, &DownloadManager::finished, thread, &QThread::quit);
+        connect(this, &DownloadManager::downloadFinished, m_filemanager, &FileManager::downloadFinished);
+        connect(m_filemanager, &FileManager::applyFinished, this, &DownloadManager::applyFinished);
+
+        // Safe blocking abort
+        thread->start();
+    }
+
     connect(this, &DownloadManager::finished, m_filemanager, &FileManager::deleteLater);
-    connect(this, &DownloadManager::destroyed, m_filemanager, &FileManager::deleteLater);
-    connect(thread, &QThread::destroyed, m_filemanager, &FileManager::deleteLater);
-    thread->start();
+    connect(this, &DownloadManager::finished, this, &DownloadManager::deleteLater);
 }
 
-#include <QDebug>
 DownloadManager::~DownloadManager()
 {
-    qDebug() << "~DownloadManager in " << QThread::currentThread() << "thread";
+
 }
 
 /**

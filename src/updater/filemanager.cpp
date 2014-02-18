@@ -1,7 +1,5 @@
 #include "filemanager.h"
 #include "../operations/operation.h"
-#include <QDebug>
-#include <QThread>
 
 FileManager::FileManager(QObject *parent) :
     QObject(parent)
@@ -10,7 +8,7 @@ FileManager::FileManager(QObject *parent) :
 
 FileManager::~FileManager()
 {
-    qDebug() << "~FileManager in " << QThread::currentThread() << "thread";
+
 }
 
 void FileManager::prepareOperation(QSharedPointer<Operation> operation)

@@ -127,11 +127,9 @@ Updater::Updater(const QString &updateDirectory, QObject *parent) : QObject(pare
     connect(m_manager, &QNetworkAccessManager::authenticationRequired, this, &Updater::authenticationRequired);
 }
 
-
-#include <QDebug>
 Updater::~Updater()
 {
-    qDebug() << "~Updater in " << QThread::currentThread() << "thread";
+
 }
 
 QNetworkReply* Updater::get(const QString & what)
@@ -206,16 +204,6 @@ void Updater::onInfoFinished()
     emit checkForUpdatesFinished();
 }
 
-class DownloadManagerThread : public QThread
-{
-public:
-    DownloadManagerThread(QObject * parent = 0) : QThread(parent) {}
-    ~DownloadManagerThread()
-    {
-        qDebug() << "~DownloadManagerThread in " << QThread::currentThread() << "thread";
-    }
-};
-
 void Updater::update()
 {
     if(isUpdateAvailable())
@@ -225,22 +213,10 @@ void Updater::update()
 
         LOG_TRACE(tr("Creating download manager"));
 
-        DownloadManager *downloader = new DownloadManager(this);
-        QThread * thread = new DownloadManagerThread();
-        downloader->moveToThread(thread);
-        //connect(downloader, &DownloadManager::finished, thread, &QThread::quit);
-        //connect(downloader, &DownloadManager::finished, downloader, &DownloadManager::deleteLater);
+        DownloadManager * downloader = new DownloadManager(this);
         connect(downloader, &DownloadManager::finished, this, &Updater::updateFinished);
         connect(downloader, &DownloadManager::updateSucceeded, this, &Updater::updateSucceeded);
         connect(downloader, &DownloadManager::updateFailed, this, &Updater::updateFailed);
-
-        connect(thread, &QThread::started, downloader, &DownloadManager::update);
-
-        // Safe garbage collection but non instantenoues
-        connect(this, &Updater::destroyed, downloader, &DownloadManager::deleteLater);
-        connect(downloader, &DownloadManager::destroyed, thread, &QThread::quit);
-        connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-        thread->start();
     }
     else
     {

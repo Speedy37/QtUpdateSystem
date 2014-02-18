@@ -26,7 +26,11 @@ void TestPackager::packageTest1NewOld()
     QCOMPARE(packager.deltaMetadataFilename(), testDir + testNew + "/deltafile_new_old.metadata");
     QFile::remove(packager.deltaFilename());
     QFile::remove(packager.deltaMetadataFilename());
-    packager.generate();
+    try {
+        packager.generate();
+    } catch(QString & msg) {
+        QFAIL(msg.toLatin1());
+    }
 }
 
 void TestPackager::packageTest1New()
@@ -47,7 +51,11 @@ void TestPackager::packageTest1New()
     QCOMPARE(packager.deltaMetadataFilename(), testDir + testNew + "/deltafile_new.metadata");
     QFile::remove(packager.deltaFilename());
     QFile::remove(packager.deltaMetadataFilename());
-    packager.generate();
+    try {
+        packager.generate();
+    } catch(QString & msg) {
+        QFAIL(msg.toLatin1());
+    }
 }
 
 void TestPackager::packageTest1Old()
@@ -68,5 +76,9 @@ void TestPackager::packageTest1Old()
     QCOMPARE(packager.deltaMetadataFilename(), testDir + testNew + "/deltafile_old.metadata");
     QFile::remove(packager.deltaFilename());
     QFile::remove(packager.deltaMetadataFilename());
-    packager.generate();
+    try {
+        packager.generate();
+    } catch(QString & msg) {
+        QFAIL(msg.toLatin1());
+    }
 }

@@ -12,9 +12,13 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
 
-    QtLog::setLevel(QtLog::Trace);
+    QtLog::setLevel(QtLog::Info);
+#ifdef Q_OS_WIN
     Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma.exe");
     Utils::setXdeltaProgram(QString(SRCDIR)+ "../xdelta3.exe");
+#else
+    Utils::setLzmaProgram("lzmacon");
+#endif
 
     {
         TestRepository t;
