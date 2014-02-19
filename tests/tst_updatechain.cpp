@@ -1,4 +1,5 @@
 #include "tst_updatechain.h"
+#include "testutils.h"
 #include <repository.h>
 #include <packager.h>
 #include <updater.h>
@@ -40,126 +41,86 @@ void TestUpdateChain::cleanupTestCase()
     QDir(testUpdate + "/local_tmp").removeRecursively();
 }
 
-void TestUpdateChain::testNewRepository()
+void TestUpdateChain::newRepository()
 {
     Repository pm;
     pm.setDirectory(testNew + "/repo");
     pm.load();
 
-    qDebug("Create package to v1");
-    {
-        Packager p;
-        p.setNewSource(testNew + "/rev1", "1");
-        p.setTmpDirectoryPath(testNew + "/tmp");
-        try {
-            PackageMetadata metadata = p.generateForRepository(testNew + "/repo");
-            pm.addPackage(metadata);
-        }
-        catch(QString & msg)
-        {
-            QFAIL(("Complete to v1 : " +msg).toLatin1());
-        }
-        pm.setCurrentRevision("1");
-        pm.save();
+    Packager p;
+    p.setNewSource(testNew + "/rev1", "1");
+    p.setTmpDirectoryPath(testNew + "/tmp");
+    try {
+        PackageMetadata metadata = p.generateForRepository(testNew + "/repo");
+        pm.addPackage(metadata);
     }
-
-    qDebug("Update to v1");
+    catch(QString & msg)
     {
-        Updater u(testNew + "/local_repo");
-        QCOMPARE(u.localRevision(), QString());
-        u.setTmpDirectory(testNew + "/local_tmp");
-        u.setRemoteRepository("file:///" + testNew + "/repo/");
-        {
-            QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
-            u.checkForUpdates();
-            QVERIFY(spy.wait());
-            QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
-        }
-        {
-            QSignalSpy spy(&u, SIGNAL(updateFinished()));
-            u.update();
-            QVERIFY(spy.wait());
-            QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
-            QCOMPARE(u.localRevision(), QString("1"));
-        }
+        QFAIL(("Complete to v1 : " +msg).toLatin1());
     }
-
-    qDebug("Create patch from v1 to v2");
-    {
-        Packager p;
-        p.setOldSource(testNew + "/rev1", "1");
-        p.setNewSource(testNew + "/rev2", "2");
-        p.setTmpDirectoryPath(testNew + "/tmp");
-        try {
-            PackageMetadata metadata = p.generateForRepository(testNew + "/repo");
-            pm.addPackage(metadata);
-        }
-        catch(QString & msg)
-        {
-            QFAIL(("Patch v1 to v2 : " +msg).toLatin1());
-        }
-        pm.setCurrentRevision("2");
-        pm.save();
-    }
-
-    qDebug("Update from v1 to v2");
-    {
-        Updater u(testNew + "/local_repo");
-        QCOMPARE(u.localRevision(), QString("1"));
-        u.setTmpDirectory(testNew + "/local_tmp");
-        u.setRemoteRepository("file:///" + testNew + "/repo/");
-        {
-            QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
-            u.checkForUpdates();
-            QVERIFY(spy.wait());
-            QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
-        }
-        {
-            QSignalSpy spy(&u, SIGNAL(updateFinished()));
-            u.update();
-            QVERIFY(spy.wait());
-            QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
-            QCOMPARE(u.localRevision(), QString("2"));
-        }
-    }
-
-    qDebug("Fallback to v1 (test the download optimisation system");
-    {
-        pm.setCurrentRevision("1");
-        pm.save();
-
-        Updater u(testNew + "/local_repo");
-        QCOMPARE(u.localRevision(), QString("2"));
-        u.setTmpDirectory(testNew + "/local_tmp");
-        u.setRemoteRepository("file:///" + testNew + "/repo/");
-        {
-            QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
-            u.checkForUpdates();
-            QVERIFY(spy.wait());
-            QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
-        }
-        {
-            QSignalSpy spy(&u, SIGNAL(updateFinished()));
-            u.update();
-            QVERIFY(spy.wait());
-            QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
-            QCOMPARE(u.localRevision(), QString("1"));
-        }
-    }
+    pm.setCurrentRevision("1");
+    pm.save();
 }
 
-void TestUpdateChain::testUpdateRepository()
+void TestUpdateChain::updateToV1()
 {
-    Updater u(testUpdate + "/local_repo");
-    u.setTmpDirectory(testUpdate + "/local_tmp");
-    u.setRemoteRepository("file:///" + testUpdate + "/repo/");
+    Updater u(testNew + "/local_repo");
+    QCOMPARE(u.localRevision(), QString());
+    u.setTmpDirectory(testNew + "/local_tmp");
+    u.setRemoteRepository("file:///" + testNew + "/repo/");
     {
         QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
         u.checkForUpdates();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
-        //QCOMPARE(u.localRevision(), QString("1"));
-        //QCOMPARE(u.updateRevision(), QString("2"));
+    }
+    {
+        QSignalSpy spy(&u, SIGNAL(updateFinished()));
+        u.update();
+        QVERIFY(spy.wait());
+        QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
+        QCOMPARE(u.localRevision(), QString("1"));
+    }
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/patch_same.txt", testNew + "/rev1/patch_same.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/path_diff.txt", testNew + "/rev1/path_diff.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/path_diff2.txt", testNew + "/rev1/path_diff2.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/rmfile.txt", testNew + "/rev1/rmfile.txt"));
+    QVERIFY(!QFile::exists(testNew + "/local_repo/add.txt"));
+}
+
+void TestUpdateChain::createPatchV1toV2()
+{
+    Repository pm;
+    pm.setDirectory(testNew + "/repo");
+    pm.load();
+
+    Packager p;
+    p.setOldSource(testNew + "/rev1", "1");
+    p.setNewSource(testNew + "/rev2", "2");
+    p.setTmpDirectoryPath(testNew + "/tmp");
+    try {
+        PackageMetadata metadata = p.generateForRepository(testNew + "/repo");
+        pm.addPackage(metadata);
+    }
+    catch(QString & msg)
+    {
+        QFAIL(("Patch v1 to v2 : " +msg).toLatin1());
+    }
+    pm.setCurrentRevision("2");
+    pm.save();
+}
+
+void TestUpdateChain::updateToV2()
+{
+    Updater u(testNew + "/local_repo");
+    QCOMPARE(u.localRevision(), QString("1"));
+    u.setTmpDirectory(testNew + "/local_tmp");
+    u.setRemoteRepository("file:///" + testNew + "/repo/");
+    {
+        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
+        u.checkForUpdates();
+        QVERIFY(spy.wait());
+        QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
     }
     {
         QSignalSpy spy(&u, SIGNAL(updateFinished()));
@@ -168,4 +129,73 @@ void TestUpdateChain::testUpdateRepository()
         QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
         QCOMPARE(u.localRevision(), QString("2"));
     }
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/patch_same.txt", testNew + "/rev2/patch_same.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/path_diff.txt", testNew + "/rev2/path_diff.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/path_diff2.txt", testNew + "/rev2/path_diff2.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/add.txt", testNew + "/rev2/add.txt"));
+    QVERIFY(!QFile::exists(testNew + "/local_repo/rmfile.txt"));
+}
+
+void TestUpdateChain::fallbackToV1()
+{
+    Repository pm;
+    pm.setDirectory(testNew + "/repo");
+    pm.load();
+    pm.setCurrentRevision("1");
+    pm.save();
+
+    Updater u(testNew + "/local_repo");
+    QCOMPARE(u.localRevision(), QString("2"));
+    u.setTmpDirectory(testNew + "/local_tmp");
+    u.setRemoteRepository("file:///" + testNew + "/repo/");
+    {
+        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
+        u.checkForUpdates();
+        QVERIFY(spy.wait());
+        QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
+    }
+    {
+        QSignalSpy spy(&u, SIGNAL(updateFinished()));
+        u.update();
+        QVERIFY(spy.wait());
+        QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
+        QCOMPARE(u.localRevision(), QString("1"));
+    }
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/patch_same.txt", testNew + "/rev1/patch_same.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/path_diff.txt", testNew + "/rev1/path_diff.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/path_diff2.txt", testNew + "/rev1/path_diff2.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/rmfile.txt", testNew + "/rev1/rmfile.txt"));
+}
+
+void TestUpdateChain::updateToV2WithFailures()
+{
+    Repository pm;
+    pm.setDirectory(testNew + "/repo");
+    pm.load();
+    pm.setCurrentRevision("2");
+    pm.save();
+
+    QFile::remove(testNew + "/local_repo/path_diff.txt");
+    Updater u(testNew + "/local_repo");
+    QCOMPARE(u.localRevision(), QString("1"));
+    u.setTmpDirectory(testNew + "/local_tmp");
+    u.setRemoteRepository("file:///" + testNew + "/repo/");
+    {
+        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
+        u.checkForUpdates();
+        QVERIFY(spy.wait());
+        QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
+    }
+    {
+        QSignalSpy spy(&u, SIGNAL(updateFinished()));
+        u.update();
+        QVERIFY(spy.wait());
+        QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
+        QCOMPARE(u.localRevision(), QString("2"));
+    }
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/patch_same.txt", testNew + "/rev2/patch_same.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/path_diff.txt", testNew + "/rev2/path_diff.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/path_diff2.txt", testNew + "/rev2/path_diff2.txt"));
+    QVERIFY(TestUtils::compareFile(testNew + "/local_repo/add.txt", testNew + "/rev2/add.txt"));
+    QVERIFY(!QFile::exists(testNew + "/local_repo/rmfile.txt"));
 }

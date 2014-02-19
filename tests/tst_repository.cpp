@@ -1,5 +1,5 @@
 #include "tst_repository.h"
-#include "utils.h"
+#include "testutils.h"
 #include <repository.h>
 #include <QString>
 
@@ -46,8 +46,8 @@ void TestRepository::testNewRepository()
     try {
         pm.save();
         QVERIFY(!QFile::exists(testNew + "/expected/current"));
-        QVERIFY(Utils::compareJson(testNew + "/dir/packages", testNew + "/expected/packages"));
-        QVERIFY(Utils::compareJson(testNew + "/dir/versions", testNew + "/expected/versions"));
+        QVERIFY(TestUtils::compareJson(testNew + "/dir/packages", testNew + "/expected/packages"));
+        QVERIFY(TestUtils::compareJson(testNew + "/dir/versions", testNew + "/expected/versions"));
     } catch(QString & msg) {
         QFAIL(("Save failed : " + msg).toLatin1());
     }
@@ -92,9 +92,9 @@ void TestRepository::testAddPackage()
 
     try {
         pm.save();
-        QVERIFY(Utils::compareJson(testAdd + "/dir/current", testAdd + "/expected/current"));
-        QVERIFY(Utils::compareJson(testAdd + "/dir/packages", testAdd + "/expected/packages"));
-        QVERIFY(Utils::compareJson(testAdd + "/dir/versions", testAdd + "/expected/versions"));
+        QVERIFY(TestUtils::compareJson(testAdd + "/dir/current", testAdd + "/expected/current"));
+        QVERIFY(TestUtils::compareJson(testAdd + "/dir/packages", testAdd + "/expected/packages"));
+        QVERIFY(TestUtils::compareJson(testAdd + "/dir/versions", testAdd + "/expected/versions"));
     } catch(QString & msg) {
         QFAIL(("Save failed : " + msg).toLatin1());
     }

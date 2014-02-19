@@ -11,8 +11,12 @@ public:
 
 private Q_SLOTS:
     void initTestCase();
-    void testNewRepository();
-    void testUpdateRepository();
+    void newRepository();
+    void updateToV1();
+    void createPatchV1toV2();
+    void updateToV2();
+    void fallbackToV1();
+    void updateToV2WithFailures();
     void cleanupTestCase();
 };
 

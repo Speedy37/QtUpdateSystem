@@ -1,8 +1,8 @@
-#include "utils.h"
+#include "testutils.h"
 #include <QFile>
 #include <QJsonDocument>
 
-bool Utils::compareFile(const QString &file1, const QString &file2)
+bool TestUtils::compareFile(const QString &file1, const QString &file2)
 {
     QFile f1(file1);
     QFile f2(file2);
@@ -37,7 +37,7 @@ bool Utils::compareFile(const QString &file1, const QString &file2)
     return true;
 }
 
-bool Utils::compareJson(const QString &file1, const QString &file2, bool expectParseError)
+bool TestUtils::compareJson(const QString &file1, const QString &file2, bool expectParseError)
 {
     QFile f1(file1);
     QFile f2(file2);

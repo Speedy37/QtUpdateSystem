@@ -29,7 +29,8 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
     connect(m_manager, &QNetworkAccessManager::authenticationRequired, this, &DownloadManager::authenticationRequired);
 
     // Create the file manager and assign it to a new thread
-    m_filemanager = new FileManager();
+
+    FileManager *filemanager = new FileManager();
 
     // Create the download thread
     {
@@ -40,22 +41,22 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
     }
     {
         OneObjectThread * thread = new OneObjectThread(updater);
-        thread->manage(m_filemanager);
+        thread->manage(filemanager);
 
-        connect(this, &DownloadManager::operationLoaded, m_filemanager, &FileManager::prepareOperation);
-        connect(m_filemanager, &FileManager::operationPrepared, this, &DownloadManager::operationPrepared);
+        connect(this, &DownloadManager::operationLoaded, filemanager, &FileManager::prepareOperation);
+        connect(filemanager, &FileManager::operationPrepared, this, &DownloadManager::operationPrepared);
 
-        connect(this, &DownloadManager::operationReadyToApply, m_filemanager, &FileManager::applyOperation);
-        connect(m_filemanager, &FileManager::operationApplied, this, &DownloadManager::operationApplied);
+        connect(this, &DownloadManager::operationReadyToApply, filemanager, &FileManager::applyOperation);
+        connect(filemanager, &FileManager::operationApplied, this, &DownloadManager::operationApplied);
 
-        connect(this, &DownloadManager::downloadFinished, m_filemanager, &FileManager::downloadFinished);
-        connect(m_filemanager, &FileManager::applyFinished, this, &DownloadManager::applyFinished);
+        connect(this, &DownloadManager::downloadFinished, filemanager, &FileManager::downloadFinished);
+        connect(filemanager, &FileManager::applyFinished, this, &DownloadManager::applyFinished);
 
         // Safe blocking abort
         thread->start();
     }
 
-    connect(this, &DownloadManager::finished, m_filemanager, &FileManager::deleteLater);
+    connect(this, &DownloadManager::finished, filemanager, &FileManager::deleteLater);
     connect(this, &DownloadManager::finished, this, &DownloadManager::deleteLater);
 }
 
@@ -104,12 +105,6 @@ void DownloadManager::updatePackagesListRequestFinished()
         if(downloadPath.isEmpty())
             throw tr("No download path found from %1 to %2").arg(m_localRevision, m_remoteRevision);
         downloadPathPos = 0;
-        downloadGlobalOffset = 0;
-        downloadGlobalSize = 0;
-        foreach(const Package &package, downloadPath)
-        {
-            downloadGlobalSize += package.size;
-        }
 
         updatePackageLoop();
     }
@@ -148,6 +143,10 @@ void DownloadManager::updatePackageLoop()
                 if(downloadPath.isEmpty())
                     failure(tr("No download path found %1").arg(m_remoteRevision));
             }
+            else
+            {
+                fixingPath = QString();
+            }
 
             int fixedFailures = 0;
             QMap<QString, Failure>::iterator it = failures.begin();
@@ -166,14 +165,14 @@ void DownloadManager::updatePackageLoop()
                 ++it;
             }
 
-            if(it != failures.end())
+            if(!fixingPath.isEmpty())
             {
                 downloadPathPos = 0;
                 const Package & package = downloadPath.at(downloadPathPos);
                 metadata.setPackage(package);
                 metadataRequest = get(package.metadataUrl());
                 connect(metadataRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackageMetadataFinished);
-                LOG_INFO(tr("Downloading metadata for %1").arg(package.url()));
+                LOG_INFO(tr("Downloading metadata for %1").arg(fixingPath));
             }
             else
             {
@@ -219,9 +218,10 @@ void DownloadManager::updatePackageMetadataFinished()
             return;
         }
 
+        preparedOperationIndex = -1;
         operationIndex = 0;
-        operation.clear();
-        preparedOperationCount = 0;
+        operation = metadata.operation(0);
+        dataRequest = nullptr;
 
         if(fixingPath.isEmpty())
         {
@@ -239,12 +239,8 @@ void DownloadManager::updatePackageMetadataFinished()
                 operation = metadata.operation(operationIndex);
                 if(operation->path() == fixingPath)
                 {
-                    preparedOperationCount = operationIndex + 1;
-                    updateDataSetupOperationFile();
-
-                    dataRequest = get(metadata.dataUrl(), operation->offset(), operation->offset() + operation->size());
-                    connect(dataRequest, &QNetworkReply::readyRead, this, &DownloadManager::updateDataReadyRead);
-                    connect(dataRequest, &QNetworkReply::finished, this, &DownloadManager::updateDataFinished);
+                    preparedOperationIndex = operationIndex;
+                    updateDataStartDownload(operation->offset() + operation->size());
                     break;
                 }
                 ++operationIndex;
@@ -258,87 +254,168 @@ void DownloadManager::updatePackageMetadataFinished()
     }
 }
 
-/**
-   \brief Filemanager has done is pre-work about this operation
-   If the operation download isn't necessary, determine if skipping it is useful
- */
-#include <QDebug>
-void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperation)
+void DownloadManager::readyToApply(QSharedPointer<Operation> readyOperation)
 {
-    Q_ASSERT(preparedOperation == metadata.operation(preparedOperationCount));
-    LOG_TRACE(tr("Operation prepared %1").arg(preparedOperation->path()));
-    ++preparedOperationCount;
-    qDebug() << operationIndex << preparedOperationCount << (operation.isNull() ? QString("NULL") : operation->path());
-
-    if(operationIndex >= preparedOperationCount)
+    if(readyOperation->status() == Operation::DownloadRequired || !fixingPath.isEmpty())
     {
-        // preparedOperation have already been downloaded
-        if(preparedOperation->status() == Operation::DownloadRequired)
-        {
-            LOG_TRACE(tr("Operation ready to apply (%1), already downloaded").arg(preparedOperation->path()));
-            if(QFile(operation->dataDownloadFilename()).rename(operation->dataFilename()))
-                emit operationReadyToApply(preparedOperation);
-            else
-                failure(operation->path(), DownloadRenameFailed);
-        }
-        else if(preparedOperation->status() == Operation::ApplyRequired)
-        {
-            QFile::remove(operation->dataDownloadFilename());
-            LOG_TRACE(tr("Operation ready to apply (%1), already downloaded was ready to apply").arg(preparedOperation->path()));
-            emit operationReadyToApply(preparedOperation);
-        }
+        LOG_TRACE(tr("Operation ready to apply (%1), already downloaded").arg(readyOperation->path()));
+        if(QFile(readyOperation->dataDownloadFilename()).rename(readyOperation->dataFilename()))
+            emit operationReadyToApply(readyOperation);
+        else
+            failure(readyOperation->path(), DownloadRenameFailed);
     }
-    else if(preparedOperation->status() == Operation::DownloadRequired)
+    else if(readyOperation->status() == Operation::ApplyRequired)
     {
-        if(operation == nullptr)
-        {
-            // No download is in progress, start a new one
-
-            Q_ASSERT(operationIndex + 1 == preparedOperationCount);
-
-            // Setup the current operation
-            operation = metadata.operation(operationIndex);
-            updateDataSetupOperationFile();
-
-            // Start the download
-            updateDataStartDownload();
-        }
+        QFile::remove(readyOperation->dataDownloadFilename());
+        LOG_TRACE(tr("Operation ready to apply (%1), already downloaded was ready to apply").arg(readyOperation->path()));
+        emit operationReadyToApply(readyOperation);
     }
-    else if(operation != nullptr)
+}
+
+void DownloadManager::failure(const QString &path, Failure reason)
+{
+    LOG_WARN(tr("Operation failed %1 (%2)").arg(path).arg(reason));
+    failures.insert(path, reason);
+}
+
+/**
+   \brief Find the next operation
+   - dataRequest can be null if no download is in progress
+   - if dataRequest != nullptr, downloadSeek is the amount of download that will be wasted
+ */
+void DownloadManager::nextOperation()
+{
+    operation = metadata.operation(++operationIndex);
+
+    if(dataRequest == nullptr)
     {
-        // There is a download in progress and preparedOperation doesn't require to be downloaded
-
-        if(operationIndex < preparedOperationCount && operation->status() != Operation::DownloadRequired)
+        // We must find the next operation that is prepared and requires download
+        while(!operation.isNull() && operationIndex <= preparedOperationIndex)
         {
-            // We may be able to optimise the download time
-
-            // Queue apply the current operation if it's possible
-            if(operation == preparedOperation && operation->status() == Operation::ApplyRequired)
+            if(operation->status() == Operation::DownloadRequired)
             {
-                LOG_TRACE(tr("Operation ready to apply (%1), download aborted").arg(operation->path()));
-                emit operationReadyToApply(operation);
+                // Restart the download
+                updateDataStartDownload();
+                break;
             }
-
-            // preparedOperation can influence the current download
-            // test if it's worth continuing the current download
-            tryContinueDownload(operation->size() - offset);
+            else if(operation->status() == Operation::ApplyRequired)
+            {
+                readyToApply(operation);
+            }
+            operation = metadata.operation(++operationIndex);
         }
     }
     else
     {
-        // No download is in progress, and no one is yet required
-
-        Q_ASSERT(operationIndex + 1 == preparedOperationCount);
-
-        // Queue apply of the current operatin if it's possible
-        if(preparedOperation->status() == Operation::ApplyRequired)
+        // We must find the next operation to download
+        // First we skip all the nullsized operations
+        while(!operation.isNull() && operation->size() == 0)
         {
-            LOG_TRACE(tr("Operation ready to apply (%1), no download required").arg(preparedOperation->path()));
-            emit operationReadyToApply(preparedOperation);
+            if(operationIndex <= preparedOperationIndex)
+            {
+                readyToApply(operation);
+            }
+            operation = metadata.operation(++operationIndex);
         }
 
-        nextOperation();
+        // 2nd we compute the amount of data that can be skipped from download
+        while(!operation.isNull() && operationIndex <= preparedOperationIndex && operation->status() != Operation::DownloadRequired)
+        {
+            downloadSeek += operation->size();
+            readyToApply(operation);
+            operation = metadata.operation(++operationIndex);
+        }
+
+        if(operation.isNull())
+        {
+            updateDataStopDownload();
+        }
+        else if(isSkipDownloadUseful(downloadSeek))
+        {
+            if(operationIndex <= preparedOperationIndex)
+            {
+                Q_ASSERT(operation->status() == Operation::DownloadRequired);
+                // Restart the download
+                updateDataStartDownload();
+            }
+        }
+        else
+        {
+            file.setFileName(operation->dataDownloadFilename());
+            if(!file.open(QFile::WriteOnly | QFile::Truncate))
+                throw(tr("Unable to open datafile for writing : %1").arg(file.fileName()));
+
+            offset = 0;
+        }
     }
+    LOG_TRACE(tr("Next Operation %1 %2 + 1 == %3").arg(operationIndex).arg(preparedOperationIndex).arg(metadata.operationCount()));
+    if(operation.isNull() && preparedOperationIndex + 1 == metadata.operationCount())
+    {
+        emit downloadFinished();
+    }
+}
+
+/**
+   \brief Filemanager has done is pre-work about this operation
+   If the operation download isn't necessary, determine if skipping it is useful
+ */
+void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperation)
+{
+    ++preparedOperationIndex;
+    Q_ASSERT(preparedOperation == metadata.operation(preparedOperationIndex));
+
+    LOG_TRACE(tr("Operation prepared %1").arg(preparedOperation->path()));
+    LOG_TRACE(tr("opIndex = %1, prepIndex = %2, op = %3").arg(operationIndex).arg(preparedOperationIndex).arg(operation.isNull() ? QString("NULL") : operation->path()));
+
+    // [--DL--][--Prepared--][--Apply--]
+    if(preparedOperationIndex < operationIndex)
+    {
+        Q_ASSERT(preparedOperation != operation);
+        readyToApply(preparedOperation);
+        if(operationIndex == metadata.operationCount())
+            emit downloadFinished();
+    }
+    // [--DL--------------]
+    //   [--Prepared--]    [--Apply--] if DownloadRequired
+    //   [--Prepared--][--Apply--]     if !DownloadRequired
+    else if(preparedOperationIndex == operationIndex)
+    {
+        Q_ASSERT(preparedOperation == operation);
+        if(dataRequest == nullptr)
+        {
+            if(preparedOperation->status() == Operation::DownloadRequired)
+            {
+                // No download is in progress, start a new one
+                updateDataStartDownload();
+            }
+            else
+            {
+                readyToApply(preparedOperation);
+                nextOperation();
+            }
+        }
+        else if(preparedOperation->status() != Operation::DownloadRequired)
+        {
+            // There is a download in progress and preparedOperation doesn't require to be downloaded
+            // We may be able to optimise the download time
+
+            // Queue apply the current operation if its possible
+            readyToApply(preparedOperation);
+
+            downloadSeek += preparedOperation->size() - offset;
+            nextOperation();
+        }
+        //else
+        //{
+        //    preparedOperation->status() == Operation::DownloadRequired
+        //    Let the updateDataReadyRead finish to handle operation
+        //}
+    }
+    // [--Prepared--][--DL--][--Apply--]
+    //else if(preparedOperationIndex > operationIndex)
+    //{
+    //    Nothing can be done, because previous operations aren't downloaded
+    //}
 
     if(preparedOperation->status() == Operation::LocalFileInvalid)
     {
@@ -346,16 +423,76 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
     }
 }
 
-void DownloadManager::nextOperation()
+void DownloadManager::updateDataReadyRead()
 {
-    operation = metadata.operation(++operationIndex);
-    if(operationIndex == metadata.operationCount())
+    Q_ASSERT(dataRequest != nullptr);
+    Q_ASSERT(operation != nullptr);
+    Q_ASSERT(operation->size() > 0);
+
+    // Read all available data
+    qint64 size;
+    qint64 availableSize = dataRequest->bytesAvailable();
+
+    if(downloadSeek > 0)
     {
-        LOG_TRACE(tr("downloadFinished, cause operationIndex == metadata.operationCount() == %1").arg(operationIndex));
-        emit downloadFinished();
+        if(availableSize <= downloadSeek)
+        {
+            downloadSeek -= availableSize;
+            return;
+        }
+        dataRequest->read(downloadSeek);
+        availableSize -= downloadSeek;
+        downloadSeek = 0;
+    }
+
+    while(availableSize > 0)
+    {
+        size = operation->size() - offset;
+        if(size <= availableSize)
+        {
+            file.write(dataRequest->read(size));
+            operationDownloaded();
+            if(dataRequest == nullptr)
+                return; //< Futures download aborted
+            availableSize -= size;
+        }
+        else
+        {
+            file.write(dataRequest->read(availableSize));
+            offset += availableSize;
+            availableSize = 0;
+        }
     }
 }
 
+void DownloadManager::operationDownloaded()
+{
+    LOG_TRACE(tr("Operation downloaded %1").arg(operation->path()));
+
+    Q_ASSERT(file.isOpen());
+    Q_ASSERT(file.size() == operation->size());
+
+    file.close();
+
+    if(!fixingPath.isEmpty())
+    {
+        updateDataStopDownload();
+        readyToApply(operation);
+        LOG_TRACE(tr("downloadFinished, cause fixingPath == %1").arg(fixingPath));
+        emit downloadFinished();
+        return;
+    }
+
+    // [--Prepared--]
+    //        [--DL--][--Apply--]
+    if(preparedOperationIndex >= operationIndex)
+    {
+        readyToApply(operation);
+    }
+
+    // Find what to do next
+    nextOperation();
+}
 
 
 void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperation)
@@ -378,14 +515,10 @@ void DownloadManager::applyFinished()
     updatePackageLoop();
 }
 
-void DownloadManager::failure(const QString &path, Failure reason)
-{
-    LOG_WARN(tr("Operation failed %1 (%2)").arg(path).arg(reason));
-    failures.insert(path, reason);
-}
-
 void DownloadManager::failure(const QString &reason)
 {
+
+    LOG_TRACE(reason);
     emit updateFailed(reason);
     emit finished();
 }
@@ -393,204 +526,6 @@ void DownloadManager::failure(const QString &reason)
 bool DownloadManager::isSkipDownloadUseful(qint64 skippableSize)
 {
     return skippableSize > 1024*1024; // 1MB
-}
-
-/**
-   \brief Test if it's worth continuing the current download
-   If abort the current download result in a gain of time, the download is aborted
-   If a prepared operation that require download is found, download is restarted at that position
-   Otherwise, preparedOperation will take care of restarting the download if needed
-
-   \warning Returns false even if the download has been restarted,
-            you can test if download is started by checking if operation != nullptr
-   \param skippableSize Amount of data that can be skipped off the current operation
-   \return True if the current download has been stopped, false otherwise
- */
-bool DownloadManager::tryContinueDownload(qint64 skippableSize)
-{
-    Q_ASSERT(operation->status() != Operation::DownloadRequired);
-    Q_ASSERT(operationIndex < metadata.operationCount());
-
-    // Compute the amount of data that can be skipped
-    int i = operationIndex + 1;
-    if(i == metadata.operationCount())
-    {
-        // It was the last download, we can for sure stop the download here
-        updateDataStopDownload();
-        nextOperation();
-        return false;//< Download has been stopped
-    }
-    while(i < preparedOperationCount && metadata.operation(i)->status() != Operation::DownloadRequired)
-    {
-        skippableSize += metadata.operation(i)->size();
-        ++i;
-    }
-
-    // test if it's worth skipping the download of that part
-    if(isSkipDownloadUseful(skippableSize))
-    {
-        // Stopping the current download is worth it
-
-        // Stop the download here
-        updateDataStopDownload();
-
-        // Find the next download start point
-        nextOperation();
-        while(operationIndex < preparedOperationCount)
-        {
-            if(operation->status() == Operation::DownloadRequired)
-            {
-                // Restart the download
-                updateDataSetupOperationFile();
-                updateDataStartDownload();
-                break;
-            }
-            else if(operation->status() == Operation::ApplyRequired)
-            {
-                LOG_TRACE(tr("Operation ready to apply (%1), no download required").arg(operation->path()));
-                emit operationReadyToApply(operation);
-            }
-            nextOperation();
-        }
-
-        return false;//< Download has been stopped
-    }
-
-    return true; //< Download continue
-}
-
-void DownloadManager::updateDataSetupOperationFile()
-{
-    offset = 0;
-
-    if(operation != nullptr)
-    {
-        file.setFileName(operation->dataDownloadFilename());
-        if(!file.open(QFile::WriteOnly | QFile::Truncate))
-            throw(tr("Unable to open datafile for writing : %1").arg(file.fileName()));
-    }
-}
-
-void DownloadManager::updateDataReadyRead()
-{
-    Q_ASSERT(operation != nullptr);
-
-    // Read all available data
-    QByteArray bytes = dataRequest->readAll();
-    const char * data = bytes.constData();
-    qint64 writeSize, size = bytes.size();
-
-    if(downloadSeek > 0)
-    {
-        if(size <= downloadSeek)
-        {
-            downloadSeek -= size;
-            return;
-        }
-        data += downloadSeek;
-        size -= downloadSeek;
-        downloadSeek = 0;
-    }
-
-    downloadGlobalOffset += size;
-    emit downloadProgress(downloadGlobalOffset, downloadGlobalSize);
-
-    while(size > 0)
-    {
-        writeSize = qMin(size, operation->size() - offset);
-        if(writeSize > 0)
-        {
-            if(operationIndex >= preparedOperationCount || operation->status() == Operation::DownloadRequired)
-            {
-                file.write(data, writeSize);
-            }
-            offset += writeSize;
-            data += writeSize;
-            size -= writeSize;
-        }
-
-        if(offset == operation->size())
-        {
-            // Operation downloaded
-            LOG_TRACE(tr("Operation downloaded %1").arg(operation->path()));
-
-            if(file.isOpen())
-            {
-                // Close the file
-                if(!file.flush())
-                    throw(tr("Unable to flush all data %1").arg(file.fileName()));
-                file.close();
-            }
-            Q_ASSERT(file.size() == operation->size());
-
-            if(!fixingPath.isEmpty())
-            {
-                LOG_TRACE(tr("Operation ready to apply (%1), download done (fixing)").arg(operation->path()));
-                if(file.rename(operation->dataFilename()))
-                    emit operationReadyToApply(operation);
-                else
-                    failure(operation->path(), DownloadRenameFailed);
-                LOG_TRACE(tr("downloadFinished, cause fixingPath == %1").arg(fixingPath));
-                emit downloadFinished();
-                return;
-            }
-
-            if(operationIndex < preparedOperationCount && operation->status() == Operation::DownloadRequired)
-            {
-                LOG_TRACE(tr("Operation ready to apply (%1, %2), download done").arg(operation->path(), operation->dataFilename()));
-                if(file.rename(operation->dataFilename()))
-                    emit operationReadyToApply(operation);
-                else
-                    failure(operation->path(), DownloadRenameFailed);
-            }
-
-            // Find what to do next
-            nextOperation();
-            while(operationIndex < preparedOperationCount)
-            {
-                if(operation->status() == Operation::DownloadRequired)
-                {
-                    // Setup the current operation
-                    updateDataSetupOperationFile();
-                    break;
-                }
-                else if(operation->status() == Operation::ApplyRequired)
-                {
-                    LOG_TRACE(tr("Operation ready to apply (%1), no download required").arg(operation->path()));
-                    emit operationReadyToApply(operation);
-                }
-
-                if(operation->size() > 0)
-                {
-                    // operation->status() != Operation::DownloadRequired
-                    if(operation->size() < size)
-                    {
-                        // Consume downloaded data
-                        size -= operation->size();
-                        data += operation->size();
-                    }
-                    else
-                    {
-                        // Test if it's worth waiting for more data
-                        if(!tryContinueDownload(operation->size() - size))
-                        {
-                            // Download has been stopped, let's do the same
-                            return;
-                        }
-                    }
-                }
-                nextOperation();
-            }
-
-            if(operationIndex >= preparedOperationCount)
-            {
-                // We don't know yet if it's worth continuing the download
-                // operationPrepared with preparedOperationCount <= operationIndex will occur
-                // Setup the current operation anyway
-                updateDataSetupOperationFile();
-            }
-        }
-    }
 }
 
 /**
@@ -627,14 +562,14 @@ void DownloadManager::updateDataStartDownload()
     qint64 skippableSize = 0;
     qint64 endOffset = 0;
     int i = operationIndex + 1;
-    while(i < preparedOperationCount)
+    while(i <= preparedOperationIndex)
     {
         // Find the next skip position
-        while(i < preparedOperationCount && metadata.operation(i)->status() == Operation::DownloadRequired)
+        while(i <= preparedOperationIndex && metadata.operation(i)->status() == Operation::DownloadRequired)
             ++i;
 
         // Compute how much data can be skipped
-        while(i < preparedOperationCount && metadata.operation(i)->status() != Operation::DownloadRequired)
+        while(i <= preparedOperationIndex && metadata.operation(i)->status() != Operation::DownloadRequired)
         {
             skippableSize += metadata.operation(i)->size();
             ++i;
@@ -648,6 +583,19 @@ void DownloadManager::updateDataStartDownload()
         }
     }
 
+    updateDataStartDownload(endOffset);
+}
+
+void DownloadManager::updateDataStartDownload(qint64 endOffset)
+{
+    Q_ASSERT(operation == metadata.operation(operationIndex));
+
+    file.setFileName(operation->dataDownloadFilename());
+    if(!file.open(QFile::WriteOnly | QFile::Truncate))
+        throw(tr("Unable to open datafile for writing : %1").arg(file.fileName()));
+
+    offset = 0;
+    downloadSeek = 0;
     dataRequest = get(metadata.dataUrl(), operation->offset(), endOffset);
     connect(dataRequest, &QNetworkReply::readyRead, this, &DownloadManager::updateDataReadyRead);
     connect(dataRequest, &QNetworkReply::finished, this, &DownloadManager::updateDataFinished);
@@ -660,6 +608,7 @@ void DownloadManager::updateDataStopDownload()
 
     file.close();
 
+    downloadSeek = 0;
     dataRequest->abort();
     dataRequest->deleteLater();
     dataRequest = nullptr;
@@ -685,7 +634,6 @@ QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition, q
     LOG_TRACE(tr("get(%1,%2,%3)").arg(what).arg(startPosition).arg(endPosition));
     QNetworkReply *reply = m_manager->get(request);
     connect(reply, SIGNAL(finished()), reply, SLOT(deleteLater()));
-
     downloadSeek = startPosition > 0 && url.isLocalFile() ? startPosition : 0;
 
     return reply;
