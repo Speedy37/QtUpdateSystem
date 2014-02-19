@@ -6,6 +6,7 @@
 
 namespace Utils {
     QString cleanPath(const QString &pathName);
+    QString formatMs(qint64 millisec);
 
     QTUPDATESYSTEMSHARED_EXPORT QString xdeltaProgram();
     QTUPDATESYSTEMSHARED_EXPORT void setXdeltaProgram(const QString &program);

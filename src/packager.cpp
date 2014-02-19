@@ -79,7 +79,7 @@ PackageMetadata Packager::generate()
     if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
         throw tr("Unable to create new delta metadata file");
 
-    LOG_TRACE(tr("Packager configuration checked in %1").arg(stepTimer.restart()));
+    LOG_INFO(tr("Packager configuration checked in %1").arg(Utils::formatMs(stepTimer.restart())));
 
     LOG_TRACE(tr("Comparing directories %1 against %2").arg(newDirectoryPath(), oldDirectoryPath()));
     {
@@ -88,7 +88,7 @@ PackageMetadata Packager::generate()
         m_tasks.clear();
         compareDirectories(QStringLiteral(""), newFiles, oldFiles);
     }
-    LOG_TRACE(tr("Directory comparison done in %1").arg(stepTimer.restart()));
+    LOG_INFO(tr("Directory comparison done in %1").arg(Utils::formatMs(stepTimer.restart())));
 
     LOG_TRACE(tr("Creating operations..."));
     {
@@ -104,7 +104,7 @@ PackageMetadata Packager::generate()
         }
         threadPool.waitForDone();
     }
-    LOG_INFO(tr("Operations created in %1").arg(stepTimer.restart()));
+    LOG_INFO(tr("Operations created in %1").arg(Utils::formatMs(stepTimer.restart())));
 
     LOG_TRACE(tr("Creating final delta file..."));
     PackageMetadata metadata;
@@ -148,13 +148,13 @@ PackageMetadata Packager::generate()
 
         deltaFile.close();
     }
-    LOG_INFO(tr("Final delta file created in %1").arg(stepTimer.restart()));
+    LOG_INFO(tr("Final delta file created in %1").arg(Utils::formatMs(stepTimer.restart())));
 
     LOG_INFO(tr("Writing metadata"));
     metadataFile.write(QJsonDocument(metadata.toJsonObject()).toJson(QJsonDocument::Indented));
-    LOG_INFO(tr("Metadata written in %1").arg(stepTimer.restart()));
+    LOG_INFO(tr("Metadata written in %1").arg(Utils::formatMs(stepTimer.restart())));
 
-    LOG_INFO(tr("Delta creation succeded in %1").arg(globalTimer.elapsed()));
+    LOG_INFO(tr("Delta creation succeded in %1").arg(Utils::formatMs(globalTimer.elapsed())));
 
     return metadata;
 }

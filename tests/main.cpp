@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
 
-    QtLog::setLevel(QtLog::Info);
+    QtLog::setLevel(QtLog::Trace);
 #ifdef Q_OS_WIN
     Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma.exe");
     Utils::setXdeltaProgram(QString(SRCDIR)+ "../xdelta3.exe");
@@ -20,25 +20,26 @@ int main(int argc, char *argv[])
     Utils::setLzmaProgram("lzmacon");
 #endif
 
+    int ret = 0;
     {
         TestRepository t;
-        QTest::qExec(&t, argc, argv);
+        ret += QTest::qExec(&t, QStringList());
     }
 
     {
         TestPackager t;
-        QTest::qExec(&t, argc, argv);
+        ret += QTest::qExec(&t, QStringList());
     }
 
     {
         TestUpdater t;
-        QTest::qExec(&t, argc, argv);
+        ret += QTest::qExec(&t, QStringList());
     }
 
     {
         TestUpdateChain t;
-        QTest::qExec(&t, argc, argv);
+        ret += QTest::qExec(&t, QStringList());
     }
 
-    return 0;
+    return ret;
 }

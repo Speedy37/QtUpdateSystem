@@ -15,9 +15,9 @@ SOURCES += \
     tst_packager.cpp \
     main.cpp \
     tst_updater.cpp \
-    utils.cpp \
     tst_updatechain.cpp \
-    tst_repository.cpp
+    tst_repository.cpp \
+    testutils.cpp
 
 win32:CONFIG(release, debug|release) {
     subdir = release/
@@ -48,7 +48,7 @@ INSTALLS += target
 HEADERS += \
     tst_packager.h \
     tst_updater.h \
-    utils.h \
     tst_updatechain.h \
-    tst_repository.h
+    tst_repository.h \
+    testutils.h
 

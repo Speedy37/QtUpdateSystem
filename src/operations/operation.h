@@ -36,6 +36,7 @@ public:
     qint64 size() const;
 
     QString dataFilename() const;
+    QString dataDownloadFilename() const;
     void setDataFilename(const QString &dataFilename);
 
     QString localFilename() const;
@@ -88,6 +89,11 @@ inline qint64 Operation::size() const
 inline QString Operation::dataFilename() const
 {
     return m_dataFilename;
+}
+
+inline QString Operation::dataDownloadFilename() const
+{
+    return m_dataFilename + ".part";
 }
 
 inline void Operation::setDataFilename(const QString &dataFilename)

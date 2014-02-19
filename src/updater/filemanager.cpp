@@ -20,6 +20,7 @@ void FileManager::prepareOperation(QSharedPointer<Operation> operation)
 void FileManager::applyOperation(QSharedPointer<Operation> operation)
 {
     operation->apply();
+    emit operationApplied(operation);
 }
 
 void FileManager::downloadFinished()
