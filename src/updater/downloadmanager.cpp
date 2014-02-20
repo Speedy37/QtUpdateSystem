@@ -440,20 +440,20 @@ void DownloadManager::updateDataReadyRead()
     qint64 size;
     qint64 availableSize = dataRequest->bytesAvailable();
 
-    if(downloadSeek > 0)
-    {
-        if(availableSize <= downloadSeek)
-        {
-            downloadSeek -= availableSize;
-            return;
-        }
-        dataRequest->read(downloadSeek);
-        availableSize -= downloadSeek;
-        downloadSeek = 0;
-    }
-
     while(availableSize > 0)
     {
+        if(downloadSeek > 0)
+        {
+            if(availableSize <= downloadSeek)
+            {
+                downloadSeek -= availableSize;
+                return;
+            }
+            dataRequest->read(downloadSeek);
+            availableSize -= downloadSeek;
+            downloadSeek = 0;
+        }
+
         size = operation->size() - offset;
         if(size <= availableSize)
         {
