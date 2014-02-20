@@ -1,22 +1,26 @@
 #include "testutils.h"
 #include <QFile>
 #include <QJsonDocument>
+#include <QTest>
 
-bool TestUtils::compareFile(const QString &file1, const QString &file2)
+void TestUtils::assertFileEquals(const QString &file1, const QString &file2)
 {
     QFile f1(file1);
     QFile f2(file2);
 
-    if(!f1.exists() || !f2.exists())
-        return false;
+    if(!f1.exists())
+        throw(QString("file %1 doesn't exists").arg(file1));
+
+    if(!f2.exists())
+        throw(QString("file %1 doesn't exists").arg(file2));
 
     if(f1.size() != f2.size())
-        return false;
+        throw(QString("file1 size %1 != file2 size %2 (%3, %4)").arg(f1.size()).arg(f2.size()).arg(f1.fileName()).arg(f2.fileName()));
 
     if(!f1.open(QFile::ReadOnly))
-        return false;
+        throw(QString("Can't open %1").arg(file1));
     if(!f2.open(QFile::ReadOnly))
-        return false;
+        throw(QString("Can't open %1").arg(file1));
 
     char buffer1[8096];
     char buffer2[8096];
@@ -26,15 +30,13 @@ bool TestUtils::compareFile(const QString &file1, const QString &file2)
     while(read1 > 0 || read2 > 0)
     {
         if(read1 != read2)
-            return false;
+            throw(QString("read1 %1 != read2 %2 (%3, %4)").arg(read1).arg(read2).arg(f1.fileName()).arg(f2.fileName()));
         if(memcmp(buffer1, buffer2, read1) != 0)
-            return false;
+            throw(QString("Content differ %1 != %2").arg(f1.fileName()).arg(f2.fileName()));
 
         read1 = f1.read(buffer1, sizeof(buffer1));
         read2 = f2.read(buffer2, sizeof(buffer2));
     }
-
-    return true;
 }
 
 bool TestUtils::compareJson(const QString &file1, const QString &file2, bool expectParseError)
