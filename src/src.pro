@@ -51,7 +51,8 @@ HEADERS +=\
     common/versions.h \
     packager/packagertask.h \
     common/utils.h \
-    repository.h
+    repository.h \
+    updater/oneobjectthread.h
 
 unix {
     target.path = /usr/lib

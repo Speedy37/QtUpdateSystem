@@ -1,4 +1,5 @@
 #include "downloadmanager.h"
+#include "oneobjectthread.h"
 #include "filemanager.h"
 #include "../common/packages.h"
 #include "../common/jsonutil.h"
