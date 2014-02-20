@@ -61,6 +61,8 @@ private:
     void nextOperation();
     void operationDownloaded();
     void readyToApply(QSharedPointer<Operation> readyOperation);
+    bool isLastPackage();
+    bool isFixingError();
     bool tryContinueDownload(qint64 skippableSize);
     bool isSkipDownloadUseful(qint64 skippableSize);
     QNetworkReply *get(const QString &what, qint64 startPosition = 0, qint64 endPosition = 0);
@@ -94,5 +96,15 @@ private:
     // Disables the use of copy constructors and assignment operators
     Q_DISABLE_COPY(DownloadManager)
 };
+
+inline bool DownloadManager::isLastPackage()
+{
+    return downloadPathPos + 1 == downloadPath.size();
+}
+
+inline bool DownloadManager::isFixingError()
+{
+    return !fixingPath.isNull();
+}
 
 #endif // DOWNLOADMANAGER_H

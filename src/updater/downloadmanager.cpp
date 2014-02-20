@@ -136,7 +136,7 @@ void DownloadManager::updatePackageLoop()
     {
         if(failures.size() > 0)
         {
-            if(fixingPath.isEmpty())
+            if(!isFixingError())
             {
                 // First time we get in this loop
                 LOG_INFO(tr("Some parts of the update have gone wrong, fixing..."));
@@ -166,7 +166,7 @@ void DownloadManager::updatePackageLoop()
                 ++it;
             }
 
-            if(!fixingPath.isEmpty())
+            if(isFixingError())
             {
                 downloadPathPos = 0;
                 const Package & package = downloadPath.at(downloadPathPos);
@@ -224,7 +224,7 @@ void DownloadManager::updatePackageMetadataFinished()
         operation = metadata.operation(0);
         dataRequest = nullptr;
 
-        if(fixingPath.isEmpty())
+        if(!isFixingError())
         {
             foreach(QSharedPointer<Operation> op, metadata.operations())
             {
@@ -242,10 +242,13 @@ void DownloadManager::updatePackageMetadataFinished()
                 {
                     preparedOperationIndex = operationIndex;
                     updateDataStartDownload(operation->offset() + operation->size());
-                    break;
+                    return;
                 }
                 ++operationIndex;
             }
+            if(isLastPackage())
+                failure(fixingPath, Fixed);
+            updatePackageLoop();
         }
     }
     catch(const QString & msg)
@@ -257,7 +260,7 @@ void DownloadManager::updatePackageMetadataFinished()
 
 void DownloadManager::readyToApply(QSharedPointer<Operation> readyOperation)
 {
-    if(readyOperation->status() == Operation::DownloadRequired || !fixingPath.isEmpty())
+    if(readyOperation->status() == Operation::DownloadRequired || isFixingError())
     {
         LOG_TRACE(tr("Operation ready to apply (%1), already downloaded").arg(readyOperation->path()));
         if(QFile(readyOperation->dataDownloadFilename()).rename(readyOperation->dataFilename()))
@@ -478,7 +481,7 @@ void DownloadManager::operationDownloaded()
 
     file.close();
 
-    if(!fixingPath.isEmpty())
+    if(isFixingError())
     {
         updateDataStopDownload();
         readyToApply(operation);
@@ -498,17 +501,26 @@ void DownloadManager::operationDownloaded()
     nextOperation();
 }
 
-
 void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperation)
 {
     LOG_TRACE(tr("Operation applied %1").arg(appliedOperation->path()));
     if(appliedOperation->status() != Operation::Valid)
     {
-        failure(appliedOperation->path(), fixingPath.isEmpty() ? ApplyFailed : NonRecoverable);
+        if(isFixingError())
+        {
+            Q_ASSERT(appliedOperation->path() == fixingPath);
+            failure(fixingPath, NonRecoverable);
+            downloadPathPos = downloadPath.size(); // stopPackageLoop
+        }
+        else
+        {
+            failure(appliedOperation->path(), ApplyFailed);
+        }
     }
-    else if(!fixingPath.isEmpty())
+    else if(isFixingError() && isLastPackage())
     {
-        failure(appliedOperation->path(), Fixed);
+        Q_ASSERT(appliedOperation->path() == fixingPath);
+        failure(fixingPath, Fixed);
     }
 }
 

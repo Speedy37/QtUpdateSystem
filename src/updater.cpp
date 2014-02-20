@@ -225,7 +225,7 @@ void Updater::updateSucceeded()
 
 void Updater::updateFailed(const QString &reason)
 {
-
+    setState(UpdateRequired);
 }
 
 void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)
