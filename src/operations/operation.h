@@ -24,8 +24,7 @@ public:
         ApplyRequired,
         Valid,
         LocalFileInvalid,
-        ApplyFailed,
-        CreateUseless
+        ApplyFailed
     };
 
     Operation();
@@ -46,12 +45,12 @@ public:
     QString sha1() const;
     QString sha1(QFile *dataFile) const;
 
-
     QString errorString() const;
     Status status() const;
     void checkLocalData(); // FileManager thread
     void apply(); // FileManager thread
 
+    virtual bool isLocalFile() const;
     virtual void fromJsonObjectV1(const QJsonObject &object);
     QJsonObject toJsonObjectV1();
 

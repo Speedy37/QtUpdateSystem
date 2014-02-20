@@ -205,7 +205,6 @@ void PatchOperation::create(const QString &path, const QString &oldFilename, con
 
     if(m_localSize == m_finalSize && m_finalSha1 == m_finalSha1)
     {
-        m_status = CreateUseless;
         return;
     }
 

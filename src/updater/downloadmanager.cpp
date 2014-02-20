@@ -21,6 +21,7 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
     m_updateDirectory = updater->localRepository();
     m_updateTmpDirectory = updater->tmpDirectory();
     m_updateUrl = updater->remoteRepository();
+    m_fileListBeforeUpdate = updater->fileList().toSet();
     m_localRevision = updater->localRevision();
     m_remoteRevision = updater->updateRevision();
     m_username = updater->username();
@@ -179,17 +180,15 @@ void DownloadManager::updatePackageLoop()
             {
                 LOG_INFO(tr("Update finished with %1/%2 fixed errors").arg(fixedFailures).arg(failures.size()));
                 if(fixedFailures == failures.size())
-                    emit updateSucceeded();
+                    success();
                 else
-                    emit updateFailed(tr("Unable to fixes all errors (%1/%2 fixed)").arg(fixedFailures).arg(failures.size()));
-                emit finished();
+                    failure(tr("Unable to fixes all errors (%1/%2 fixed)").arg(fixedFailures).arg(failures.size()));
             }
         }
         else
         {
             LOG_INFO(tr("Update finished without error"));
-            emit updateSucceeded();
-            emit finished();
+            success();
         }
     }
 }
@@ -226,8 +225,13 @@ void DownloadManager::updatePackageMetadataFinished()
 
         if(!isFixingError())
         {
+            Q_ASSERT(!isLastPackage() || m_fileListAfterUpdate.size() == 0);
             foreach(QSharedPointer<Operation> op, metadata.operations())
             {
+                if(isLastPackage() && op->isLocalFile())
+                {
+                    m_fileListAfterUpdate.insert(op->path());
+                }
                 // Ask the file manager to take care of pre-apply job
                 // Jobs are automatically queued by Qt signals & slots
                 emit operationLoaded(op);
@@ -529,6 +533,18 @@ void DownloadManager::applyFinished()
     ++downloadPathPos;
     LOG_TRACE(tr("Apply %1/%2 finished").arg(downloadPathPos).arg(downloadPath.size()));
     updatePackageLoop();
+}
+void DownloadManager::success()
+{
+    m_fileListBeforeUpdate -= m_fileListAfterUpdate;
+    foreach(const QString &fileToRemove, m_fileListBeforeUpdate)
+    {
+        if(!QFile::remove(m_updateDirectory + fileToRemove))
+            LOG_WARN(tr("Unable to remove %1").arg(fileToRemove));
+    }
+
+    emit updateSucceeded(QStringList(m_fileListAfterUpdate.toList()));
+    emit finished();
 }
 
 void DownloadManager::failure(const QString &reason)

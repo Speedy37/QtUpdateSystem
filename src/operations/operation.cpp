@@ -51,6 +51,11 @@ void Operation::apply()
     }
 }
 
+bool Operation::isLocalFile() const
+{
+    return false;
+}
+
 void Operation::fromJsonObjectV1(const QJsonObject &object)
 {
     m_path = object.value(Path).toString();

@@ -120,9 +120,6 @@ PackageMetadata Packager::generate()
             if(!task.errorString.isNull())
                 throw task.errorString;
 
-            if(task.operation->status() == Operation::CreateUseless)
-                continue;
-
             if(task.operation->size() > 0)
             {
                 operationFile.setFileName(task.operation->dataFilename());

@@ -178,6 +178,7 @@ void TestUpdateChain::fallbackToV1()
     } catch(QString &msg) {
         QFAIL(msg.toLatin1());
     }
+    QVERIFY(!QFile::exists(testNew + "/local_repo/add.txt"));
 }
 
 void TestUpdateChain::updateToV2WithFailures()

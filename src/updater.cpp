@@ -98,6 +98,7 @@
 
 const QString Updater::Revision = QStringLiteral("Revision");
 const QString Updater::UpdatingTo = QStringLiteral("UpdatingTo");
+const QString Updater::FileList = QStringLiteral("FileList");
 
 Updater::Updater(const QString &updateDirectory, QObject *parent) : QObject(parent)
 {
@@ -109,6 +110,7 @@ Updater::Updater(const QString &updateDirectory, QObject *parent) : QObject(pare
     m_settings = new QSettings(m_updateDirectory + QStringLiteral("status.ini"), QSettings::IniFormat, this);
     m_localRevision = m_settings->value(Revision).toString();
     m_updatingToRevision  = m_settings->value(UpdatingTo).toString();
+    m_fileList = m_settings->value(FileList).toStringList();
 
     // Network
     m_manager = new QNetworkAccessManager(this);
@@ -214,11 +216,13 @@ void Updater::update()
     }
 }
 
-void Updater::updateSucceeded()
+void Updater::updateSucceeded(const QStringList &newFileList)
 {
     m_localRevision = remoteRevision();
+    m_fileList = newFileList;
     m_settings->setValue(Revision, localRevision());
     m_settings->remove(UpdatingTo);
+    m_settings->setValue(FileList, newFileList);
     m_settings->sync();
     setState(Uptodate);
 }

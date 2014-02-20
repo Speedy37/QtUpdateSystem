@@ -24,6 +24,11 @@ AddOperation::AddOperation() : Operation()
     m_finalSize = 0;
 }
 
+bool AddOperation::isLocalFile() const
+{
+    return true;
+}
+
 void AddOperation::fromJsonObjectV1(const QJsonObject &object)
 {
     Operation::fromJsonObjectV1(object);

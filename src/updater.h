@@ -5,6 +5,7 @@
 #include "common/version.h"
 
 #include <QObject>
+#include <QStringList>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -31,6 +32,7 @@ public:
     bool isIdle() const;
     bool isUpdateAvailable() const;
 
+    QStringList fileList() const;
     QString localRevision() const;
     QString remoteRevision() const;
     QString updateRevision() const;
@@ -68,7 +70,7 @@ signals:
 
 private slots:
     void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
-    void updateSucceeded();
+    void updateSucceeded(const QStringList &newFileList);
     void updateFailed(const QString &reason);
 
 signals:
@@ -85,6 +87,8 @@ private:
 private:
     static const QString Revision;
     static const QString UpdatingTo;
+    static const QString FileList;
+
     // Network
     QNetworkAccessManager *m_manager;
     QNetworkReply *m_currentRequest, *metadata;
@@ -96,6 +100,7 @@ private:
     QString m_username, m_password;
 
     // Informations
+    QStringList m_fileList;
     QString m_localRevision, m_updatingToRevision;
     Version m_remoteRevision;
     QString m_errorString;
@@ -110,6 +115,11 @@ inline bool Updater::isIdle() const
 inline bool Updater::isUpdateAvailable() const
 {
     return state() == UpdateRequired;
+}
+
+inline QStringList Updater::fileList() const
+{
+    return m_fileList;
 }
 
 inline QString Updater::localRevision() const

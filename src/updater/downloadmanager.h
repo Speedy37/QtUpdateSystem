@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QObject>
 #include <QMap>
+#include <QSet>
 
 class QNetworkReply;
 class QNetworkAccessManager;
@@ -37,7 +38,7 @@ signals:
     void downloadFinished();
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void updateFailed(const QString &reason);
-    void updateSucceeded();
+    void updateSucceeded(const QStringList &newFileList);
     void finished();
 
 private:
@@ -51,6 +52,7 @@ private:
         Fixed,
         NonRecoverable
     };
+    void success();
     void failure(const QString &reason);
     void failure(const QString &path, Failure reason);
     void updatePackageLoop();
@@ -72,6 +74,8 @@ private:
     QString m_updateDirectory, m_updateTmpDirectory;
     QString m_localRevision, m_remoteRevision;
     QString m_updateUrl, m_username, m_password;
+    QSet<QString> m_fileListBeforeUpdate;
+    QSet<QString> m_fileListAfterUpdate;
 
     // Network
     QNetworkAccessManager *m_manager;
