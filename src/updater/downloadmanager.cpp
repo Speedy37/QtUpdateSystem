@@ -348,9 +348,9 @@ void DownloadManager::nextOperation()
             offset = 0;
         }
     }
-    LOG_TRACE(tr("Next Operation %1 %2 + 1 == %3").arg(operationIndex).arg(preparedOperationIndex).arg(metadata.operationCount()));
     if(operation.isNull() && preparedOperationIndex + 1 == metadata.operationCount())
     {
+        LOG_TRACE(tr("downloadFinished, cause %1 %2 + 1 == %3").arg(operationIndex).arg(preparedOperationIndex).arg(metadata.operationCount()));
         emit downloadFinished();
     }
 }
@@ -372,8 +372,11 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
     {
         Q_ASSERT(preparedOperation != operation);
         readyToApply(preparedOperation);
-        if(operationIndex == metadata.operationCount())
+        if(operationIndex == metadata.operationCount() && preparedOperationIndex + 1 == operationIndex)
+        {
+            LOG_TRACE(tr("downloadFinished, cause %1 == preparedOperationIndex + 1 == operationIndex == metadata.operationCount()").arg(operationIndex));
             emit downloadFinished();
+        }
     }
     // [--DL--------------]
     //   [--Prepared--]    [--Apply--] if DownloadRequired
