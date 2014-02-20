@@ -23,8 +23,6 @@ SOURCES += \
     common/package.cpp \
     common/version.cpp \
     packager.cpp \
-    common/files.cpp \
-    common/file.cpp \
     updater.cpp \
     common/packages.cpp \
     common/jsonutil.cpp \
@@ -46,8 +44,6 @@ HEADERS +=\
     common/package.h \
     common/version.h \
     packager.h \
-    common/files.h \
-    common/file.h \
     updater.h \
     common/packages.h \
     common/jsonutil.h \
