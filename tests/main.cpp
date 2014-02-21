@@ -3,6 +3,7 @@
 #include <qtlog.h>
 #include <common/utils.h>
 
+#include "testutils.h"
 #include "tst_repository.h"
 #include "tst_packager.h"
 #include "tst_updater.h"
@@ -12,7 +13,8 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
 
-    QtLog::setLevel(QtLog::Trace);
+    QtLog::setLevel(QtLog::Off);
+    TestUtils::cleanup = true;
 #ifdef Q_OS_WIN
     Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma.exe");
     Utils::setXdeltaProgram(QString(SRCDIR)+ "../xdelta3.exe");

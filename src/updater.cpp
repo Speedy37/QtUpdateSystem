@@ -191,12 +191,12 @@ void Updater::update()
     {
         setState(Updating);
         clearError();
-        m_localRepository.setUpdatingTo(updateRevision());
+        m_localRepository.setUpdateInProgress(true);
         m_localRepository.save();
 
         LOG_TRACE(tr("Creating download manager"));
 
-        DownloadManager * downloader = new DownloadManager(this);
+        DownloadManager * downloader = new DownloadManager(m_localRepository, this);
         connect(downloader, &DownloadManager::finished, this, &Updater::updateFinished);
         connect(downloader, &DownloadManager::updateSucceeded, this, &Updater::updateSucceeded);
         connect(downloader, &DownloadManager::updateFailed, this, &Updater::updateFailed);
@@ -209,7 +209,7 @@ void Updater::update()
 
 void Updater::copy(const QString &copyDirectory)
 {
-    CopyThread *copier = new CopyThread(&m_localRepository, copyDirectory, this);
+    CopyThread *copier = new CopyThread(m_localRepository, copyDirectory, this);
 
     connect(copier, &CopyThread::progression, this, &Updater::copyProgress);
     connect(copier, &CopyThread::finished, this, &Updater::copyFinished);
@@ -217,12 +217,9 @@ void Updater::copy(const QString &copyDirectory)
     copier->start();
 }
 
-void Updater::updateSucceeded(const QStringList &newFileList)
+void Updater::updateSucceeded()
 {
-    m_localRepository.setRevision(updateRevision());
-    m_localRepository.setFileList(newFileList);
-    m_localRepository.setUpdatingTo(QString());
-    m_localRepository.save();
+    m_localRepository.load();
     setState(Uptodate);
 }
 

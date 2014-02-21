@@ -33,10 +33,8 @@ public:
     bool isIdle() const;
     bool isUpdateAvailable() const;
 
-    QStringList fileList() const;
     QString localRevision() const;
     QString remoteRevision() const;
-    QString updateRevision() const;
     Version remoteVersion() const;
 
     QString localRepository() const;
@@ -74,7 +72,7 @@ signals:
 
 private slots:
     void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
-    void updateSucceeded(const QStringList &newFileList);
+    void updateSucceeded();
     void updateFailed(const QString &reason);
 
 signals:
@@ -115,11 +113,6 @@ inline bool Updater::isUpdateAvailable() const
     return state() == UpdateRequired;
 }
 
-inline QStringList Updater::fileList() const
-{
-    return m_localRepository.fileList();
-}
-
 inline QString Updater::localRevision() const
 {
     return m_localRepository.revision();
@@ -128,11 +121,6 @@ inline QString Updater::localRevision() const
 inline QString Updater::remoteRevision() const
 {
     return m_remoteRevision.revision;
-}
-
-inline QString Updater::updateRevision() const
-{
-    return m_localRepository.isConsistent() ? remoteRevision() : m_localRepository.updatingTo();
 }
 
 inline Version Updater::remoteVersion() const

@@ -12,7 +12,8 @@
 
 Q_DECLARE_METATYPE(QSharedPointer<Operation>)
 
-DownloadManager::DownloadManager(Updater *updater) : QObject()
+DownloadManager::DownloadManager(const LocalRepository &sourceRepository, Updater *updater) :
+    QObject(), m_localRepository(sourceRepository)
 {
     qRegisterMetaType< QSharedPointer<Operation> >();
 
@@ -21,9 +22,8 @@ DownloadManager::DownloadManager(Updater *updater) : QObject()
     m_updateDirectory = updater->localRepository();
     m_updateTmpDirectory = updater->tmpDirectory();
     m_updateUrl = updater->remoteRepository();
-    m_fileListBeforeUpdate = updater->fileList().toSet();
     m_localRevision = updater->localRevision();
-    m_remoteRevision = updater->updateRevision();
+    m_remoteRevision = updater->remoteRevision();
     m_username = updater->username();
     m_password = updater->password();
 
@@ -521,10 +521,10 @@ void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperatio
             failure(appliedOperation->path(), ApplyFailed);
         }
     }
-    else if(isFixingError() && isLastPackage())
+    else if(failures.contains(appliedOperation->path()))
     {
-        Q_ASSERT(appliedOperation->path() == fixingPath);
-        failure(fixingPath, Fixed);
+        Q_ASSERT(!isFixingError() || appliedOperation->path() == fixingPath);
+        failure(appliedOperation->path(), Fixed);
     }
 }
 
@@ -534,16 +534,22 @@ void DownloadManager::applyFinished()
     LOG_TRACE(tr("Apply %1/%2 finished").arg(downloadPathPos).arg(downloadPath.size()));
     updatePackageLoop();
 }
+
 void DownloadManager::success()
 {
-    m_fileListBeforeUpdate -= m_fileListAfterUpdate;
-    foreach(const QString &fileToRemove, m_fileListBeforeUpdate)
+    QSet<QString> diffFileList = m_localRepository.fileList().toSet() - m_fileListAfterUpdate;
+    foreach(const QString &fileToRemove, diffFileList)
     {
         if(!QFile::remove(m_updateDirectory + fileToRemove))
             LOG_WARN(tr("Unable to remove %1").arg(fileToRemove));
     }
 
-    emit updateSucceeded(QStringList(m_fileListAfterUpdate.toList()));
+    m_localRepository.setFileList(QStringList(m_fileListAfterUpdate.toList()));
+    m_localRepository.setRevision(m_remoteRevision);
+    m_localRepository.setUpdateInProgress(false);
+    m_localRepository.save();
+
+    emit updateSucceeded();
     emit finished();
 }
 

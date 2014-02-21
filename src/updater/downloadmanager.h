@@ -18,7 +18,7 @@ class DownloadManager : public QObject
 {
     Q_OBJECT
 public:
-    DownloadManager(Updater *updater);
+    DownloadManager(const LocalRepository &sourceRepository, Updater *updater);
     ~DownloadManager();
 
 private slots:
@@ -38,7 +38,7 @@ signals:
     void downloadFinished();
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void updateFailed(const QString &reason);
-    void updateSucceeded(const QStringList &newFileList);
+    void updateSucceeded();
     void finished();
 
 private:
@@ -71,10 +71,10 @@ private:
 
 private:
     // Configuration
+    LocalRepository m_localRepository;
     QString m_updateDirectory, m_updateTmpDirectory;
     QString m_localRevision, m_remoteRevision;
     QString m_updateUrl, m_username, m_password;
-    QSet<QString> m_fileListBeforeUpdate;
     QSet<QString> m_fileListAfterUpdate;
 
     // Network

@@ -10,7 +10,6 @@ class LocalRepository
 {
 public:
     LocalRepository(const QString &directory);
-    ~LocalRepository();
     void load();
     void save();
 
@@ -20,18 +19,17 @@ public:
     void setRevision(const QString &revision);
 
     bool isConsistent() const;
-    QString updatingTo() const;
-    void setUpdatingTo(const QString &revision);
+    bool updateInProgress() const;
+    void setUpdateInProgress(bool updateInProgress);
 
     QStringList fileList() const;
     void setFileList(const QStringList &files);
-private:
-    static const QString Revision , UpdatingTo, FileList, StatusFileName;
-    QSettings *m_settings;
-    QStringList m_fileList;
-    QString m_directory, m_localRevision, m_updatingToRevision;
 
-    Q_DISABLE_COPY(LocalRepository)
+private:
+    static const QString Revision, UpdateInProgress, FileList, StatusFileName;
+    QStringList m_fileList;
+    QString m_directory, m_localRevision;
+    bool m_updateInProgress;
 };
 
 inline QString LocalRepository::directory() const
@@ -51,17 +49,17 @@ inline void LocalRepository::setRevision(const QString &revision)
 
 inline bool LocalRepository::isConsistent() const
 {
-    return m_updatingToRevision.isEmpty();
+    return !m_updateInProgress;
 }
 
-inline QString LocalRepository::updatingTo() const
+inline bool LocalRepository::updateInProgress() const
 {
-    return m_updatingToRevision;
+    return m_updateInProgress;
 }
 
-inline void LocalRepository::setUpdatingTo(const QString &revision)
+inline void LocalRepository::setUpdateInProgress(bool updateInProgress)
 {
-    m_updatingToRevision = revision;
+    m_updateInProgress = updateInProgress;
 }
 
 inline QStringList LocalRepository::fileList() const
