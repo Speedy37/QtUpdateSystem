@@ -30,7 +30,8 @@ SOURCES += \
     common/versions.cpp \
     packager/packagertask.cpp \
     common/utils.cpp \
-    repository.cpp
+    repository.cpp \
+    updater/localrepository.cpp
 
 HEADERS +=\
     qtupdatesystem_global.h \
@@ -52,7 +53,8 @@ HEADERS +=\
     packager/packagertask.h \
     common/utils.h \
     repository.h \
-    updater/oneobjectthread.h
+    updater/oneobjectthread.h \
+    updater/localrepository.h
 
 unix {
     target.path = /usr/lib

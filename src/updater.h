@@ -3,6 +3,7 @@
 
 #include "qtupdatesystem_global.h"
 #include "common/version.h"
+#include "updater/localrepository.h"
 
 #include <QObject>
 #include <QStringList>
@@ -85,23 +86,17 @@ private:
     void setState(State newState);
 
 private:
-    static const QString Revision;
-    static const QString UpdatingTo;
-    static const QString FileList;
-
     // Network
     QNetworkAccessManager *m_manager;
     QNetworkReply *m_currentRequest, *metadata;
 
     // Config
-    QSettings *m_settings;
-    QString m_updateDirectory, m_updateTmpDirectory;
+    QString m_updateTmpDirectory;
     QString m_updateUrl;
     QString m_username, m_password;
 
     // Informations
-    QStringList m_fileList;
-    QString m_localRevision, m_updatingToRevision;
+    LocalRepository m_localRepository;
     Version m_remoteRevision;
     QString m_errorString;
     State m_state;
@@ -119,12 +114,12 @@ inline bool Updater::isUpdateAvailable() const
 
 inline QStringList Updater::fileList() const
 {
-    return m_fileList;
+    return m_localRepository.fileList();
 }
 
 inline QString Updater::localRevision() const
 {
-    return m_localRevision;
+    return m_localRepository.revision();
 }
 
 inline QString Updater::remoteRevision() const
@@ -134,7 +129,7 @@ inline QString Updater::remoteRevision() const
 
 inline QString Updater::updateRevision() const
 {
-    return m_updatingToRevision.isEmpty() ? remoteRevision() : m_updatingToRevision;
+    return m_localRepository.isConsistent() ? remoteRevision() : m_localRepository.updatingTo();
 }
 
 inline Version Updater::remoteVersion() const
@@ -144,7 +139,7 @@ inline Version Updater::remoteVersion() const
 
 inline QString Updater::localRepository() const
 {
-    return m_updateDirectory;
+    return m_localRepository.directory();
 }
 
 inline QString Updater::tmpDirectory() const

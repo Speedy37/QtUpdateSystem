@@ -96,21 +96,11 @@
     \sa Updater::State
 */
 
-const QString Updater::Revision = QStringLiteral("Revision");
-const QString Updater::UpdatingTo = QStringLiteral("UpdatingTo");
-const QString Updater::FileList = QStringLiteral("FileList");
 
-Updater::Updater(const QString &updateDirectory, QObject *parent) : QObject(parent)
+Updater::Updater(const QString &updateDirectory, QObject *parent) : QObject(parent), m_localRepository(updateDirectory)
 {
     // Init
     m_state = Idle;
-    m_updateDirectory = Utils::cleanPath(updateDirectory);
-
-    // Settings
-    m_settings = new QSettings(m_updateDirectory + QStringLiteral("status.ini"), QSettings::IniFormat, this);
-    m_localRevision = m_settings->value(Revision).toString();
-    m_updatingToRevision  = m_settings->value(UpdatingTo).toString();
-    m_fileList = m_settings->value(FileList).toStringList();
 
     // Network
     m_manager = new QNetworkAccessManager(this);
@@ -159,7 +149,7 @@ void Updater::onInfoFinished()
 
         LOG_INFO(tr("Remote informations analyzed"));
 
-        if(!m_updatingToRevision.isEmpty())
+        if(!m_localRepository.isConsistent())
         {
             LOG_INFO(tr("An update was in progress"));
             setState(UpdateRequired);
@@ -200,8 +190,8 @@ void Updater::update()
     {
         setState(Updating);
         clearError();
-        m_settings->setValue(UpdatingTo, updateRevision());
-        m_settings->sync();
+        m_localRepository.setUpdatingTo(updateRevision());
+        m_localRepository.save();
 
         LOG_TRACE(tr("Creating download manager"));
 
@@ -218,12 +208,10 @@ void Updater::update()
 
 void Updater::updateSucceeded(const QStringList &newFileList)
 {
-    m_localRevision = remoteRevision();
-    m_fileList = newFileList;
-    m_settings->setValue(Revision, localRevision());
-    m_settings->remove(UpdatingTo);
-    m_settings->setValue(FileList, newFileList);
-    m_settings->sync();
+    m_localRepository.setRevision(updateRevision());
+    m_localRepository.setFileList(newFileList);
+    m_localRepository.setUpdatingTo(QString());
+    m_localRepository.save();
     setState(Uptodate);
 }
 
