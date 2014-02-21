@@ -9,9 +9,7 @@ const QString testAdd = testDir + "repository_testAdd";
 
 void TestRepository::initTestCase()
 {
-    QFile::remove(testAdd + "/dir/versions");
-    QFile::remove(testAdd + "/dir/packages");
-    QFile::remove(testAdd + "/dir/current");
+    FORCED_CLEANUP
     if(!QFile::copy(testAdd + "/init/versions", testAdd + "/dir/versions"))
         QFAIL("Unable to copy init/versions to dir/versions");
     if(!QFile::copy(testAdd + "/init/packages", testAdd + "/dir/packages"))
@@ -22,6 +20,12 @@ void TestRepository::initTestCase()
 
 void TestRepository::cleanupTestCase()
 {
+    if(!TestUtils::cleanup)
+        return;
+
+    QFile::remove(testAdd + "/dir/versions");
+    QFile::remove(testAdd + "/dir/packages");
+    QFile::remove(testAdd + "/dir/current");
 }
 
 void TestRepository::testNewRepository()

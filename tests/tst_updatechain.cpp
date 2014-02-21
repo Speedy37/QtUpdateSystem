@@ -7,11 +7,10 @@
 const QString testDir = QString(SRCDIR);
 const QString testNew = testDir + "updatechain_testNew";
 const QString testUpdate = testDir + "updatechain_testUpdate";
-bool cleanup = true;
 
 void TestUpdateChain::initTestCase()
 {
-    cleanupTestCase();
+    FORCED_CLEANUP
     {
         QDir dir(testNew);
         dir.mkpath("repo");
@@ -24,12 +23,11 @@ void TestUpdateChain::initTestCase()
         dir.mkpath("local_repo");
         dir.mkpath("local_tmp");
     }
-    cleanup = false;
 }
 
 void TestUpdateChain::cleanupTestCase()
 {
-    if(!cleanup)
+    if(!TestUtils::cleanup)
         return;
 
     QDir(testNew + "/repo").removeRecursively();

@@ -31,6 +31,7 @@ SOURCES += \
     packager/packagertask.cpp \
     common/utils.cpp \
     repository.cpp \
+    updater/copythread.cpp \
     updater/localrepository.cpp
 
 HEADERS +=\
@@ -54,6 +55,7 @@ HEADERS +=\
     common/utils.h \
     repository.h \
     updater/oneobjectthread.h \
+    updater/copythread.h \
     updater/localrepository.h
 
 unix {

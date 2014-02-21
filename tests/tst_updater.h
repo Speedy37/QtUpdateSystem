@@ -10,8 +10,9 @@ public:
     TestUpdater() {}
 
 private Q_SLOTS:
-    void checkForUpdates();
-
+    void initTestCase();
+    void updaterCopy();
+    void cleanupTestCase();
 };
 
 #endif // TST_UPDATER_H

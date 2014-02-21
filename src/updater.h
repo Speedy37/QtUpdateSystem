@@ -57,6 +57,7 @@ public:
 public slots:
     void checkForUpdates();
     void update();
+    void copy(const QString& copyDirectory);
 private slots:
     void onInfoFinished();
 signals:
@@ -65,6 +66,8 @@ signals:
 
 public slots:
 signals:
+    void copyProgress(int copiedFileCount, int totalFileCount);
+    void copyFinished();
     void updateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void updateApplyProgress(qint64 bytesApplied, qint64 bytesTotal);
     void updateFinished();

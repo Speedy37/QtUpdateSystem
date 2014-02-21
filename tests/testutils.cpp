@@ -3,6 +3,8 @@
 #include <QJsonDocument>
 #include <QTest>
 
+bool TestUtils::cleanup = true;
+
 void TestUtils::assertFileEquals(const QString &file1, const QString &file2)
 {
     QFile f1(file1);

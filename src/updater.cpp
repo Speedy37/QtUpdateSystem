@@ -2,6 +2,7 @@
 #include "common/jsonutil.h"
 #include "common/utils.h"
 #include "updater/downloadmanager.h"
+#include "updater/copythread.h"
 
 #include <qtlog.h>
 #include <QNetworkReply>
@@ -204,6 +205,16 @@ void Updater::update()
     {
         LOG_WARN(tr("called without an available update"));
     }
+}
+
+void Updater::copy(const QString &copyDirectory)
+{
+    CopyThread *copier = new CopyThread(&m_localRepository, copyDirectory, this);
+
+    connect(copier, &CopyThread::progression, this, &Updater::copyProgress);
+    connect(copier, &CopyThread::finished, this, &Updater::copyFinished);
+    connect(copier, &CopyThread::finished, copier, &CopyThread::deleteLater);
+    copier->start();
 }
 
 void Updater::updateSucceeded(const QStringList &newFileList)
