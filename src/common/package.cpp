@@ -47,7 +47,7 @@ QJsonObject Package::toJsonObjectV1() const
     return packageObject;
 }
 
-bool Package::operator==(const Package &other)
+bool Package::operator==(const Package &other) const
 {
     return other.from == from && other.to == to && other.size == size;
 }

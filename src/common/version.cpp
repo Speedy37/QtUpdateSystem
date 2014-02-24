@@ -44,7 +44,7 @@ QJsonObject Version::toJsonObjectV1() const
     return object;
 }
 
-bool Version::operator==(const Version &other)
+bool Version::operator==(const Version &other) const
 {
     return revision == other.revision;
 }

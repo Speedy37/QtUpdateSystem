@@ -20,7 +20,7 @@ public:
     QString metadataUrl() const;
     void fromJsonObjectV1(const QJsonObject &packageObject);
     QJsonObject toJsonObjectV1() const;
-    bool operator==(const Package &other);
+    bool operator==(const Package &other) const;
 };
 
 inline QString Package::metadataUrl() const

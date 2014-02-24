@@ -15,7 +15,7 @@ public:
 
     void fromJsonObjectV1(const QJsonObject &object);
     QJsonObject toJsonObjectV1() const;
-    bool operator==(const Version &other);
+    bool operator==(const Version &other) const;
 };
 
 #endif // VERSION_H
