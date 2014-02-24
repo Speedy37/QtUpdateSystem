@@ -69,3 +69,12 @@ else:unix: LIBS += -L$$OUT_PWD/../QtLog/ -lQtLog
 
 INCLUDEPATH += $$PWD/../QtLog
 DEPENDPATH += $$PWD/../QtLog
+
+win32 {
+    exes.files = $$PWD/../xdelta3.exe $$PWD/../lzma.exe
+    exes.path = $$[top_builddir]/Install
+    INSTALLS += exes
+}
+
+target.path = $$[top_builddir]/Install
+INSTALLS += target

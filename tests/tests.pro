@@ -1,7 +1,7 @@
 QT       += testlib
 QT       -= gui
 
-TARGET = UpdateSystemTests
+TARGET = tests
 CONFIG   += console
 CONFIG   -= app_bundle
 
@@ -34,16 +34,11 @@ else:unix: {
 
 LIBS += -L$$OUT_PWD/../src/$${subdir} -lQtUpdateSystem
 LIBS += -L$$OUT_PWD/../QtLog/$${subdir} -lQtLog
-target.files = $$OUT_PWD/../src/$${subdir}QtUpdateSystem$${dllext}
-target.files += $$OUT_PWD/../QtLog/$${subdir}QtLog$${dllext}
 
 INCLUDEPATH += $$PWD/../src
 DEPENDPATH += $$PWD/../src
 INCLUDEPATH += $$PWD/../QtLog
 DEPENDPATH += $$PWD/../QtLog
-
-target.path = $$OUT_PWD/Install
-INSTALLS += target
 
 HEADERS += \
     tst_packager.h \
@@ -52,3 +47,5 @@ HEADERS += \
     tst_repository.h \
     testutils.h
 
+target.path = $$[top_builddir]/Install
+INSTALLS += target
