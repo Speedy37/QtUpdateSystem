@@ -31,6 +31,10 @@ public:
     void addPackage(const QString &packageFullName);
     void addPackage(const PackageMetadata &packageMetadata);
     void addPackage(const Package &package);
+    void removePackage(const QString &packageFullName);
+    void removePackage(const PackageMetadata &packageMetadata);
+    void removePackage(const Package &package);
+    void simplify();
 
     Versions versions() const;
     QString currentRevision() const;
@@ -47,6 +51,7 @@ private:
     Versions m_versions;
     int m_currentVersion;
     void ensurePackageVersionExists(const Package &package);
+    void markPackagesAsUseful(QVector<bool> &useful, const QVector<Package> packages);
 };
 
 inline QString Repository::directory() const
@@ -62,6 +67,11 @@ inline Packages Repository::packages() const
 inline void Repository::addPackage(const PackageMetadata &packageMetadata)
 {
     addPackage(packageMetadata.package());
+}
+
+inline void Repository::removePackage(const PackageMetadata &packageMetadata)
+{
+    removePackage(packageMetadata.package());
 }
 
 inline Versions Repository::versions() const

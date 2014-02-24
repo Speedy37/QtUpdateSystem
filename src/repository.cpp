@@ -113,6 +113,65 @@ void Repository::addPackage(const QString &packageFullName)
     throw tr("%1 doesn't exists").arg(metadataFile.fileName());
 }
 
+void Repository::removePackage(const QString &packageFullName)
+{
+    QFile metadataFile(m_directory + packageFullName + PackageMetadata::FileExtension);
+    if(metadataFile.exists())
+    {
+        if(metadataFile.open(QFile::ReadOnly | QFile::Text))
+        {
+            PackageMetadata packageMetadata;
+            packageMetadata.fromJsonObject(JsonUtil::fromJson(metadataFile.readAll()), false);
+            removePackage(packageMetadata);
+            return;
+        }
+        throw tr("Unable to open %1").arg(metadataFile.fileName());
+    }
+    throw tr("%1 doesn't exists").arg(metadataFile.fileName());
+}
+
+void Repository::removePackage(const Package &package)
+{
+    int pos = m_packages.indexOf(package);
+    if(pos != -1)
+    {
+        m_packages.remove(pos);
+    }
+}
+
+void Repository::simplify()
+{
+    QVector<bool> useful(m_packages.size(), false);
+    const QString & currentVersion = m_versions.at(m_currentVersion).revision;
+
+    markPackagesAsUseful(useful, m_packages.findBestPath(QString(), currentVersion));
+    for(int i = 0; i < m_versions.size(); ++i)
+    {
+        markPackagesAsUseful(useful, m_packages.findBestPath(m_versions.at(i).revision, currentVersion));
+    }
+
+    for(int i = m_packages.size() - 1; i >= 0; --i)
+    {
+        if(!useful.at(i))
+            m_packages.remove(i);
+    }
+}
+
+void Repository::markPackagesAsUseful(QVector<bool> &useful, const QVector<Package> packages)
+{
+    foreach(const Package &usefulPackage, packages)
+    {
+        for(int i = 0; i < m_packages.size(); ++i)
+        {
+            if(m_packages.at(i) == usefulPackage)
+            {
+                useful[i] = true;
+                break;
+            }
+        }
+    }
+}
+
 void Repository::save()
 {
     JsonUtil::toJsonFile(m_directory + PackagesFile, m_packages.toJsonObject());
