@@ -3,4 +3,5 @@ CONFIG += ordered
 system(qmake -set top_builddir $$OUT_PWD)
 SUBDIRS += QtLog \
     src \
+    bin \
     tests
