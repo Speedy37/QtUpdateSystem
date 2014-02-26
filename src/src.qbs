@@ -17,8 +17,8 @@ Product {
         cpp.cxxFlags: ["/W3", "/w34100", "/w34189"]
     }
     Properties {
-        condition: qbs.toolchain.contains("gcc") && !qbs.targetOS.contains("windows")
-        cpp.cxxFlags: ["-Werror"]
+        condition: qbs.toolchain.contains("llvm") || qbs.toolchain.contains("gcc")
+        cpp.cxxFlags: ["-std=c++11"]
     }
 
     Group {
