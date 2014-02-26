@@ -30,7 +30,7 @@ QJsonObject fromJson(const QByteArray &json)
     QJsonDocument doc = QJsonDocument::fromJson(json, &jsonError);
 
     if(jsonError.error != QJsonParseError::NoError)
-        throw(QObject::tr("Unable to parse json").arg(jsonError.errorString()));
+        throw(QObject::tr("Unable to parse json %1").arg(jsonError.errorString()));
 
     if(!doc.isObject())
         throw(QObject::tr("Expecting an object"));
