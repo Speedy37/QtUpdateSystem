@@ -1,7 +1,7 @@
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QMetaEnum>
-#include <QDebug>
+#include <QLoggingCategory>
 #include <packager.h>
 
 int main(int argc, char *argv[])

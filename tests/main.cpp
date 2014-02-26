@@ -1,6 +1,6 @@
 #include <QTest>
 #include <QCoreApplication>
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <common/utils.h>
 
 #include "testutils.h"
@@ -13,7 +13,6 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
 
-    QtLog::setLevel(QtLog::Off);
     TestUtils::cleanup = true;
 #ifdef Q_OS_WIN
     Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma.exe");
@@ -21,7 +20,6 @@ int main(int argc, char *argv[])
 #else
     Utils::setLzmaProgram("lzmacon");
 #endif
-
     int ret = 0;
     {
         TestRepository t;

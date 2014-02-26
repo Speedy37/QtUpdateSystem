@@ -6,7 +6,7 @@
 #include "../operations/removedirectoryoperation.h"
 #include "../operations/removeoperation.h"
 
-#include <qtlog.h>
+#include <QLoggingCategory>
 
 const QString PackageMetadata::FileExtension = ".metadata";
 

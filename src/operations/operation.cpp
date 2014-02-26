@@ -1,7 +1,9 @@
 #include "operation.h"
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QFile>
 #include <QCryptographicHash>
+
+Q_LOGGING_CATEGORY(LOG_OP, "updatesystem.common.operation")
 
 const QString Operation::Path = QStringLiteral("path");
 
@@ -16,7 +18,7 @@ QString Operation::sha1(QFile * file) const
 {
     if(!file->open(QIODevice::ReadOnly))
     {
-        LOG_ERROR(QObject::tr("Unable to open %1").arg(file->fileName()));
+        qCCritical(LOG_OP) << "Unable to open " << file->fileName();
         return QString();
     }
 
@@ -45,7 +47,7 @@ void Operation::apply()
     }
     catch(const QString &msg)
     {
-        LOG_TRACE(msg);
+        qCDebug(LOG_OP) << msg;
         m_errorString = msg;
         m_status = ApplyFailed;
     }

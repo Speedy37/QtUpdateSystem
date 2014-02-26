@@ -1,7 +1,7 @@
 #include "versions.h"
 #include "jsonutil.h"
 
-#include <qtlog.h>
+#include <QLoggingCategory>
 
 void Versions::fromJsonObject(const QJsonObject & object)
 {

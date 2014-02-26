@@ -4,12 +4,14 @@
 #include "updater/downloadmanager.h"
 #include "updater/copythread.h"
 
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QNetworkReply>
 #include <QNetworkAccessManager>
-#include <QDebug>
+#include <QLoggingCategory>
 #include <QSettings>
 #include <QAuthenticator>
+
+Q_LOGGING_CATEGORY(LOG_UPDATER, "updatesystem.updater")
 
 /*!
     \class RemoteUpdate
@@ -133,7 +135,7 @@ void Updater::checkForUpdates()
     }
     else
     {
-        LOG_WARN(tr("Called while not Idle"));
+        qCWarning(LOG_UPDATER) << "Called while not Idle";
     }
 }
 
@@ -144,32 +146,32 @@ void Updater::onInfoFinished()
         if(m_currentRequest->error() != QNetworkReply::NoError)
             throw m_currentRequest->errorString();
 
-        LOG_INFO(tr("Remote informations downloaded"));
+        qCDebug(LOG_UPDATER) << "Remote informations downloaded";
 
         m_remoteRevision.fromJsonObject(JsonUtil::fromJson(m_currentRequest->readAll()));
 
-        LOG_INFO(tr("Remote informations analyzed"));
+        qCDebug(LOG_UPDATER) << "Remote informations analyzed";
 
         if(!m_localRepository.isConsistent())
         {
-            LOG_INFO(tr("An update was in progress"));
+            qCDebug(LOG_UPDATER) << "An update was in progress";
             setState(UpdateRequired);
             emit updateRequired();
         }
         else if(localRevision() == remoteRevision())
         {
-            LOG_INFO(tr("Already at the latest version"));
+            qCDebug(LOG_UPDATER) << "Already at the latest version";
             setState(AlreadyUptodate);
         }
         else
         {
             if(localRevision().isEmpty())
             {
-                LOG_INFO(tr("Install required to %1").arg(remoteRevision()));
+                qCDebug(LOG_UPDATER) << "Install required to" << remoteRevision();
             }
             else
             {
-                LOG_INFO(tr("Update required from %1 to %2").arg(localRevision(), remoteRevision()));
+                qCDebug(LOG_UPDATER) << "Install required from" << localRevision() << "to" << remoteRevision();
             }
 
             setState(UpdateRequired);
@@ -194,8 +196,6 @@ void Updater::update()
         m_localRepository.setUpdateInProgress(true);
         m_localRepository.save();
 
-        LOG_TRACE(tr("Creating download manager"));
-
         DownloadManager * downloader = new DownloadManager(m_localRepository, this);
         connect(downloader, &DownloadManager::finished, this, &Updater::updateFinished);
         connect(downloader, &DownloadManager::updateSucceeded, this, &Updater::updateSucceeded);
@@ -203,7 +203,7 @@ void Updater::update()
     }
     else
     {
-        LOG_WARN(tr("called without an available update"));
+        qCWarning(LOG_UPDATER) << "Called without an available update";
     }
 }
 

@@ -6,9 +6,11 @@
 #include "../common/packagemetadata.h"
 #include "../operations/operation.h"
 
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QNetworkReply>
 #include <QAuthenticator>
+
+Q_LOGGING_CATEGORY(LOG_DLMANAGER, "updatesystem.updater.dlmanager")
 
 Q_DECLARE_METATYPE(QSharedPointer<Operation>)
 
@@ -78,7 +80,6 @@ DownloadManager::~DownloadManager()
  */
 void DownloadManager::update()
 {
-    LOG_INFO(tr("update"));
     packagesListRequest = get(QStringLiteral("packages"));
     connect(packagesListRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackagesListRequestFinished);
 }
@@ -97,11 +98,11 @@ void DownloadManager::updatePackagesListRequestFinished()
         if(packagesListRequest->error() != QNetworkReply::NoError)
             throw packagesListRequest->errorString();
 
-        LOG_INFO(tr("Packages list downloaded"));
+        qCDebug(LOG_DLMANAGER) << "Packages list downloaded";
 
         m_packages.fromJsonObject(JsonUtil::fromJson(packagesListRequest->readAll()));
 
-        LOG_INFO(tr("Remote informations analyzed"));
+        qCDebug(LOG_DLMANAGER) << "Remote informations analyzed";
 
         downloadPath = m_packages.findBestPath(m_localRevision, m_remoteRevision);
         if(downloadPath.isEmpty())
@@ -112,7 +113,6 @@ void DownloadManager::updatePackagesListRequestFinished()
     }
     catch(const QString & msg)
     {
-        LOG_ERROR(tr("Update failed %1").arg(msg));
         failure(msg);
     }
 }
@@ -131,7 +131,6 @@ void DownloadManager::updatePackageLoop()
         metadata.setPackage(package);
         metadataRequest = get(package.metadataUrl());
         connect(metadataRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackageMetadataFinished);
-        LOG_INFO(tr("Downloading metadata for %1").arg(package.url()));
     }
     else
     {
@@ -140,7 +139,7 @@ void DownloadManager::updatePackageLoop()
             if(!isFixingError())
             {
                 // First time we get in this loop
-                LOG_INFO(tr("Some parts of the update have gone wrong, fixing..."));
+                qCDebug(LOG_DLMANAGER) << "Some parts of the update have gone wrong, fixing...";
                 downloadPath = m_packages.findBestPath("", m_remoteRevision);
                 if(downloadPath.isEmpty())
                     failure(tr("No download path found %1").arg(m_remoteRevision));
@@ -174,20 +173,19 @@ void DownloadManager::updatePackageLoop()
                 metadata.setPackage(package);
                 metadataRequest = get(package.metadataUrl());
                 connect(metadataRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackageMetadataFinished);
-                LOG_INFO(tr("Downloading metadata for %1").arg(fixingPath));
             }
             else
             {
-                LOG_INFO(tr("Update finished with %1/%2 fixed errors").arg(fixedFailures).arg(failures.size()));
+                qCDebug(LOG_DLMANAGER) << "Update finished with " << fixedFailures << "/" << failures.size() << "fixed errors";
                 if(fixedFailures == failures.size())
                     success();
                 else
-                    failure(tr("Unable to fixes all errors (%1/%2 fixed)").arg(fixedFailures).arg(failures.size()));
+                    qCDebug(LOG_DLMANAGER) << "Unable to fixes all errors (" << fixedFailures << "/" << failures.size() << "fixed)";
             }
         }
         else
         {
-            LOG_INFO(tr("Update finished without error"));
+            qCDebug(LOG_DLMANAGER) << "Update finished without error";
             success();
         }
     }
@@ -205,8 +203,6 @@ void DownloadManager::updatePackageMetadataFinished()
     {
         if(metadataRequest->error() != QNetworkReply::NoError)
             throw metadataRequest->errorString();
-
-        LOG_INFO(tr("Metadata downloaded"));
 
         metadata.fromJsonObject(JsonUtil::fromJson(metadataRequest->readAll()));
         metadata.setup(m_updateDirectory, m_updateTmpDirectory);
@@ -257,7 +253,6 @@ void DownloadManager::updatePackageMetadataFinished()
     }
     catch(const QString & msg)
     {
-        LOG_ERROR(tr("Update failed %1").arg(msg));
         failure(msg);
     }
 }
@@ -266,7 +261,6 @@ void DownloadManager::readyToApply(QSharedPointer<Operation> readyOperation)
 {
     if(readyOperation->status() == Operation::DownloadRequired || isFixingError())
     {
-        LOG_TRACE(tr("Operation ready to apply (%1), already downloaded").arg(readyOperation->path()));
         if(QFile(readyOperation->dataDownloadFilename()).rename(readyOperation->dataFilename()))
             emit operationReadyToApply(readyOperation);
         else
@@ -275,14 +269,16 @@ void DownloadManager::readyToApply(QSharedPointer<Operation> readyOperation)
     else if(readyOperation->status() == Operation::ApplyRequired)
     {
         QFile::remove(readyOperation->dataDownloadFilename());
-        LOG_TRACE(tr("Operation ready to apply (%1), already downloaded was ready to apply").arg(readyOperation->path()));
         emit operationReadyToApply(readyOperation);
     }
 }
 
 void DownloadManager::failure(const QString &path, Failure reason)
 {
-    LOG_WARN(tr("Operation failed %1 (%2)").arg(path).arg(reason));
+    if(reason != Fixed)
+        qCWarning(LOG_DLMANAGER) << "Operation failed " << reason << path;
+    else
+        qCDebug(LOG_DLMANAGER) << "Operation fixed " << path;
     failures.insert(path, reason);
 }
 
@@ -358,7 +354,7 @@ void DownloadManager::nextOperation()
     }
     if(operation.isNull() && preparedOperationIndex + 1 == metadata.operationCount())
     {
-        LOG_TRACE(tr("downloadFinished, cause %1 %2 + 1 == %3").arg(operationIndex).arg(preparedOperationIndex).arg(metadata.operationCount()));
+        qCDebug(LOG_DLMANAGER) << "DownloadFinished, cause " << preparedOperationIndex << "+ 1 == " << metadata.operationCount();
         emit downloadFinished();
     }
 }
@@ -372,8 +368,7 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
     ++preparedOperationIndex;
     Q_ASSERT(preparedOperation == metadata.operation(preparedOperationIndex));
 
-    LOG_TRACE(tr("Operation prepared %1").arg(preparedOperation->path()));
-    LOG_TRACE(tr("opIndex = %1, prepIndex = %2, op = %3").arg(operationIndex).arg(preparedOperationIndex).arg(operation.isNull() ? QString("NULL") : operation->path()));
+    qCDebug(LOG_DLMANAGER) << "Operation prepared" << preparedOperation->path();
 
     // [--DL--][--Prepared--][--Apply--]
     if(preparedOperationIndex < operationIndex)
@@ -382,7 +377,7 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
         readyToApply(preparedOperation);
         if(operationIndex == metadata.operationCount() && preparedOperationIndex + 1 == operationIndex)
         {
-            LOG_TRACE(tr("downloadFinished, cause %1 == preparedOperationIndex + 1 == operationIndex == metadata.operationCount()").arg(operationIndex));
+            qCDebug(LOG_DLMANAGER) << "DownloadFinished, cause " << operationIndex << "== preparedOperationIndex + 1 == operationIndex == operationCount";
             emit downloadFinished();
         }
     }
@@ -478,7 +473,7 @@ void DownloadManager::updateDataReadyRead()
 
 void DownloadManager::operationDownloaded()
 {
-    LOG_TRACE(tr("Operation downloaded %1").arg(operation->path()));
+    qCDebug(LOG_DLMANAGER) << "Operation downloaded" << operation->path();
 
     Q_ASSERT(file.isOpen());
     Q_ASSERT(file.size() == operation->size());
@@ -489,7 +484,7 @@ void DownloadManager::operationDownloaded()
     {
         updateDataStopDownload();
         readyToApply(operation);
-        LOG_TRACE(tr("downloadFinished, cause fixingPath == %1").arg(fixingPath));
+        qCDebug(LOG_DLMANAGER) << "DownloadFinished, cause isFixingError()" << fixingPath;
         emit downloadFinished();
         return;
     }
@@ -507,7 +502,7 @@ void DownloadManager::operationDownloaded()
 
 void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperation)
 {
-    LOG_TRACE(tr("Operation applied %1").arg(appliedOperation->path()));
+    qCDebug(LOG_DLMANAGER) << "Operation applied" << appliedOperation->path();
     if(appliedOperation->status() != Operation::Valid)
     {
         if(isFixingError())
@@ -531,7 +526,7 @@ void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperatio
 void DownloadManager::applyFinished()
 {
     ++downloadPathPos;
-    LOG_TRACE(tr("Apply %1/%2 finished").arg(downloadPathPos).arg(downloadPath.size()));
+    qCDebug(LOG_DLMANAGER) << "Apply " << downloadPathPos << "/" << downloadPath.size() << "finished";
     updatePackageLoop();
 }
 
@@ -540,8 +535,8 @@ void DownloadManager::success()
     QSet<QString> diffFileList = m_localRepository.fileList().toSet() - m_fileListAfterUpdate;
     foreach(const QString &fileToRemove, diffFileList)
     {
-        if(!QFile::remove(m_updateDirectory + fileToRemove))
-            LOG_WARN(tr("Unable to remove %1").arg(fileToRemove));
+        if(QFile::exists(m_updateDirectory + fileToRemove) && !QFile::remove(m_updateDirectory + fileToRemove))
+            qCWarning(LOG_DLMANAGER) << "Unable to remove " << fileToRemove;
     }
 
     m_localRepository.setFileList(QStringList(m_fileListAfterUpdate.toList()));
@@ -555,8 +550,7 @@ void DownloadManager::success()
 
 void DownloadManager::failure(const QString &reason)
 {
-
-    LOG_TRACE(reason);
+    qCCritical(LOG_DLMANAGER) << "Failure" << reason;
     emit updateFailed(reason);
     emit finished();
 }
@@ -669,7 +663,7 @@ QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition, q
         }
     }
 
-    LOG_TRACE(tr("get(%1,%2,%3)").arg(what).arg(startPosition).arg(endPosition));
+    qCDebug(LOG_DLMANAGER) << "GET(" << what << "," << startPosition << "-" << endPosition << ")";
     QNetworkReply *reply = m_manager->get(request);
     connect(reply, SIGNAL(finished()), reply, SLOT(deleteLater()));
     downloadSeek = startPosition > 0 && url.isLocalFile() ? startPosition : 0;

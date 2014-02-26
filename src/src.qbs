@@ -3,7 +3,6 @@ import qbs 1.0
 Product {
     Depends { name: "cpp" }
     Depends { name: "Qt"; submodules: ["core", "network"] }
-    Depends { name: "qtlog" }
     name: "qtupdatesystem"
     type: "dynamiclibrary"
 
@@ -31,7 +30,6 @@ Product {
     Export {
         Depends { name: "cpp" }
         Depends { name: "Qt"; submodules: ["core", "network"] }
-        Depends { name: "qtlog" }
         cpp.includePaths: path
     }
 

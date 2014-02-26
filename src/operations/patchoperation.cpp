@@ -1,11 +1,13 @@
 #include "patchoperation.h"
 #include "../common/jsonutil.h"
 #include "../common/utils.h"
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
 #include <QJsonDocument>
+
+Q_LOGGING_CATEGORY(LOG_PATCHOP, "updatesystem.common.patchoperation")
 
 const QString PatchOperation::Action = QStringLiteral("patch");
 
@@ -35,12 +37,12 @@ Operation::Status PatchOperation::localDataStatus()
 
             if(hash == m_finalSha1)
             {
-                LOG_INFO(QObject::tr("File %1 is already at the right version").arg(path()));
+                qCDebug(LOG_PATCHOP) << "File is already at the right version" << path();
                 return Valid;
             }
             else if(hash == m_localSha1)
             {
-                LOG_INFO(QObject::tr("File %1 is as expected for patching").arg(path()));
+                qCDebug(LOG_PATCHOP) << "File is as expected for patching" << path();
 
                 file.setFileName(dataFilename());
                 if(file.exists())
@@ -48,21 +50,21 @@ Operation::Status PatchOperation::localDataStatus()
                     // Check downloaded data file content
                     if(file.size() == size() && sha1(&file) == sha1())
                     {
-                        LOG_INFO(QObject::tr("File %1 data is valid").arg(path()));
+                        qCDebug(LOG_PATCHOP) << "File data is valid" << path();
                         return ApplyRequired;
                     }
 
-                    LOG_WARN(QObject::tr("File %1 data is invalid and will be downloaded again").arg(path()));
+                    qCWarning(LOG_PATCHOP) << "File data is invalid and will be downloaded again" << path();;
                 }
                 return DownloadRequired;
             }
         }
 
-        LOG_WARN(QObject::tr("File %1 content is invalid").arg(path()));
+        qCWarning(LOG_PATCHOP) << "File content is invalid" << path();;
     }
     else
     {
-        LOG_WARN(QObject::tr("File %1 doesn't exists and can't be patched, complete file download will happen").arg(path()));
+        qCWarning(LOG_PATCHOP) << "File doesn't exists and can't be patched, complete file download will happen" << path();;
     }
 
     return LocalFileInvalid;
@@ -72,7 +74,7 @@ void PatchOperation::applyData()
 {
     if(m_patchtype == PATCHTYPE_XDELTA)
     {
-        LOG_TRACE(QObject::tr("Decompressing %1 to %2 by %3+%4").arg(dataFilename(), path(), m_compression, m_patchtype));
+        qCDebug(LOG_PATCHOP) << "Decompressing " << dataFilename() << " to " << path() << " by " << m_compression << " and " << m_patchtype;
 
         QString patchedFilename = dataFilename()+".patched";
         QFile file(patchedFilename);
@@ -124,13 +126,13 @@ void PatchOperation::applyData()
 
         if(hasCompression && !waitForFinished(decompressor))
         {
-            LOG_ERROR(QString(decompressor.readAllStandardError()));
+            qCDebug(LOG_PATCHOP) << decompressor.readAllStandardError();
             throw QObject::tr("Decompression by %1 failed").arg(decompressor.program());
         }
 
         if(!waitForFinished(xdelta))
         {
-            LOG_ERROR(QString(xdelta.readAllStandardError()));
+            qCDebug(LOG_PATCHOP) << xdelta.readAllStandardError();
             throw QObject::tr("%1 failed").arg(xdelta.program());
         }
 
@@ -144,7 +146,7 @@ void PatchOperation::applyData()
 
         Q_ASSERT(sha1(&file) == m_finalSha1);
 
-        LOG_INFO(QObject::tr("Patch succeeded %1").arg(path()));
+        qCDebug(LOG_PATCHOP) << "Patch succeeded" << path();
 
         if(!QFile(localFilename()).remove())
             throw QObject::tr("Unable to remove local file %1").arg(path());
@@ -153,7 +155,7 @@ void PatchOperation::applyData()
             throw QObject::tr("Unable to rename file %1 to %2").arg(file.fileName(), path());
 
         if(!QFile(dataFilename()).remove())
-            LOG_WARN(QObject::tr("Unable to remove temporary file %1").arg(dataFilename()));
+            qCWarning(LOG_PATCHOP) << "Unable to remove temporary file" << dataFilename();
     }
     else
     {
@@ -273,13 +275,13 @@ void PatchOperation::create(const QString &path, const QString &oldFilename, con
 
     if(!waitForFinished(xdelta))
     {
-        LOG_ERROR(QString(xdelta.readAllStandardError()));
+        qCCritical(LOG_PATCHOP) << xdelta.readAllStandardError();
         throw QObject::tr("%1 failed").arg(xdelta.program());
     }
 
     if(!waitForFinished(compressor))
     {
-        LOG_ERROR(QString(compressor.readAllStandardError()));
+        qCCritical(LOG_PATCHOP) << compressor.readAllStandardError();
         throw QObject::tr("Ccompression by %1 failed").arg(compressor.program());
     }
 

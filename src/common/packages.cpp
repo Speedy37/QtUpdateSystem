@@ -1,9 +1,11 @@
 #include "packages.h"
 #include "jsonutil.h"
 
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QMap>
 #include <QElapsedTimer>
+
+Q_LOGGING_CATEGORY(LOG_PACKAGES, "updatesystem.common.packages")
 
 void Packages::fromJsonObject(const QJsonObject & object)
 {
@@ -119,13 +121,13 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
         }
     }
 
-    LOG_INFO(QObject::tr("Graph built in %1 ms").arg(t.restart()));
+    qCDebug(LOG_PACKAGES) << "Graph built in " << t.elapsed() << "ms";
 
     QVector<Package> path;
     Node * node = startNode;
     qint64 bestParcouru;
     node->parcouru = 0;
-
+    t.start();
     do
     {
         node->done = true;
@@ -165,11 +167,11 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
             path.prepend(*node->previousPackage);
             node = node->previousNode;
         }
-        LOG_INFO(QObject::tr("Best path found in %1 ms").arg(t.elapsed()));
+        qCDebug(LOG_PACKAGES) << "Best path found in " << t.elapsed() << "ms";
     }
     else
     {
-        LOG_WARN(QObject::tr("No path found from %1 to %2").arg(from, to));
+        qCWarning(LOG_PACKAGES) << "No path found from " << from << "to" << to;
     }
 
     foreach(Node * n, nodes)

@@ -1,8 +1,10 @@
 #include "removedirectoryoperation.h"
 
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QFileInfo>
 #include <QDir>
+
+Q_LOGGING_CATEGORY(LOG_RMDIROP, "updatesystem.common.rmdir")
 
 const QString RemoveDirectoryOperation::Action = QStringLiteral("rmdir");
 
@@ -16,7 +18,7 @@ Operation::Status RemoveDirectoryOperation::localDataStatus()
     QFileInfo dirInfo(localFilename());
     if(!dirInfo.exists())
     {
-        LOG_INFO(QObject::tr("Directory %1 was already removed").arg(path()));
+        qCDebug(LOG_RMDIROP) << "Directory " << path() << " was already removed";
         return Valid;
     }
 
@@ -28,16 +30,15 @@ void RemoveDirectoryOperation::applyData()
     QFileInfo dirInfo(localFilename());
     if(!dirInfo.isDir())
     {
-        LOG_WARN(QObject::tr("The update was supposed to remove the directory %1, but a file was found").arg(path()));
+        qCWarning(LOG_RMDIROP) << "The update was supposed to remove a directory, but a file was found" << path();
         if(!QFile::remove(localFilename()))
             throw QObject::tr("The update failed to remove the file %1").arg(path());
-        LOG_INFO(QObject::tr("Successfully removed file %1 that was supposed to be a directory").arg(path()));
     }
     else
     {
         if(!QDir().rmdir(localFilename()))
             throw QObject::tr("Failed to remove directory %1").arg(path());
-        LOG_INFO(QObject::tr("Directory %1 removed").arg(path()));
+        qCDebug(LOG_RMDIROP) << "Directory removed" << path();
     }
 }
 

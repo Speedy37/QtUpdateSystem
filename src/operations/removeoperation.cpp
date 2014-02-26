@@ -1,9 +1,11 @@
 #include "removeoperation.h"
 #include "../common/jsonutil.h"
 
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QFileInfo>
 #include <QDir>
+
+Q_LOGGING_CATEGORY(LOG_RMFILEOP, "updatesystem.common.rmfile")
 
 const QString RemoveOperation::Action = QStringLiteral("rm");
 
@@ -28,7 +30,7 @@ Operation::Status RemoveOperation::localDataStatus()
     QFileInfo fileInfo(localFilename());
     if(!fileInfo.exists())
     {
-        LOG_INFO(QObject::tr("File %1 was already removed").arg(path()));
+        qCDebug(LOG_RMFILEOP) << "File was already removed" << path();
         return Valid;
     }
 
@@ -40,16 +42,15 @@ void RemoveOperation::applyData()
     QFileInfo dirInfo(localFilename());
     if(dirInfo.isDir())
     {
-        LOG_WARN(QObject::tr("The update was supposed to remove a file %1, but a directory was found").arg(path()));
+        qCWarning(LOG_RMFILEOP) << "The update was supposed to remove a file, but a directory was found" << path();
         if(!QDir().rmdir(localFilename()))
             throw QObject::tr("Failed to remove directory %1").arg(path());
-        LOG_INFO(QObject::tr("Successfully removed directory %1 that was supposed to be a file").arg(path()));
     }
     else
     {
         if(!QFile::remove(localFilename()))
             throw QObject::tr("The update failed to remove the file %1").arg(path());
-        LOG_INFO(QObject::tr("File %1 removed").arg(path()));
+        qCDebug(LOG_RMFILEOP) << "File removed" << path();
     }
 }
 

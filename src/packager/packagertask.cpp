@@ -1,5 +1,5 @@
 #include "packagertask.h"
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include "../operations/operation.h"
 #include "../operations/addoperation.h"
 #include "../operations/patchoperation.h"

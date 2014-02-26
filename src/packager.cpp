@@ -3,19 +3,21 @@
 #include "common/package.h"
 #include "operations/operation.h"
 
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QCryptographicHash>
 #include <QProcess>
 #include <QTemporaryFile>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QDebug>
+#include <QLoggingCategory>
 #include <QRunnable>
 #include <QThreadPool>
 #include <QTemporaryDir>
 #include <QScopedPointer>
 #include <QElapsedTimer>
 #include <QJsonArray>
+
+Q_LOGGING_CATEGORY(LOG_PACKAGER, "updatesystem.packager")
 
 Packager::Packager(QObject *parent) : QObject(parent)
 {
@@ -51,7 +53,7 @@ PackageMetadata Packager::generate()
     globalTimer.start();
     stepTimer = globalTimer;
 
-    LOG_TRACE(tr("Checking packager configuration..."));
+    qCDebug(LOG_PACKAGER) << "Checking packager configuration...";
 
     if(newDirectoryPath().isEmpty())
         throw tr("New directory path is empty");
@@ -79,18 +81,18 @@ PackageMetadata Packager::generate()
     if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
         throw tr("Unable to create new delta metadata file");
 
-    LOG_INFO(tr("Packager configuration checked in %1").arg(Utils::formatMs(stepTimer.restart())));
+    qCDebug(LOG_PACKAGER) << "Packager configuration checked in" << Utils::formatMs(stepTimer.restart());
 
-    LOG_TRACE(tr("Comparing directories %1 against %2").arg(newDirectoryPath(), oldDirectoryPath()));
+    qCDebug(LOG_PACKAGER) << "Comparing directories...";
     {
         QFileInfoList newFiles = dirList(newDir);
         QFileInfoList oldFiles = oldDirectoryPath().isNull() ? QFileInfoList() : dirList(oldDir);
         m_tasks.clear();
         compareDirectories(QStringLiteral(""), newFiles, oldFiles);
     }
-    LOG_INFO(tr("Directory comparison done in %1").arg(Utils::formatMs(stepTimer.restart())));
+    qCDebug(LOG_PACKAGER) << "Directory comparison done in" << Utils::formatMs(stepTimer.restart());
 
-    LOG_TRACE(tr("Creating operations..."));
+    qCDebug(LOG_PACKAGER) << "Creating operations...";
     {
         QThreadPool threadPool;
         for(size_t i = 0; i < m_tasks.size(); ++i)
@@ -104,9 +106,9 @@ PackageMetadata Packager::generate()
         }
         threadPool.waitForDone();
     }
-    LOG_INFO(tr("Operations created in %1").arg(Utils::formatMs(stepTimer.restart())));
+    qCDebug(LOG_PACKAGER) << "Operations created in" << Utils::formatMs(stepTimer.restart());
 
-    LOG_TRACE(tr("Creating final delta file..."));
+    qCDebug(LOG_PACKAGER) << "Creating final delta file...";
     PackageMetadata metadata;
     {
         qint64 totalSize = 0;
@@ -145,13 +147,13 @@ PackageMetadata Packager::generate()
 
         deltaFile.close();
     }
-    LOG_INFO(tr("Final delta file created in %1").arg(Utils::formatMs(stepTimer.restart())));
+    qCDebug(LOG_PACKAGER) << "Final delta file created in" << Utils::formatMs(stepTimer.restart());
 
-    LOG_INFO(tr("Writing metadata"));
+    qCDebug(LOG_PACKAGER) << "Writing metadata";
     metadataFile.write(QJsonDocument(metadata.toJsonObject()).toJson(QJsonDocument::Indented));
-    LOG_INFO(tr("Metadata written in %1").arg(Utils::formatMs(stepTimer.restart())));
+    qCDebug(LOG_PACKAGER) << "Metadata written in" << Utils::formatMs(stepTimer.restart());
 
-    LOG_INFO(tr("Delta creation succeded in %1").arg(Utils::formatMs(globalTimer.elapsed())));
+    qCDebug(LOG_PACKAGER) << "Delta creation succeded in" << Utils::formatMs(globalTimer.elapsed());
 
     return metadata;
 }
@@ -191,8 +193,6 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
     int newPos = 0, newLen = newFiles.size();
     int oldPos = 0, oldLen = oldFiles.size();
 
-    LOG_TRACE(tr("path = %1, newFiles.size() = %2, oldFiles.size() = %3").arg(path).arg(newLen).arg(oldLen));
-
     while(newPos < newLen || oldPos < oldLen)
     {
         QFileInfo newFile, oldFile;
@@ -206,8 +206,6 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
             diff = QString::compare(newFile.fileName(), oldFile.fileName());
         else
             diff = newPos < newLen ? -1 : 1;
-
-        LOG_TRACE(tr("diff = %1, newFile = %2, oldFile = %3").arg(diff).arg(newFile.filePath()).arg(oldFile.filePath()));
 
         if(diff < 0)
         {
@@ -271,8 +269,6 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
         }
 
     }
-
-    LOG_TRACE(tr("generate_recursion done"));
 }
 
 void Packager::addTask(PackagerTask::Type operationType, QString path, QString newFilename, QString oldFilename)

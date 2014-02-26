@@ -4,7 +4,7 @@ QT       -= gui
 TARGET = QtUpdateSystem
 TEMPLATE = lib
 
-DEFINES += QTUPDATESYSTEM_LIBRARY LZMA_API_STATIC QTLOG_STATIC
+DEFINES += QTUPDATESYSTEM_LIBRARY LZMA_API_STATIC
 
 Release:DEFINES += NOLOGDEBUG NOLOGTRACE
 
@@ -62,13 +62,6 @@ unix {
     target.path = /usr/lib
     INSTALLS += target
 }
-
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../QtLog/release/ -lQtLog
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../QtLog/debug/ -lQtLog
-else:unix: LIBS += -L$$OUT_PWD/../QtLog/ -lQtLog
-
-INCLUDEPATH += $$PWD/../QtLog
-DEPENDPATH += $$PWD/../QtLog
 
 win32 {
     exes.files = $$PWD/../xdelta3.exe $$PWD/../lzma.exe

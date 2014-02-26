@@ -1,11 +1,13 @@
 #include "addoperation.h"
 #include "../common/jsonutil.h"
 #include "../common/utils.h"
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
 #include <QJsonDocument>
+
+Q_LOGGING_CATEGORY(LOG_ADDOP, "updatesystem.common.addoperation")
 
 const QString AddOperation::Action = QStringLiteral("add");
 
@@ -108,7 +110,7 @@ void AddOperation::create(const QString &path, const QString &newFilename, const
 
     if(!waitForFinished(compressor))
     {
-        LOG_ERROR(QString(compressor.readAllStandardError()));
+        qCCritical(LOG_ADDOP) << compressor.readAllStandardError();
         throw QObject::tr("%1 failed").arg(compressor.program());
     }
 
@@ -146,11 +148,11 @@ Operation::Status AddOperation::localDataStatus()
         // Check final file content
         if(file.size() == m_finalSize && sha1(&file) == m_finalSha1)
         {
-            LOG_INFO(QObject::tr("File %1 is already at the right version").arg(path()));
+            qCDebug(LOG_ADDOP) << "File is already at the right version" << path();
             return Valid;
         }
 
-        LOG_WARN(QObject::tr("File %1 already exists and will be overwrited").arg(path()));
+        qCWarning(LOG_ADDOP) << "File already exists and will be overwrited" << path();
     }
 
     file.setFileName(dataFilename());
@@ -159,11 +161,10 @@ Operation::Status AddOperation::localDataStatus()
         // Check downloaded data file content
         if(file.size() == size() && sha1(&file) == sha1())
         {
-            LOG_INFO(QObject::tr("File %1 data is valid").arg(path()));
+            qCDebug(LOG_ADDOP) << "File data is valid" << path();
             return ApplyRequired;
         }
-
-        LOG_WARN(QObject::tr("File %1 data is invalid and will be downloaded again").arg(path()));
+        qCWarning(LOG_ADDOP) << "File data is invalid and will be downloaded again" << path();
     }
 
     return DownloadRequired;
@@ -184,12 +185,12 @@ void AddOperation::applyData()
         QFile dataFile(dataFilename());
         if(!dataFile.rename(localFilename()))
             throw QObject::tr("Unable to rename file %1 to %2").arg(dataFilename(), path());
-        LOG_INFO(QObject::tr("Rename succeeded %1").arg(path()));
+        qCDebug(LOG_ADDOP) << "Rename succeeded" << path();
         return;
     }
     else if(m_compression == COMPRESSION_LZMA)
     {
-        LOG_TRACE(QObject::tr("Decompressing %1 to %2 by lzma").arg(dataFilename(), path()));
+        qCDebug(LOG_ADDOP) << "Decompressing" << dataFilename() << "to" << path() << "by lzma";
 
         QFile file(localFilename());
         if(!file.open(QFile::WriteOnly | QFile::Truncate))
@@ -218,7 +219,7 @@ void AddOperation::applyData()
 
         if(!waitForFinished(decompressor))
         {
-            LOG_ERROR(QString(decompressor.readAllStandardError()));
+            qCDebug(LOG_ADDOP) << decompressor.readAllStandardError();
             throw QObject::tr("%1 failed").arg(decompressor.program());
         }
 
@@ -232,10 +233,10 @@ void AddOperation::applyData()
 
         Q_ASSERT(sha1(&file) == m_finalSha1);
 
-        LOG_INFO(QObject::tr("Extraction succeeded %1").arg(path()));
+        qCDebug(LOG_ADDOP) << "Extraction succeeded" << path();
 
         if(!QFile(dataFilename()).remove())
-            LOG_WARN(QObject::tr("Unable to remove temporary file %1").arg(dataFilename()));
+            qCWarning(LOG_ADDOP) << "Unable to remove temporary file" << dataFilename();
     }
     else
     {

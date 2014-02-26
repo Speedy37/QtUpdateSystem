@@ -1,10 +1,12 @@
 #include "copythread.h"
 #include "localrepository.h"
 #include "../common/utils.h"
-#include <qtlog.h>
+#include <QLoggingCategory>
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
+
+Q_LOGGING_CATEGORY(LOG_COPY, "updatesystem.updater.copy")
 
 CopyThread::CopyThread(const LocalRepository &sourceRepository, const QString &destinationDir, QObject *parent) :
     QThread(parent), m_sourceRepository(sourceRepository)
@@ -47,7 +49,7 @@ void CopyThread::run()
         {
             dest = m_destinationDir + filename;
             if(QFile::exists(dest) && !QFile::remove(dest))
-                LOG_WARN(tr("Unable to remove %1").arg(dest));
+                qCWarning(LOG_COPY) << "Unable to remove" << dest;
         }
 
         destRepository.setFileList(m_sourceRepository.fileList());
@@ -57,6 +59,6 @@ void CopyThread::run()
     }
     catch(const QString &msg)
     {
-        LOG_ERROR(msg);
+        qCCritical(LOG_COPY) << msg;
     }
 }
