@@ -72,14 +72,10 @@ PackageMetadata Packager::generate()
     QFile deltaFile(deltaFilename());
     if(deltaFile.exists())
         throw tr("Delta file already exists");
-    if(!deltaFile.open(QFile::WriteOnly))
-        throw tr("Unable to create new delta file");
 
     QFile metadataFile(deltaMetadataFilename());
     if(metadataFile.exists())
         throw tr("Delta metadata file already exists");
-    if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
-        throw tr("Unable to create new delta metadata file");
 
     qCDebug(LOG_PACKAGER) << "Packager configuration checked in" << Utils::formatMs(stepTimer.restart());
 
@@ -111,6 +107,8 @@ PackageMetadata Packager::generate()
     qCDebug(LOG_PACKAGER) << "Creating final delta file...";
     PackageMetadata metadata;
     {
+        if(!deltaFile.open(QFile::WriteOnly))
+            throw tr("Unable to create new delta file");
         qint64 totalSize = 0;
         qint64 read;
         char buffer[8096];
@@ -150,7 +148,10 @@ PackageMetadata Packager::generate()
     qCDebug(LOG_PACKAGER) << "Final delta file created in" << Utils::formatMs(stepTimer.restart());
 
     qCDebug(LOG_PACKAGER) << "Writing metadata";
+    if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
+        throw tr("Unable to create new delta metadata file");
     metadataFile.write(QJsonDocument(metadata.toJsonObject()).toJson(QJsonDocument::Indented));
+    metadataFile.close();
     qCDebug(LOG_PACKAGER) << "Metadata written in" << Utils::formatMs(stepTimer.restart());
 
     qCDebug(LOG_PACKAGER) << "Delta creation succeded in" << Utils::formatMs(globalTimer.elapsed());
