@@ -99,12 +99,6 @@ Q_LOGGING_CATEGORY(LOG_UPDATER, "updatesystem.updater")
     \sa Updater::State
 */
 
-
-Updater::Updater(const QString &updateDirectory, QObject *parent) : Updater(updateDirectory, QString(), parent)
-{
-
-}
-
 Updater::Updater(const QString &updateDirectory, const QString &remoteRepository, QObject *parent)
     : QObject(parent),
       m_updateUrl(remoteRepository),

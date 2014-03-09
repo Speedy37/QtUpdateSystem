@@ -27,8 +27,7 @@ public:
         Updating ///< Updating in progress
     };
 
-    Updater(const QString &updateDirectory, QObject * parent = 0);
-    Updater(const QString &updateDirectory, const QString &remoteRepository, QObject * parent = 0);
+    Updater(const QString &updateDirectory, const QString &remoteRepository = QString(), QObject * parent = 0);
     ~Updater();
 
     bool isIdle() const;
