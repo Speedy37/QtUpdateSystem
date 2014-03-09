@@ -100,7 +100,15 @@ Q_LOGGING_CATEGORY(LOG_UPDATER, "updatesystem.updater")
 */
 
 
-Updater::Updater(const QString &updateDirectory, QObject *parent) : QObject(parent), m_localRepository(updateDirectory)
+Updater::Updater(const QString &updateDirectory, QObject *parent) : Updater(updateDirectory, QString(), parent)
+{
+
+}
+
+Updater::Updater(const QString &updateDirectory, const QString &remoteRepository, QObject *parent)
+    : QObject(parent),
+      m_updateUrl(remoteRepository),
+      m_localRepository(updateDirectory)
 {
     // Init
     m_state = Idle;

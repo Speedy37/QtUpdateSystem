@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma.exe");
     Utils::setXdeltaProgram(QString(SRCDIR)+ "../xdelta3.exe");
 #else
-    Utils::setLzmaProgram("lzmacon");
+    Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma");
 #endif
     int ret = 0;
     {

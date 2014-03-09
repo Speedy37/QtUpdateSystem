@@ -28,6 +28,7 @@ public:
     };
 
     Updater(const QString &updateDirectory, QObject * parent = 0);
+    Updater(const QString &updateDirectory, const QString &remoteRepository, QObject * parent = 0);
     ~Updater();
 
     bool isIdle() const;
@@ -47,7 +48,7 @@ public:
 
     QString username() const;
     QString password() const;
-    void setCredential(const QString &username, const QString &password);
+    void setCredentials(const QString &username, const QString &password);
 
     QString errorString() const;
     State state() const;
@@ -159,7 +160,7 @@ inline QString Updater::password() const
     return m_password;
 }
 
-inline void Updater::setCredential(const QString &username, const QString &password)
+inline void Updater::setCredentials(const QString &username, const QString &password)
 {
     Q_ASSERT(isIdle());
     m_username = username;
