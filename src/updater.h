@@ -16,6 +16,8 @@ class QSettings;
 class QTUPDATESYSTEMSHARED_EXPORT Updater : public QObject
 {
     Q_OBJECT
+    Q_ENUMS(State)
+
 public:
     enum State
     {
@@ -56,29 +58,22 @@ public slots:
     void checkForUpdates();
     void update();
     void copy(const QString& copyDirectory);
-private slots:
-    void onInfoFinished();
+
 signals:
     void updateRequired();
     void checkForUpdatesFinished();
-
-public slots:
-signals:
     void copyProgress(int copiedFileCount, int totalFileCount);
     void copyFinished();
+    void updateProgress(qint64 bytesReceived, qint64 bytesTotal);
     void updateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void updateApplyProgress(qint64 bytesApplied, qint64 bytesTotal);
     void updateFinished();
 
 private slots:
-    void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
+    void onInfoFinished();
     void updateSucceeded();
     void updateFailed(const QString &reason);
-
-signals:
-    void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void applyProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void applyFinished(bool success);
+    void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
 
 private:
     QNetworkReply *get(const QString &what);

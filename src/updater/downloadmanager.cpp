@@ -109,6 +109,14 @@ void DownloadManager::updatePackagesListRequestFinished()
             throw tr("No download path found from %1 to %2").arg(m_localRevision, m_remoteRevision);
         downloadPathPos = 0;
 
+        downloadSize = 0;
+        downloadPosition = 0;
+        applyPosition = 0;
+        foreach(const Package &package, downloadPath)
+        {
+            downloadSize += package.size;
+        }
+
         updatePackageLoop();
     }
     catch(const QString & msg)
@@ -457,6 +465,7 @@ void DownloadManager::updateDataReadyRead()
         if(size <= availableSize)
         {
             file.write(dataRequest->read(size));
+            incrementDownloadPosition(size);
             operationDownloaded();
             if(dataRequest == nullptr)
                 return; //< Futures download aborted
@@ -465,6 +474,7 @@ void DownloadManager::updateDataReadyRead()
         else
         {
             file.write(dataRequest->read(availableSize));
+            incrementDownloadPosition(availableSize);
             offset += availableSize;
             availableSize = 0;
         }
@@ -518,8 +528,13 @@ void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperatio
     }
     else if(failures.contains(appliedOperation->path()))
     {
+        incrementApplyPosition(appliedOperation->size());
         Q_ASSERT(!isFixingError() || appliedOperation->path() == fixingPath);
         failure(appliedOperation->path(), Fixed);
+    }
+    else
+    {
+        incrementApplyPosition(appliedOperation->size());
     }
 }
 
@@ -669,6 +684,20 @@ QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition, q
     downloadSeek = startPosition > 0 && url.isLocalFile() ? startPosition : 0;
 
     return reply;
+}
+
+void DownloadManager::incrementDownloadPosition(qint64 size)
+{
+    downloadPosition += size;
+    emit downloadProgress(downloadPosition, downloadSize);
+    emit progress(downloadPosition + applyPosition, downloadSize * 2);
+}
+
+void DownloadManager::incrementApplyPosition(qint64 size)
+{
+    applyPosition += size;
+    emit applyProgress(applyPosition, downloadSize);
+    emit progress(downloadPosition + applyPosition, downloadSize * 2);
 }
 
 void DownloadManager::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)
