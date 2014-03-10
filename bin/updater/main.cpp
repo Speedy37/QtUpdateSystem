@@ -70,8 +70,20 @@ int main(int argc, char *argv[])
             QEventLoop loop;
             QObject::connect(&updater, &Updater::checkForUpdatesFinished, &loop, &QEventLoop::quit);
             loop.exec();
-            const char * state = Updater::staticMetaObject.enumerator(Updater::staticMetaObject.indexOfEnumerator("State")).valueToKey(updater.state());
-            printf("%s", state);
+
+            if(!updater.errorString().isEmpty())
+            {
+                fprintf(stderr, "Failure : %s\n", qPrintable(updater.errorString()));
+            }
+
+            if(updater.isUpdateAvailable())
+            {
+                printf("An update is available\n");
+            }
+            else
+            {
+                printf("Already up-to-date\n");
+            }
         }
         else
         {
@@ -79,14 +91,44 @@ int main(int argc, char *argv[])
             QEventLoop loop;
             QObject::connect(&updater, &Updater::checkForUpdatesFinished, &loop, &QEventLoop::quit);
             loop.exec();
+
+            printf("Checking for updates...\n");
+            if(!updater.errorString().isEmpty())
+            {
+                fprintf(stderr, "Failure : %s\n", qPrintable(updater.errorString()));
+            }
+
             if(updater.isUpdateAvailable())
             {
+                printf("Updating...\n");
+                printf("Download   0%%, Apply   0%%");
+                fflush(stdout);
                 updater.update();
                 QObject::connect(&updater, &Updater::updateFinished, &loop, &QEventLoop::quit);
+                qint64 downloaded = 0, applied = 0;
+                QObject::connect(&updater, &Updater::updateDownloadProgress, [&downloaded, &applied](qint64 bytesReceived, qint64 bytesTotal) {
+                    downloaded = (bytesReceived*100)/bytesTotal;
+                    printf("\rDownload %3lld%%, Apply %3lld%%", downloaded, applied);
+                    fflush(stdout);
+                });
+                QObject::connect(&updater, &Updater::updateApplyProgress, [&downloaded, &applied](qint64 bytesReceived, qint64 bytesTotal) {
+                    applied = (bytesReceived*100)/bytesTotal;
+                    printf("\rDownload %3lld%%, Apply %3lld%%", downloaded, applied);
+                    fflush(stdout);
+                });
                 loop.exec();
+                printf("\nUpdated\n");
+            }
+            else
+            {
+                printf("Already up-to-date\n");
             }
         }
+
+        return 0;
     }
+
+    parser.showHelp(1);
 
     return 1;
 }
