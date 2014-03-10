@@ -65,6 +65,7 @@ signals:
     void copyProgress(int copiedFileCount, int totalFileCount);
     void copyFinished();
     void updateProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void updateCheckProgress(qint64 bytesApplied, qint64 bytesTotal);
     void updateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void updateApplyProgress(qint64 bytesApplied, qint64 bytesTotal);
     void updateFinished();

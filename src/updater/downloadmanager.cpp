@@ -110,6 +110,7 @@ void DownloadManager::updatePackagesListRequestFinished()
         downloadPathPos = 0;
 
         downloadSize = 0;
+        checkPosition = 0;
         downloadPosition = 0;
         applyPosition = 0;
         foreach(const Package &package, downloadPath)
@@ -373,6 +374,8 @@ void DownloadManager::nextOperation()
  */
 void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperation)
 {
+    if(preparedOperation->isLocalFile())
+        incrementCheckPosition(preparedOperation->size());
     ++preparedOperationIndex;
     Q_ASSERT(preparedOperation == metadata.operation(preparedOperationIndex));
 
@@ -686,18 +689,25 @@ QNetworkReply *DownloadManager::get(const QString &what, qint64 startPosition, q
     return reply;
 }
 
+void DownloadManager::incrementCheckPosition(qint64 size)
+{
+    checkPosition += size;
+    emit checkProgress(checkPosition, downloadSize);
+    emit progress(downloadPosition + applyPosition + checkPosition, downloadSize * 3);
+}
+
 void DownloadManager::incrementDownloadPosition(qint64 size)
 {
     downloadPosition += size;
     emit downloadProgress(downloadPosition, downloadSize);
-    emit progress(downloadPosition + applyPosition, downloadSize * 2);
+    emit progress(downloadPosition + applyPosition + checkPosition, downloadSize * 3);
 }
 
 void DownloadManager::incrementApplyPosition(qint64 size)
 {
     applyPosition += size;
     emit applyProgress(applyPosition, downloadSize);
-    emit progress(downloadPosition + applyPosition, downloadSize * 2);
+    emit progress(downloadPosition + applyPosition + checkPosition, downloadSize * 3);
 }
 
 void DownloadManager::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)

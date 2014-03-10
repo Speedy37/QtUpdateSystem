@@ -36,6 +36,7 @@ signals:
     void operationReadyToApply(QSharedPointer<Operation> operation);
     void downloadFinished();
     void progress(qint64 bytesReceived, qint64 bytesTotal);
+    void checkProgress(qint64 bytesApplied, qint64 bytesTotal);
     void applyProgress(qint64 bytesApplied, qint64 bytesTotal);
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
     void updateFailed(const QString &reason);
@@ -69,6 +70,7 @@ private:
     bool tryContinueDownload(qint64 skippableSize);
     bool isSkipDownloadUseful(qint64 skippableSize);
     QNetworkReply *get(const QString &what, qint64 startPosition = 0, qint64 endPosition = 0);
+    void incrementCheckPosition(qint64 size);
     void incrementDownloadPosition(qint64 size);
     void incrementApplyPosition(qint64 size);
 
@@ -91,7 +93,7 @@ private:
     QMap<QString, Failure> failures; ///< Map<Path, Reason> of failures
 
     // Progression
-    qint64 downloadSize, downloadPosition, applyPosition;
+    qint64 downloadSize, checkPosition, downloadPosition, applyPosition;
 
     // Package download/application
     PackageMetadata metadata; ///< Informations about the package currently downloaded

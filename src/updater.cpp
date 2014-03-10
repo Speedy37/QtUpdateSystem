@@ -199,6 +199,7 @@ void Updater::update()
         m_localRepository.save();
 
         DownloadManager * downloader = new DownloadManager(m_localRepository, this);
+        connect(downloader, &DownloadManager::checkProgress, this, &Updater::updateCheckProgress);
         connect(downloader, &DownloadManager::downloadProgress, this, &Updater::updateDownloadProgress);
         connect(downloader, &DownloadManager::applyProgress, this, &Updater::updateApplyProgress);
         connect(downloader, &DownloadManager::progress, this, &Updater::updateProgress);
