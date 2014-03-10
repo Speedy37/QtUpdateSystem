@@ -215,3 +215,38 @@ void TestUpdateChain::updateToV2WithFailures()
     }
     QVERIFY(!QFile::exists(testNew + "/local_repo/rmfile.txt"));
 }
+
+void TestUpdateChain::integrityCheck()
+{
+    Updater u(testNew + "/local_repo");
+    QCOMPARE(u.localRevision(), QString("2"));
+    u.setTmpDirectory(testNew + "/local_tmp");
+    u.setRemoteRepository("file:///" + testNew + "/repo/");
+    {
+        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
+        u.checkForUpdates();
+        QVERIFY(spy.wait());
+        QVERIFY2(u.state() == Updater::AlreadyUptodate, u.errorString().toLatin1());
+    }
+    {
+        QSignalSpy spy(&u, SIGNAL(updateFinished()));
+        QSignalSpy spyDownloadProgress(&u, SIGNAL(updateDownloadProgress(qint64,qint64)));
+        QSignalSpy spyApplyProgress(&u, SIGNAL(updateApplyProgress(qint64,qint64)));
+        QSignalSpy spyCheckProgress(&u, SIGNAL(updateCheckProgress(qint64,qint64)));
+        u.update();
+        QVERIFY(spy.wait());
+        QCOMPARE(spyDownloadProgress.count(), 0);
+        QCOMPARE(spyApplyProgress.count(), 0);
+        QCOMPARE(spyCheckProgress.count(), 4);
+        QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
+        QCOMPARE(u.localRevision(), QString("2"));
+    }
+    try {
+        (TestUtils::assertFileEquals(testNew + "/local_repo/patch_same.txt", testNew + "/rev2/patch_same.txt"));
+        (TestUtils::assertFileEquals(testNew + "/local_repo/path_diff.txt", testNew + "/rev2/path_diff.txt"));
+        (TestUtils::assertFileEquals(testNew + "/local_repo/path_diff2.txt", testNew + "/rev2/path_diff2.txt"));
+        (TestUtils::assertFileEquals(testNew + "/local_repo/add.txt", testNew + "/rev2/add.txt"));
+    } catch(QString &msg) {
+        QFAIL(msg.toLatin1());
+    }
+}

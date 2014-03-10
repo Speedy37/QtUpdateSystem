@@ -17,6 +17,9 @@ int main(int argc, char *argv[])
     QCommandLineOption checkonly(QStringList() << "c" << "checkonly"
          , QCoreApplication::tr("Only check for updates."));
 
+    QCommandLineOption force(QStringList() << "f" << "force"
+         , QCoreApplication::tr("Force integrity checks if the local repository is uptodate."));
+
     QCommandLineOption tmpDirectoryPath(QStringList() << "t" << "tmp"
          , QCoreApplication::tr("Path to use for temporary files.")
          , "tmp_directory");
@@ -30,6 +33,7 @@ int main(int argc, char *argv[])
          , "xdelta3_bin");
 
     parser.addOption(checkonly);
+    parser.addOption(force);
     parser.addOption(tmpDirectoryPath);
     parser.addOption(lzmaPath);
     parser.addOption(xdeltaPath);
@@ -97,8 +101,7 @@ int main(int argc, char *argv[])
             {
                 fprintf(stderr, "Failure : %s\n", qPrintable(updater.errorString()));
             }
-
-            if(updater.isUpdateAvailable())
+            else if(updater.isUpdateAvailable() || parser.isSet(force))
             {
                 printf("Updating...\n");
                 printf("Download   0%%, Apply   0%%");

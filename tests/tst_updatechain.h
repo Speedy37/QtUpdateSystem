@@ -18,6 +18,7 @@ private Q_SLOTS:
     void fallbackToV1();
     void updateToV2WithFailures();
     void cleanupTestCase();
+    void integrityCheck();
 };
 
 #endif // TST_UPDATECHAIN_H

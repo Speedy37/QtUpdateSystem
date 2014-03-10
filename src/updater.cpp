@@ -191,7 +191,7 @@ void Updater::onInfoFinished()
 
 void Updater::update()
 {
-    if(isUpdateAvailable())
+    if(state() == UpdateRequired || state() == AlreadyUptodate)
     {
         setState(Updating);
         clearError();

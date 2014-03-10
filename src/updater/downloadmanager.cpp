@@ -104,9 +104,19 @@ void DownloadManager::updatePackagesListRequestFinished()
 
         qCDebug(LOG_DLMANAGER) << "Remote informations analyzed";
 
-        downloadPath = m_packages.findBestPath(m_localRevision, m_remoteRevision);
-        if(downloadPath.isEmpty())
-            throw tr("No download path found from %1 to %2").arg(m_localRevision, m_remoteRevision);
+        if(m_localRevision != m_remoteRevision)
+        {
+            downloadPath = m_packages.findBestPath(m_localRevision, m_remoteRevision);
+            if(downloadPath.isEmpty())
+                throw tr("No download path found from %1 to %2").arg(m_localRevision, m_remoteRevision);
+        }
+        else
+        {
+            downloadPath = m_packages.findBestPath(QString(), m_remoteRevision);
+            if(downloadPath.isEmpty())
+                throw tr("No download path found to %1").arg(m_remoteRevision);
+            downloadPath.remove(0, downloadPath.count() - 1);
+        }
         downloadPathPos = 0;
 
         downloadSize = 0;
