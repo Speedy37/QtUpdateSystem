@@ -373,6 +373,7 @@ void DownloadManager::nextOperation()
         }
         else if(isSkipDownloadUseful(downloadSeek))
         {
+            updateDataStopDownload();
             if(operationIndex <= preparedOperationIndex)
             {
                 Q_ASSERT(operation->status() == Operation::DownloadRequired);
@@ -497,6 +498,7 @@ void DownloadManager::updateDataReadyRead()
         }
 
         size = operation->size() - offset;
+        Q_ASSERT(size >= 0);
         if(size <= availableSize)
         {
             file.write(dataRequest->read(size));
