@@ -489,6 +489,7 @@ void DownloadManager::updateDataReadyRead()
         {
             if(availableSize <= downloadSeek)
             {
+                dataRequest->read(availableSize);
                 downloadSeek -= availableSize;
                 return;
             }
