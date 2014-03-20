@@ -178,7 +178,7 @@ void DownloadManager::updatePackageLoop()
                 {
                     ++fixedFailures;
                 }
-                else if(it.value() != NonRecoverable && it.value() != FixInProgress)
+                else if(it.value() < NonRecoverable)
                 {
                     fixingPath = it.key();
                     it.value() = FixInProgress;

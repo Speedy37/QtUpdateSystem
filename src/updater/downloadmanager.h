@@ -48,11 +48,11 @@ private:
     {
         DownloadFailed,
         LocalFileInvalid,
-        DownloadRenameFailed,
         ApplyFailed,
-        FixInProgress,
         Fixed,
-        NonRecoverable
+        NonRecoverable,
+        FixInProgress,
+        DownloadRenameFailed
     };
     void success();
     void failure(const QString &path, Failure reason);
