@@ -13,11 +13,11 @@
 Q_LOGGING_CATEGORY(LOG_DLMANAGER, "updatesystem.updater.dlmanager")
 
 Q_DECLARE_METATYPE(QSharedPointer<Operation>)
+int OperationPointerMetaType = qMetaTypeId< QSharedPointer<Operation> >();
 
 DownloadManager::DownloadManager(const LocalRepository &sourceRepository, Updater *updater) :
     QObject(), m_localRepository(sourceRepository)
 {
-    qRegisterMetaType< QSharedPointer<Operation> >();
 
     // Make a safe copy of important properties
     // This is "required" because this class if run in it's own thread and allow it to be independant at almost no cost
