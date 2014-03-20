@@ -6,7 +6,6 @@
 
 const QString testDir = QString(SRCDIR);
 const QString testNew = testDir + "updatechain_testNew";
-const QString testUpdate = testDir + "updatechain_testUpdate";
 
 void TestUpdateChain::initTestCase()
 {
@@ -15,11 +14,6 @@ void TestUpdateChain::initTestCase()
         QDir dir(testNew);
         dir.mkpath("repo");
         dir.mkpath("tmp");
-        dir.mkpath("local_repo");
-        dir.mkpath("local_tmp");
-    }
-    {
-        QDir dir(testUpdate);
         dir.mkpath("local_repo");
         dir.mkpath("local_tmp");
     }
@@ -34,9 +28,6 @@ void TestUpdateChain::cleanupTestCase()
     QDir(testNew + "/tmp").removeRecursively();
     QDir(testNew + "/local_repo").removeRecursively();
     QDir(testNew + "/local_tmp").removeRecursively();
-
-    QDir(testUpdate + "/local_repo").removeRecursively();
-    QDir(testUpdate + "/local_tmp").removeRecursively();
 }
 
 void TestUpdateChain::newRepository()
@@ -246,14 +237,8 @@ void TestUpdateChain::integrityCheck()
     }
     {
         QSignalSpy spy(&u, SIGNAL(updateFinished(bool)));
-        QSignalSpy spyDownloadProgress(&u, SIGNAL(updateDownloadProgress(qint64,qint64)));
-        QSignalSpy spyApplyProgress(&u, SIGNAL(updateApplyProgress(qint64,qint64)));
-        QSignalSpy spyCheckProgress(&u, SIGNAL(updateCheckProgress(qint64,qint64)));
         u.update();
         QVERIFY(spy.wait());
-        QCOMPARE(spyDownloadProgress.count(), 0);
-        QCOMPARE(spyApplyProgress.count(), 0);
-        QCOMPARE(spyCheckProgress.count(), 4);
         QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
         QCOMPARE(u.localRevision(), QString("2"));
     }
