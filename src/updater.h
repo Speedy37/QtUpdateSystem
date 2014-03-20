@@ -29,7 +29,7 @@ public:
         Updating ///< Updating in progress
     };
 
-    Updater(const QString &updateDirectory, const QString &remoteRepository = QString(), QObject * parent = 0);
+    Updater(QObject * parent = 0);
     ~Updater();
 
     bool isIdle() const;
@@ -40,6 +40,7 @@ public:
     Version remoteVersion() const;
 
     QString localRepository() const;
+    void setLocalRepository(const QString &localRepository);
 
     QString tmpDirectory() const;
     void setTmpDirectory(const QString &tmpDirectory);
@@ -129,9 +130,21 @@ inline QString Updater::localRepository() const
     return m_localRepository.directory();
 }
 
+inline void Updater::setLocalRepository(const QString &localRepository)
+{
+    Q_ASSERT(isIdle());
+    m_localRepository.setDirectory(localRepository);
+}
+
 inline QString Updater::tmpDirectory() const
 {
     return m_updateTmpDirectory;
+}
+
+inline void Updater::setTmpDirectory(const QString &updateTmpDirectory)
+{
+    Q_ASSERT(isIdle());
+    m_updateTmpDirectory = Utils::cleanPath(updateTmpDirectory);
 }
 
 inline QString Updater::remoteRepository() const

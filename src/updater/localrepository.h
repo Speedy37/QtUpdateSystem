@@ -3,17 +3,20 @@
 
 #include <QString>
 #include <QStringList>
+#include "../common/utils.h"
 
 class QSettings;
 
 class LocalRepository
 {
 public:
+    LocalRepository();
     LocalRepository(const QString &directory);
     void load();
     void save();
 
     QString directory() const;
+    void setDirectory(const QString &directory);
 
     QString revision() const;
     void setRevision(const QString &revision);
@@ -35,6 +38,12 @@ private:
 inline QString LocalRepository::directory() const
 {
     return m_directory;
+}
+
+inline void LocalRepository::setDirectory(const QString &directory)
+{
+    m_directory = Utils::cleanPath(directory);
+    load();
 }
 
 inline QString LocalRepository::revision() const

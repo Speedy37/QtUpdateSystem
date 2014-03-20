@@ -62,7 +62,8 @@ void TestUpdateChain::newRepository()
 
 void TestUpdateChain::updateToV1()
 {
-    Updater u(testNew + "/local_repo");
+    Updater u;
+    u.setLocalRepository(testNew + "/local_repo");
     QCOMPARE(u.localRevision(), QString());
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");
@@ -115,7 +116,8 @@ void TestUpdateChain::createPatchV1toV2()
 
 void TestUpdateChain::updateToV2()
 {
-    Updater u(testNew + "/local_repo");
+    Updater u;
+    u.setLocalRepository(testNew + "/local_repo");
     QCOMPARE(u.localRevision(), QString("1"));
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");
@@ -151,7 +153,8 @@ void TestUpdateChain::fallbackToV1()
     pm.setCurrentRevision("1");
     pm.save();
 
-    Updater u(testNew + "/local_repo");
+    Updater u;
+    u.setLocalRepository(testNew + "/local_repo");
     QCOMPARE(u.localRevision(), QString("2"));
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");
@@ -188,7 +191,8 @@ void TestUpdateChain::updateToV2WithFailures()
     pm.save();
 
     QFile::remove(testNew + "/local_repo/path_diff.txt");
-    Updater u(testNew + "/local_repo");
+    Updater u;
+    u.setLocalRepository(testNew + "/local_repo");
     QCOMPARE(u.localRevision(), QString("1"));
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");
@@ -218,7 +222,8 @@ void TestUpdateChain::updateToV2WithFailures()
 
 void TestUpdateChain::integrityCheck()
 {
-    Updater u(testNew + "/local_repo");
+    Updater u;
+    u.setLocalRepository(testNew + "/local_repo");
     QCOMPARE(u.localRevision(), QString("2"));
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");

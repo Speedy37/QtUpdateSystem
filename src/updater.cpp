@@ -99,10 +99,8 @@ Q_LOGGING_CATEGORY(LOG_UPDATER, "updatesystem.updater")
     \sa Updater::State
 */
 
-Updater::Updater(const QString &updateDirectory, const QString &remoteRepository, QObject *parent)
-    : QObject(parent),
-      m_updateUrl(remoteRepository),
-      m_localRepository(updateDirectory)
+Updater::Updater(QObject *parent)
+    : QObject(parent)
 {
     // Init
     m_state = Idle;
@@ -240,10 +238,4 @@ void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authentica
         authenticator->setPassword(m_password);
     if(!m_username.isEmpty() && authenticator->user() != m_username)
         authenticator->setUser(m_username);
-}
-
-void Updater::setTmpDirectory(const QString &updateTmpDirectory)
-{
-    Q_ASSERT(isIdle());
-    m_updateTmpDirectory = Utils::cleanPath(updateTmpDirectory);
 }

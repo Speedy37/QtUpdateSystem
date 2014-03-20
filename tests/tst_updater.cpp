@@ -27,7 +27,8 @@ void TestUpdater::cleanupTestCase()
 void TestUpdater::updaterCopy()
 {
     QVERIFY(QFile::exists(testCopy + "/local_copy/add.txt"));
-    Updater u(testCopy + "/local_repo");
+    Updater u;
+    u.setLocalRepository(testCopy + "/local_repo");
     u.copy(testCopy + "/local_copy");
     QSignalSpy spy(&u, SIGNAL(copyFinished()));
     QVERIFY(spy.wait());

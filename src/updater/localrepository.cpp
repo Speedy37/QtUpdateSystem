@@ -9,6 +9,11 @@ const QString LocalRepository::UpdateInProgress = QStringLiteral("UpdateInProgre
 const QString LocalRepository::FileList = QStringLiteral("FileList");
 const QString LocalRepository::StatusFileName = QStringLiteral("status.ini");
 
+LocalRepository::LocalRepository()
+{
+
+}
+
 LocalRepository::LocalRepository(const QString &directory)
 {
     m_directory = Utils::cleanPath(directory);

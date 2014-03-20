@@ -54,7 +54,9 @@ int main(int argc, char *argv[])
         qWarning() << "Error : too much arguments";
     else
     {
-        Updater updater(args[0], args[1]);
+        Updater updater;
+        updater.setLocalRepository(args[0]);
+        updater.setRemoteRepository(args[1]);
 
         if(parser.isSet(tmpDirectoryPath))
             updater.setTmpDirectory(parser.value(tmpDirectoryPath));
