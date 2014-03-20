@@ -391,6 +391,7 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
 
     qCDebug(LOG_DLMANAGER) << "Operation prepared" << preparedOperation->path();
 
+    // Download of prepared operation has already occured
     // [--DL--][--Prepared--][--Apply--]
     if(preparedOperationIndex < operationIndex)
     {
@@ -402,6 +403,7 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
             emit downloadFinished();
         }
     }
+    // Download of prepared operation is in progress
     // [--DL--------------]
     //   [--Prepared--]    [--Apply--] if DownloadRequired
     //   [--Prepared--][--Apply--]     if !DownloadRequired

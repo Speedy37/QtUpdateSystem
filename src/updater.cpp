@@ -14,91 +14,8 @@
 Q_LOGGING_CATEGORY(LOG_UPDATER, "updatesystem.updater")
 
 /*!
-    \class RemoteUpdate
-    \brief Provide remote update functionality
-
-    \reentrant
-
+   Creates a Updater object with parent object \c parent.
 */
-
-/*! \fn bool Updater::isIdle() const
-    Returns \c true if no action is in progress; otherwise returns \c false.
-
-    \sa isUpdateRequired()
-*/
-
-/*! \fn bool Updater::isUpdateAvailable() const
-    Returns \c true if an update is available; otherwise returns \c false.
-
-    \sa isIdle()
-*/
-
-/*! \fn QString Updater::currentVersion() const
-    Returns the local current version.
-
-    \sa latestVersion(), versions()
-*/
-
-/*! \fn QString Updater::latestVersion() const
-    Returns the latest remote version.
-
-    \sa currentVersion(), versions()
-*/
-
-/*! \fn QVector<Version> Updater::versions()
-    Returns the remote version list.
-
-    \sa currentVersion(), latestVersion()
-*/
-
-/*! \fn QString Updater::updateDirectory() const
-    Returns the directory to update.
-
-    \sa setUpdateDirectory(), updateTmpDirectory(), setUpdateTmpDirectory(), updateUrl(), setUpdateUrl()
-*/
-
-/*! \fn void Updater::setUpdateDirectory(const QString &updateDirectory)
-    Set the directory to update
-
-    \sa updateDirectory(), updateTmpDirectory(), setUpdateTmpDirectory(), updateUrl(), setUpdateUrl()
-*/
-
-/*! \fn QString Updater::updateTmpDirectory() const
-    Returns the directory to use for storing temporary files required for doing the update.
-
-    \sa updateDirectory(), setUpdateDirectory(), setUpdateTmpDirectory(), updateUrl(), setUpdateUrl()
-*/
-
-/*! \fn void Updater::setUpdateTmpDirectory(const QString &updateTmpDirectory)
-    Set the directory to use for storing temporary files required for doing the update.
-
-    \sa updateDirectory(), setUpdateDirectory(), updateTmpDirectory(), updateUrl(), setUpdateUrl()
-*/
-
-/*! \fn QString Updater::updateUrl() const
-    Returns the remote update url.
-
-    \sa setUpdateUrl(), setCredential()
-*/
-
-/*! \fn void Updater::setUpdateUrl(const QString &updateUrl)
-    Set the remote update url.
-
-    \sa updateUrl(), setCredential()
-*/
-
-/*! \fn void Updater::setCredential(const QString &username, const QString &password)
-    Set the username and password for remote url basic authentification.
-
-    \sa updateUrl(), setUpdateUrl()
-*/
-
-/*! \fn Updater::State Updater::state() const
-    Returns this object state.
-
-    \sa Updater::State
-*/
-
 Updater::Updater(QObject *parent)
     : QObject(parent)
 {
@@ -109,6 +26,11 @@ Updater::Updater(QObject *parent)
     m_manager = new QNetworkAccessManager(this);
     connect(m_manager, &QNetworkAccessManager::authenticationRequired, this, &Updater::authenticationRequired);
 }
+
+/*! \fn void Updater::warning(const QString &message)
+    This signal is emitted when an operation encounter an unexpected but non fatal error.
+    \param message A human-readable description of warning.
+*/
 
 Updater::~Updater()
 {
@@ -123,6 +45,10 @@ QNetworkReply* Updater::get(const QString & what)
     return reply;
 }
 
+/*!
+    \brief Check the remote repository for updates
+    \sa checkForUpdatesFinished()
+*/
 void Updater::checkForUpdates()
 {
     if(isIdle())
@@ -138,6 +64,12 @@ void Updater::checkForUpdates()
         qCWarning(LOG_UPDATER) << "Called while not Idle";
     }
 }
+/*! \fn void Updater::checkForUpdatesFinished(bool success)
+    This signal is emitted once checkForUpdates() has finished is work
+    \param success True if check for updates succeeded, false otherwise.
+                   See errorString() for details about the last error.
+    \sa checkForUpdates()
+*/
 
 void Updater::onInfoFinished()
 {
@@ -187,6 +119,11 @@ void Updater::onInfoFinished()
     emit checkForUpdatesFinished();
 }
 
+/*!
+    \brief Update the local repository
+    \pre A check for remote updates must have been done.
+    \sa updateFinished()
+*/
 void Updater::update()
 {
     if(state() == UpdateRequired || state() == AlreadyUptodate)
@@ -210,6 +147,36 @@ void Updater::update()
         qCWarning(LOG_UPDATER) << "Called without an available update";
     }
 }
+/*! \fn void Updater::updateFinished(bool success)
+    This signal is emitted once update() has finished is work
+    \param success True if the update operation has succeeded, false otherwise.
+                   See errorString() for details about the last error.
+    \sa update()
+*/
+/*! \fn void Updater::updateProgress(qint64 bytesProcessed, qint64 bytesTotal)
+    This signal is emitted once the update progression has changed
+    \param bytesProcessed The number of bytes processed
+    \param bytesTotal The total number of bytes beeing processed
+    \sa update()
+*/
+/*! \fn void Updater::updateCheckProgress(qint64 bytesChecked, qint64 bytesTotal)
+    This signal is emitted once the check step of the update has progressed
+    \param bytesChecked The number of bytes processed
+    \param bytesTotal The total number of bytes beeing processed
+    \sa update()
+*/
+/*! \fn void Updater::updateDownloadProgress(qint64 bytesDownloaded, qint64 bytesTotal)
+    This signal is emitted once the download step of the update has progressed
+    \param bytesDownloaded The number of bytes processed
+    \param bytesTotal The total number of bytes beeing processed
+    \sa update()
+*/
+/*! \fn void Updater::updateApplyProgress(qint64 bytesApplied, qint64 bytesTotal)
+    This signal is emitted once the apply step of the update has progressed
+    \param bytesApplied The number of bytes processed
+    \param bytesTotal The total number of bytes beeing processed
+    \sa update()
+*/
 
 void Updater::copy(const QString &copyDirectory)
 {
