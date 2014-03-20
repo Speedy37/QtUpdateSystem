@@ -286,11 +286,17 @@ void DownloadManager::readyToApply(QSharedPointer<Operation> readyOperation)
 {
     if(readyOperation->status() == Operation::DownloadRequired || isFixingError())
     {
-        if(QFile(readyOperation->dataDownloadFilename()).rename(readyOperation->dataFilename()))
+        if( (!QFile::exists(readyOperation->dataFilename()) || QFile::remove(readyOperation->dataFilename()))
+            && QFile(readyOperation->dataDownloadFilename()).rename(readyOperation->dataFilename())
+           )
+        {
             emit operationReadyToApply(readyOperation);
+        }
         else
+        {
             EMIT_WARNING(OperationDownload, tr("Unable to rename downloaded filename"), readyOperation);
             failure(readyOperation->path(), DownloadRenameFailed);
+        }
     }
     else if(readyOperation->status() == Operation::ApplyRequired)
     {
