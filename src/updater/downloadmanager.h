@@ -1,6 +1,7 @@
 #ifndef DOWNLOADMANAGER_H
 #define DOWNLOADMANAGER_H
 
+#include "../errors/warning.h"
 #include "../updater.h"
 #include "../common/package.h"
 #include "../common/packages.h"
@@ -35,13 +36,12 @@ signals:
     void operationLoaded(QSharedPointer<Operation> operation);
     void operationReadyToApply(QSharedPointer<Operation> operation);
     void downloadFinished();
-    void progress(qint64 bytesReceived, qint64 bytesTotal);
-    void checkProgress(qint64 bytesApplied, qint64 bytesTotal);
+    void progress(qint64 bytesProgressed, qint64 bytesTotal);
+    void checkProgress(qint64 bytesChecked, qint64 bytesTotal);
     void applyProgress(qint64 bytesApplied, qint64 bytesTotal);
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void updateFailed(const QString &reason);
-    void updateSucceeded();
-    void finished();
+    void finished(const QString &errorString);
+    void warning(const Warning &warning);
 
 private:
     enum Failure
@@ -55,7 +55,6 @@ private:
         NonRecoverable
     };
     void success();
-    void failure(const QString &reason);
     void failure(const QString &path, Failure reason);
     void updatePackageLoop();
     void updateDataReadAll();

@@ -5,6 +5,7 @@
 #include <QProcess>
 #include <QJsonObject>
 #include <QFile>
+#include <functional>
 
 class QFile;
 class DownloadManager;
@@ -49,10 +50,13 @@ public:
     Status status() const;
     void checkLocalData(); // FileManager thread
     void apply(); // FileManager thread
+    virtual void cleanup();  // DownloadManager thread
 
     virtual bool isLocalFile() const;
     virtual void fromJsonObjectV1(const QJsonObject &object);
     QJsonObject toJsonObjectV1();
+
+    void setWarningListener(std::function<void(const QString &message)> listener);
 
 private:
     QString m_localFilename, m_dataFilename;
@@ -64,7 +68,9 @@ protected:
     virtual void applyData() = 0; // FileManager thread
     virtual QString type() const = 0;
     virtual void fillJsonObjectV1(QJsonObject & object);
+    void throwWarning(const QString &warning);
 
+    std::function<void(const QString &message)> m_warningListener;
     qint64 m_offset, m_size;
     QString m_path, m_sha1, m_errorString;
     Status m_status;
@@ -128,6 +134,17 @@ inline QString Operation::errorString() const
 inline Operation::Status Operation::status() const
 {
     return m_status;
+}
+
+inline void Operation::setWarningListener(std::function<void (const QString &)> listener)
+{
+    m_warningListener = listener;
+}
+
+inline void Operation::throwWarning(const QString &warning)
+{
+    if(m_warningListener)
+        m_warningListener(warning);
 }
 
 #endif // UPDATER_OPERATION_H

@@ -61,7 +61,7 @@ void Updater::checkForUpdates()
     }
     else
     {
-        qCWarning(LOG_UPDATER) << "Called while not Idle";
+        qWarning("Updater::checkForUpdates : Called while not Idle");
     }
 }
 /*! \fn void Updater::checkForUpdatesFinished(bool success)
@@ -88,7 +88,6 @@ void Updater::onInfoFinished()
         {
             qCDebug(LOG_UPDATER) << "An update was in progress";
             setState(UpdateRequired);
-            emit updateRequired();
         }
         else if(localRevision() == remoteRevision())
         {
@@ -107,16 +106,15 @@ void Updater::onInfoFinished()
             }
 
             setState(UpdateRequired);
-            emit updateRequired();
         }
+        emit checkForUpdatesFinished(true);
     }
     catch(const QString & msg)
     {
-        failure(msg);
+        setErrorString(msg);
         setState(Idle);
+        emit checkForUpdatesFinished(false);
     }
-
-    emit checkForUpdatesFinished();
 }
 
 /*!
@@ -138,13 +136,12 @@ void Updater::update()
         connect(downloader, &DownloadManager::downloadProgress, this, &Updater::updateDownloadProgress);
         connect(downloader, &DownloadManager::applyProgress, this, &Updater::updateApplyProgress);
         connect(downloader, &DownloadManager::progress, this, &Updater::updateProgress);
-        connect(downloader, &DownloadManager::finished, this, &Updater::updateFinished);
-        connect(downloader, &DownloadManager::updateSucceeded, this, &Updater::updateSucceeded);
-        connect(downloader, &DownloadManager::updateFailed, this, &Updater::updateFailed);
+        connect(downloader, &DownloadManager::finished, this, &Updater::onUpdateFinished);
+        connect(downloader, &DownloadManager::warning, this, &Updater::warning);
     }
     else
     {
-        qCWarning(LOG_UPDATER) << "Called without an available update";
+        qWarning("Updater::update : Called without an available update");
     }
 }
 /*! \fn void Updater::updateFinished(bool success)
@@ -178,25 +175,66 @@ void Updater::update()
     \sa update()
 */
 
+void Updater::onUpdateFinished(const QString &errorString)
+{
+    if(errorString.isEmpty())
+    {
+        m_localRepository.load();
+        setState(Uptodate);
+        emit updateFinished(true);
+    }
+    else
+    {
+        setErrorString(errorString);
+        setState(UpdateRequired);
+        emit updateFinished(false);
+    }
+}
+
+/*!
+    \brief Copy the local repository to another directory.
+    If the copy destination is a repository, the copy operation update it.
+    \sa copyFinished()
+*/
 void Updater::copy(const QString &copyDirectory)
 {
-    CopyThread *copier = new CopyThread(m_localRepository, copyDirectory, this);
+    if(isIdle())
+    {
+        m_beforeCopyState = state();
+        setState(Copying);
+        clearError();
 
-    connect(copier, &CopyThread::progression, this, &Updater::copyProgress);
-    connect(copier, &CopyThread::finished, this, &Updater::copyFinished);
-    connect(copier, &CopyThread::finished, copier, &CopyThread::deleteLater);
-    copier->start();
+        CopyThread *copier = new CopyThread(m_localRepository, copyDirectory, this);
+
+        connect(copier, &CopyThread::progression, this, &Updater::copyProgress);
+        connect(copier, &CopyThread::copyFinished, this, &Updater::onCopyFinished);
+        connect(copier, &CopyThread::warning, this, &Updater::warning);
+        connect(copier, &CopyThread::finished, copier, &CopyThread::deleteLater);
+        copier->start();
+    }
+    else
+    {
+        qWarning("Updater::copy : Called while not Idle");
+    }
 }
+/*! \fn void Updater::copyFinished(bool success)
+    This signal is emitted once copy() operation has finished is work
+    \param success True if the copy operation has succeeded, false otherwise.
+                   See errorString() for details about the last error.
+    \sa copy()
+*/
+/*! \fn void Updater::copyProgress(int copiedFileCount, int totalFileCount)
+    This signal is emitted once the copy progressed
+    \param copiedFileCount The number of files copied
+    \param totalFileCount The number of files beeing copied
+    \sa copy()
+*/
 
-void Updater::updateSucceeded()
+void Updater::onCopyFinished(const QString &errorString)
 {
-    m_localRepository.load();
-    setState(Uptodate);
-}
-
-void Updater::updateFailed(const QString &reason)
-{
-    setState(UpdateRequired);
+    setErrorString(errorString);
+    setState(m_beforeCopyState);
+    emit copyFinished(errorString.isEmpty());
 }
 
 void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)

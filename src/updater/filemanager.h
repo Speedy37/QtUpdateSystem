@@ -1,6 +1,8 @@
 #ifndef UPDATER_FILEMANAGER_H
 #define UPDATER_FILEMANAGER_H
 
+#include "../errors/warning.h"
+
 #include <QObject>
 #include <QSharedPointer>
 
@@ -17,6 +19,7 @@ signals:
     void operationPrepared(QSharedPointer<Operation> operation);
     void operationApplied(QSharedPointer<Operation> operation);
     void applyFinished();
+    void warning(const Warning &warning);
 
 public slots:
     void prepareOperation(QSharedPointer<Operation> operation);

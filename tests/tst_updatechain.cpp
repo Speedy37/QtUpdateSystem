@@ -68,17 +68,19 @@ void TestUpdateChain::updateToV1()
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");
     {
-        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
+        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished(bool)));
         u.checkForUpdates();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
     }
     {
-        QSignalSpy spy(&u, SIGNAL(updateFinished()));
+        QSignalSpy spyWarnings(&u, SIGNAL(warning(Warning)));
+        QSignalSpy spy(&u, SIGNAL(updateFinished(bool)));
         u.update();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
         QCOMPARE(u.localRevision(), QString("1"));
+        QCOMPARE(spyWarnings.size(), 0);
     }
     try {
         (TestUtils::assertFileEquals(testNew + "/local_repo/patch_same.txt", testNew + "/rev1/patch_same.txt"));
@@ -122,17 +124,19 @@ void TestUpdateChain::updateToV2()
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");
     {
-        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
+        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished(bool)));
         u.checkForUpdates();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
     }
     {
-        QSignalSpy spy(&u, SIGNAL(updateFinished()));
+        QSignalSpy spyWarnings(&u, SIGNAL(warning(Warning)));
+        QSignalSpy spy(&u, SIGNAL(updateFinished(bool)));
         u.update();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
         QCOMPARE(u.localRevision(), QString("2"));
+        QCOMPARE(spyWarnings.size(), 0);
     }
     try{
         (TestUtils::assertFileEquals(testNew + "/local_repo/patch_same.txt", testNew + "/rev2/patch_same.txt"));
@@ -159,17 +163,19 @@ void TestUpdateChain::fallbackToV1()
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");
     {
-        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
+        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished(bool)));
         u.checkForUpdates();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
     }
     {
-        QSignalSpy spy(&u, SIGNAL(updateFinished()));
+        QSignalSpy spyWarnings(&u, SIGNAL(warning(Warning)));
+        QSignalSpy spy(&u, SIGNAL(updateFinished(bool)));
         u.update();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
         QCOMPARE(u.localRevision(), QString("1"));
+        QCOMPARE(spyWarnings.size(), 4);
     }
     try{
         (TestUtils::assertFileEquals(testNew + "/local_repo/patch_same.txt", testNew + "/rev1/patch_same.txt"));
@@ -197,17 +203,22 @@ void TestUpdateChain::updateToV2WithFailures()
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");
     {
-        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
+        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished(bool)));
         u.checkForUpdates();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::UpdateRequired, u.errorString().toLatin1());
     }
     {
-        QSignalSpy spy(&u, SIGNAL(updateFinished()));
+        QSignalSpy spyWarnings(&u, SIGNAL(warning(Warning)));
+        QSignalSpy spy(&u, SIGNAL(updateFinished(bool)));
         u.update();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
         QCOMPARE(u.localRevision(), QString("2"));
+        QCOMPARE(spyWarnings.size(), 1);
+        QCOMPARE(spyWarnings[0].size(), 1);
+        QCOMPARE(spyWarnings[0][0].typeName(), "Warning");
+        QCOMPARE(spyWarnings[0][0].value<Warning>().type(), Warning::OperationPreparation);
     }
     try {
         (TestUtils::assertFileEquals(testNew + "/local_repo/patch_same.txt", testNew + "/rev2/patch_same.txt"));
@@ -228,13 +239,13 @@ void TestUpdateChain::integrityCheck()
     u.setTmpDirectory(testNew + "/local_tmp");
     u.setRemoteRepository("file:///" + testNew + "/repo/");
     {
-        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished()));
+        QSignalSpy spy(&u, SIGNAL(checkForUpdatesFinished(bool)));
         u.checkForUpdates();
         QVERIFY(spy.wait());
         QVERIFY2(u.state() == Updater::AlreadyUptodate, u.errorString().toLatin1());
     }
     {
-        QSignalSpy spy(&u, SIGNAL(updateFinished()));
+        QSignalSpy spy(&u, SIGNAL(updateFinished(bool)));
         QSignalSpy spyDownloadProgress(&u, SIGNAL(updateDownloadProgress(qint64,qint64)));
         QSignalSpy spyApplyProgress(&u, SIGNAL(updateApplyProgress(qint64,qint64)));
         QSignalSpy spyCheckProgress(&u, SIGNAL(updateCheckProgress(qint64,qint64)));

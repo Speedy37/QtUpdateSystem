@@ -56,6 +56,8 @@ DownloadManager::DownloadManager(const LocalRepository &sourceRepository, Update
         connect(this, &DownloadManager::downloadFinished, filemanager, &FileManager::downloadFinished);
         connect(filemanager, &FileManager::applyFinished, this, &DownloadManager::applyFinished);
 
+        connect(filemanager, &FileManager::warning, this, &DownloadManager::warning);
+
         // Safe blocking abort
         thread->start();
     }
@@ -132,7 +134,7 @@ void DownloadManager::updatePackagesListRequestFinished()
     }
     catch(const QString & msg)
     {
-        failure(msg);
+        emit finished(msg);
     }
 }
 
@@ -161,7 +163,7 @@ void DownloadManager::updatePackageLoop()
                 qCDebug(LOG_DLMANAGER) << "Some parts of the update have gone wrong, fixing...";
                 downloadPath = m_packages.findBestPath("", m_remoteRevision);
                 if(downloadPath.isEmpty())
-                    failure(tr("No download path found %1").arg(m_remoteRevision));
+                    emit finished(tr("No download path found %1").arg(m_remoteRevision));
             }
             else
             {
@@ -197,9 +199,13 @@ void DownloadManager::updatePackageLoop()
             {
                 qCDebug(LOG_DLMANAGER) << "Update finished with " << fixedFailures << "/" << failures.size() << "fixed errors";
                 if(fixedFailures == failures.size())
+                {
                     success();
+                }
                 else
-                    qCDebug(LOG_DLMANAGER) << "Unable to fixes all errors (" << fixedFailures << "/" << failures.size() << "fixed)";
+                {
+                    emit finished(tr("Unable to fixes all errors (%1/%2 fixed)").arg(fixedFailures).arg(failures.size()));
+                }
             }
         }
         else
@@ -272,7 +278,7 @@ void DownloadManager::updatePackageMetadataFinished()
     }
     catch(const QString & msg)
     {
-        failure(msg);
+        emit finished(msg);
     }
 }
 
@@ -283,6 +289,7 @@ void DownloadManager::readyToApply(QSharedPointer<Operation> readyOperation)
         if(QFile(readyOperation->dataDownloadFilename()).rename(readyOperation->dataFilename()))
             emit operationReadyToApply(readyOperation);
         else
+            EMIT_WARNING(OperationDownload, tr("Unable to rename downloaded filename"), readyOperation);
             failure(readyOperation->path(), DownloadRenameFailed);
     }
     else if(readyOperation->status() == Operation::ApplyRequired)
@@ -295,9 +302,10 @@ void DownloadManager::readyToApply(QSharedPointer<Operation> readyOperation)
 void DownloadManager::failure(const QString &path, Failure reason)
 {
     if(reason != Fixed)
-        qCWarning(LOG_DLMANAGER) << "Operation failed " << reason << path;
+        qCDebug(LOG_DLMANAGER) << "Operation failed " << reason << path;
     else
         qCDebug(LOG_DLMANAGER) << "Operation fixed " << path;
+
     failures.insert(path, reason);
 }
 
@@ -538,6 +546,7 @@ void DownloadManager::operationApplied(QSharedPointer<Operation> appliedOperatio
         }
         else
         {
+            EMIT_WARNING(OperationApply, appliedOperation->errorString(), appliedOperation);
             failure(appliedOperation->path(), ApplyFailed);
         }
     }
@@ -566,7 +575,7 @@ void DownloadManager::success()
     foreach(const QString &fileToRemove, diffFileList)
     {
         if(QFile::exists(m_updateDirectory + fileToRemove) && !QFile::remove(m_updateDirectory + fileToRemove))
-            qCWarning(LOG_DLMANAGER) << "Unable to remove " << fileToRemove;
+            EMIT_WARNING(RemoveFiles, tr("Unable to remove %1").arg(fileToRemove), fileToRemove);
     }
 
     m_localRepository.setFileList(QStringList(m_fileListAfterUpdate.toList()));
@@ -574,15 +583,7 @@ void DownloadManager::success()
     m_localRepository.setUpdateInProgress(false);
     m_localRepository.save();
 
-    emit updateSucceeded();
-    emit finished();
-}
-
-void DownloadManager::failure(const QString &reason)
-{
-    qCCritical(LOG_DLMANAGER) << "Failure" << reason;
-    emit updateFailed(reason);
-    emit finished();
+    emit finished(QString());
 }
 
 bool DownloadManager::isSkipDownloadUseful(qint64 skippableSize)
@@ -665,6 +666,7 @@ void DownloadManager::updateDataStartDownload(qint64 endOffset)
 
 void DownloadManager::updateDataStopDownload()
 {
+    qCDebug(LOG_DLMANAGER) << "GET STOPPED";
     disconnect(dataRequest, &QNetworkReply::readyRead, this, &DownloadManager::updateDataReadyRead);
     disconnect(dataRequest, &QNetworkReply::finished, this, &DownloadManager::updateDataFinished);
 

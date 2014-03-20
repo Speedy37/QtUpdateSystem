@@ -152,7 +152,7 @@ Operation::Status AddOperation::localDataStatus()
             return Valid;
         }
 
-        qCWarning(LOG_ADDOP) << "File already exists and will be overwrited" << path();
+        throwWarning(QObject::tr("File already exists and will be overwrited"));
     }
 
     file.setFileName(dataFilename());
@@ -164,7 +164,7 @@ Operation::Status AddOperation::localDataStatus()
             qCDebug(LOG_ADDOP) << "File data is valid" << path();
             return ApplyRequired;
         }
-        qCWarning(LOG_ADDOP) << "File data is invalid and will be downloaded again" << path();
+        throwWarning(QObject::tr("File data is invalid and will be downloaded again"));
     }
 
     return DownloadRequired;
@@ -235,8 +235,7 @@ void AddOperation::applyData()
 
         qCDebug(LOG_ADDOP) << "Extraction succeeded" << path();
 
-        if(!QFile(dataFilename()).remove())
-            qCWarning(LOG_ADDOP) << "Unable to remove temporary file" << dataFilename();
+        cleanup();
     }
     else
     {

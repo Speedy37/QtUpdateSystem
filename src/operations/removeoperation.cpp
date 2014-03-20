@@ -42,7 +42,7 @@ void RemoveOperation::applyData()
     QFileInfo dirInfo(localFilename());
     if(dirInfo.isDir())
     {
-        qCWarning(LOG_RMFILEOP) << "The update was supposed to remove a file, but a directory was found" << path();
+        throwWarning(QObject::tr("The update was supposed to remove a file, but a directory was found"));
         if(!QDir().rmdir(localFilename()))
             throw QObject::tr("Failed to remove directory %1").arg(path());
     }

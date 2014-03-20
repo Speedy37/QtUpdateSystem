@@ -4,9 +4,9 @@
 #include "qtupdatesystem_global.h"
 #include "common/version.h"
 #include "updater/localrepository.h"
+#include "errors/warning.h"
 
 #include <QObject>
-#include <QStringList>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -34,7 +34,8 @@ public:
         AlreadyUptodate, ///< Local repository is already uptodate.
         Uptodate, ///< Local repository is new uptodate.
         DownloadingInformations, ///< Downloading informations about the remote versions.
-        Updating ///< Updating in progress
+        Updating, ///< Updating in progress
+        Copying ///< Copy in progress
     };
 
     Updater(QObject * parent = 0);
@@ -69,26 +70,26 @@ public slots:
     void copy(const QString& copyDirectory);
 
 signals:
-    void updateRequired();
-    void checkForUpdatesFinished();
+    void checkForUpdatesFinished(bool success);
     void copyProgress(int copiedFileCount, int totalFileCount);
-    void copyFinished();
-    void updateProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void updateCheckProgress(qint64 bytesApplied, qint64 bytesTotal);
-    void updateDownloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+    void copyFinished(bool success);
+    void updateProgress(qint64 bytesProcessed, qint64 bytesTotal);
+    void updateCheckProgress(qint64 bytesChecked, qint64 bytesTotal);
+    void updateDownloadProgress(qint64 bytesDownloaded, qint64 bytesTotal);
     void updateApplyProgress(qint64 bytesApplied, qint64 bytesTotal);
-    void updateFinished();
+    void updateFinished(bool success);
+    void warning(const Warning &warning);
 
 private slots:
     void onInfoFinished();
-    void updateSucceeded();
-    void updateFailed(const QString &reason);
+    void onUpdateFinished(const QString &errorString);
+    void onCopyFinished(const QString &errorString);
     void authenticationRequired(QNetworkReply *, QAuthenticator * authenticator);
 
 private:
     QNetworkReply *get(const QString &what);
     void clearError();
-    void failure(const QString & msg);
+    void setErrorString(const QString & msg);
     void setState(State newState);
 
 private:
@@ -105,7 +106,7 @@ private:
     LocalRepository m_localRepository;
     Version m_remoteRevision;
     QString m_errorString;
-    State m_state;
+    State m_state, m_beforeCopyState;
 };
 
 /*!
@@ -253,7 +254,7 @@ inline void Updater::clearError()
     m_errorString = QString();
 }
 
-inline void Updater::failure(const QString &msg)
+inline void Updater::setErrorString(const QString &msg)
 {
     m_errorString = msg;
 }

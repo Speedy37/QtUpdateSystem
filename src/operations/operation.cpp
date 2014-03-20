@@ -47,9 +47,19 @@ void Operation::apply()
     }
     catch(const QString &msg)
     {
+        cleanup();
         qCDebug(LOG_OP) << msg;
         m_errorString = msg;
         m_status = ApplyFailed;
+    }
+}
+
+void Operation::cleanup()
+{
+    if(isLocalFile())
+    {
+        if(!QFile(dataFilename()).remove())
+            throwWarning(QObject::tr("Unable to remove temporary file %1").arg(dataFilename()));
     }
 }
 

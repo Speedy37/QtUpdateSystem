@@ -9,7 +9,7 @@ Product {
     targetName: (qbs.enableDebugCode && qbs.targetOS.contains("windows")) ? (name + 'd') : name
     destinationDirectory: qbs.targetOS.contains("windows") ? "bin" : "lib"
     cpp.defines: [
-        "QTUPDATESYSTEM_LIBRARY"
+        "QTUPDATESYSTEM_LIBRARY", "ERROR_CONTEXT"
     ]
 
     Properties {
@@ -31,6 +31,7 @@ Product {
         Depends { name: "cpp" }
         Depends { name: "Qt"; submodules: ["core", "network"] }
         cpp.includePaths: path
+        cpp.defines: ["ERROR_CONTEXT"]
     }
 
     files: [
@@ -48,6 +49,8 @@ Product {
         "common/version.h",
         "common/versions.cpp",
         "common/versions.h",
+        "errors/warning.cpp",
+        "errors/warning.h",
         "operations/addoperation.cpp",
         "operations/addoperation.h",
         "operations/operation.cpp",

@@ -169,10 +169,6 @@ QVector<Package> Packages::findBestPath(const QString &from, const QString &to)
         }
         qCDebug(LOG_PACKAGES) << "Best path found in " << t.elapsed() << "ms";
     }
-    else
-    {
-        qCWarning(LOG_PACKAGES) << "No path found from " << from << "to" << to;
-    }
 
     foreach(Node * n, nodes)
     {

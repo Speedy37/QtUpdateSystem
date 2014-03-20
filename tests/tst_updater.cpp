@@ -30,7 +30,7 @@ void TestUpdater::updaterCopy()
     Updater u;
     u.setLocalRepository(testCopy + "/local_repo");
     u.copy(testCopy + "/local_copy");
-    QSignalSpy spy(&u, SIGNAL(copyFinished()));
+    QSignalSpy spy(&u, SIGNAL(copyFinished(bool)));
     QVERIFY(spy.wait());
 
     try {

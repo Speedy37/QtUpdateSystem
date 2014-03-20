@@ -13,6 +13,9 @@ FileManager::~FileManager()
 
 void FileManager::prepareOperation(QSharedPointer<Operation> operation)
 {
+    operation->setWarningListener([=] (const QString &message) {
+        EMIT_WARNING(OperationPreparation, message, operation);
+    });
     operation->checkLocalData();
     emit operationPrepared(operation);
 }

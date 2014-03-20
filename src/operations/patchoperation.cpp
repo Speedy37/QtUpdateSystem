@@ -53,18 +53,17 @@ Operation::Status PatchOperation::localDataStatus()
                         qCDebug(LOG_PATCHOP) << "File data is valid" << path();
                         return ApplyRequired;
                     }
-
-                    qCWarning(LOG_PATCHOP) << "File data is invalid and will be downloaded again" << path();;
+                    throwWarning(QObject::tr("File data is invalid and will be downloaded again"));
                 }
                 return DownloadRequired;
             }
         }
 
-        qCWarning(LOG_PATCHOP) << "File content is invalid" << path();;
+        throwWarning(QObject::tr("File content is invalid"));
     }
     else
     {
-        qCWarning(LOG_PATCHOP) << "File doesn't exists and can't be patched, complete file download will happen" << path();;
+        throwWarning(QObject::tr("File doesn't exists and can't be patched, complete file download will happen"));
     }
 
     return LocalFileInvalid;
@@ -154,8 +153,7 @@ void PatchOperation::applyData()
         if(!file.rename(localFilename()))
             throw QObject::tr("Unable to rename file %1 to %2").arg(file.fileName(), path());
 
-        if(!QFile(dataFilename()).remove())
-            qCWarning(LOG_PATCHOP) << "Unable to remove temporary file" << dataFilename();
+        cleanup();
     }
     else
     {
