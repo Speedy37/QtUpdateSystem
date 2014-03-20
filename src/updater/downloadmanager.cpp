@@ -303,6 +303,10 @@ void DownloadManager::readyToApply(QSharedPointer<Operation> readyOperation)
         QFile::remove(readyOperation->dataDownloadFilename());
         emit operationReadyToApply(readyOperation);
     }
+    else
+    {
+        incrementApplyPosition(readyOperation->size());
+    }
 }
 
 void DownloadManager::failure(const QString &path, Failure reason)
@@ -433,6 +437,7 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
             }
             else
             {
+                incrementDownloadPosition(preparedOperation->size());
                 readyToApply(preparedOperation);
                 nextOperation();
             }
@@ -443,6 +448,7 @@ void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperat
             // We may be able to optimise the download time
 
             // Queue apply the current operation if its possible
+            incrementDownloadPosition(preparedOperation->size() - offset);
             readyToApply(preparedOperation);
 
             downloadSeek += preparedOperation->size() - offset;
