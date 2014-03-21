@@ -79,7 +79,7 @@ private:
     QString m_updateDirectory, m_updateTmpDirectory;
     QString m_localRevision, m_remoteRevision;
     QString m_updateUrl, m_username, m_password;
-    QSet<QString> m_fileListAfterUpdate;
+    QSet<QString> m_fileListAfterUpdate, m_dirListAfterUpdate;
 
     // Network
     QNetworkAccessManager *m_manager;

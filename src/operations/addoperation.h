@@ -12,7 +12,7 @@ class AddOperation : public Operation
 public:
     AddOperation();
     static const QString Action;
-    virtual bool isLocalFile() const Q_DECL_OVERRIDE;
+    virtual FileType fileType() const Q_DECL_OVERRIDE;
     virtual void fromJsonObjectV1(const QJsonObject &object) Q_DECL_OVERRIDE;
     void create(const QString &path, const QString &newFilename, const QString &tmpDirectory);
 protected:

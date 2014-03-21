@@ -19,6 +19,12 @@ inline bool waitForFinished(QProcess & process)
 class Operation
 {
 public:
+    enum FileType {
+        None,
+        File,
+        Folder
+    };
+
     enum Status {
         Unknown,
         DownloadRequired,
@@ -52,7 +58,7 @@ public:
     void apply(); // FileManager thread
     virtual void cleanup();  // DownloadManager thread
 
-    virtual bool isLocalFile() const;
+    virtual FileType fileType() const;
     virtual void fromJsonObjectV1(const QJsonObject &object);
     QJsonObject toJsonObjectV1();
 

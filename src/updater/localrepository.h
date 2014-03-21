@@ -28,9 +28,12 @@ public:
     QStringList fileList() const;
     void setFileList(const QStringList &files);
 
+    QStringList dirList() const;
+    void setDirList(const QStringList &dirList);
+
 private:
-    static const QString Revision, UpdateInProgress, FileList, StatusFileName;
-    QStringList m_fileList;
+    static const QString Revision, UpdateInProgress, FileList, DirList, StatusFileName;
+    QStringList m_fileList, m_dirList;
     QString m_directory, m_localRevision;
     bool m_updateInProgress;
 };
@@ -79,6 +82,16 @@ inline QStringList LocalRepository::fileList() const
 inline void LocalRepository::setFileList(const QStringList &files)
 {
     m_fileList = files;
+}
+
+inline QStringList LocalRepository::dirList() const
+{
+    return m_dirList;
+}
+
+inline void LocalRepository::setDirList(const QStringList &dirList)
+{
+    m_dirList = dirList;
 }
 
 #endif // LOCALREPOSITORY_H

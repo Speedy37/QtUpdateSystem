@@ -56,16 +56,16 @@ void Operation::apply()
 
 void Operation::cleanup()
 {
-    if(isLocalFile())
+    if(fileType() == File)
     {
         if(!QFile(dataFilename()).remove())
             throwWarning(QObject::tr("Unable to remove temporary file %1").arg(dataFilename()));
     }
 }
 
-bool Operation::isLocalFile() const
+Operation::FileType Operation::fileType() const
 {
-    return false;
+    return None;
 }
 
 void Operation::fromJsonObjectV1(const QJsonObject &object)

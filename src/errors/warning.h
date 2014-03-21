@@ -49,7 +49,11 @@ public:
         OperationPreparation,
         OperationDownload,
         OperationApply,
-        RemoveFiles
+        RemoveFiles,
+        RemoveDirs,
+        Copy,
+        CopyRemove,
+        CopyMkPath
     };
 
 #if defined(ERROR_CONTEXT)

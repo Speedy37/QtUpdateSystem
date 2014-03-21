@@ -13,6 +13,14 @@ QString Warning::typeString() const
         return QStringLiteral("OperationApply");
     case RemoveFiles:
         return QStringLiteral("RemoveFiles");
+    case RemoveDirs:
+        return QStringLiteral("RemoveDirs");
+    case Copy:
+        return QStringLiteral("Copy");
+    case CopyRemove:
+        return QStringLiteral("CopyRemove");
+    case CopyMkPath:
+        return QStringLiteral("CopyMkPath");
     default:
         return QStringLiteral("Unknown");
     }

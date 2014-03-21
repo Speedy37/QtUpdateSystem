@@ -84,7 +84,7 @@ PackageMetadata Packager::generate()
         QFileInfoList newFiles = dirList(newDir);
         QFileInfoList oldFiles = oldDirectoryPath().isNull() ? QFileInfoList() : dirList(oldDir);
         m_tasks.clear();
-        compareDirectories(QStringLiteral(""), newFiles, oldFiles);
+        compareDirectories(QString(), newFiles, oldFiles);
     }
     qCDebug(LOG_PACKAGER) << "Directory comparison done in" << Utils::formatMs(stepTimer.restart());
 
@@ -194,6 +194,11 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
     int newPos = 0, newLen = newFiles.size();
     int oldPos = 0, oldLen = oldFiles.size();
 
+    if(!path.isEmpty())
+    {
+        addTask(PackagerTask::AddDir, path);
+        path += QLatin1Char('/');
+    }
     while(newPos < newLen || oldPos < oldLen)
     {
         QFileInfo newFile, oldFile;
@@ -217,7 +222,7 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
             }
             else if(newFile.isDir())
             {
-                compareDirectories(path + newFile.fileName() + QLatin1Char('/'),
+                compareDirectories(path + newFile.fileName(),
                                    dirList(QDir(newFile.filePath())), QFileInfoList());
             }
             ++newPos;
@@ -253,13 +258,13 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
                 if(!oldFile.isDir())
                 {
                     addTask(PackagerTask::RemoveFile, path + oldFile.fileName(), QString(), oldFile.filePath());
-                    compareDirectories(path + newFile.fileName() + QLatin1Char('/'),
+                    compareDirectories(path + newFile.fileName(),
                                        dirList(QDir(newFile.filePath())),
                                        QFileInfoList());
                 }
                 else
                 {
-                    compareDirectories(path + newFile.fileName() + QLatin1Char('/'),
+                    compareDirectories(path + newFile.fileName(),
                                        dirList(QDir(newFile.filePath())),
                                        dirList(QDir(oldFile.filePath())));
                 }

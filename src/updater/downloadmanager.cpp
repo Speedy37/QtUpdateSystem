@@ -9,6 +9,7 @@
 #include <QLoggingCategory>
 #include <QNetworkReply>
 #include <QAuthenticator>
+#include <QDir>
 
 Q_LOGGING_CATEGORY(LOG_DLMANAGER, "updatesystem.updater.dlmanager")
 
@@ -247,12 +248,23 @@ void DownloadManager::updatePackageMetadataFinished()
         if(!isFixingError())
         {
             Q_ASSERT(!isLastPackage() || m_fileListAfterUpdate.size() == 0);
+            Q_ASSERT(!isLastPackage() || m_dirListAfterUpdate.size() == 0);
             foreach(QSharedPointer<Operation> op, metadata.operations())
             {
-                if(isLastPackage() && op->isLocalFile())
+                if(isLastPackage())
                 {
-                    m_fileListAfterUpdate.insert(op->path());
+                    switch (op->fileType()) {
+                    case Operation::File:
+                        m_fileListAfterUpdate.insert(op->path());
+                        break;
+                    case Operation::Folder:
+                        m_dirListAfterUpdate.insert(op->path());
+                        break;
+                    default:
+                        break;
+                    }
                 }
+
                 // Ask the file manager to take care of pre-apply job
                 // Jobs are automatically queued by Qt signals & slots
                 emit operationLoaded(op);
@@ -403,7 +415,7 @@ void DownloadManager::nextOperation()
  */
 void DownloadManager::operationPrepared(QSharedPointer<Operation> preparedOperation)
 {
-    if(preparedOperation->isLocalFile())
+    if(preparedOperation->size() > 0)
         incrementCheckPosition(preparedOperation->size());
     ++preparedOperationIndex;
     Q_ASSERT(preparedOperation == metadata.operation(preparedOperationIndex));
@@ -586,14 +598,24 @@ void DownloadManager::applyFinished()
 
 void DownloadManager::success()
 {
-    QSet<QString> diffFileList = m_localRepository.fileList().toSet() - m_fileListAfterUpdate;
+    QSet<QString> diffFileList = m_localRepository.fileList().toSet() - m_fileListAfterUpdate - m_dirListAfterUpdate;
+    QSet<QString> diffDirList = m_localRepository.dirList().toSet() - m_fileListAfterUpdate - m_dirListAfterUpdate;
     foreach(const QString &fileToRemove, diffFileList)
     {
-        if(QFile::exists(m_updateDirectory + fileToRemove) && !QFile::remove(m_updateDirectory + fileToRemove))
-            EMIT_WARNING(RemoveFiles, tr("Unable to remove %1").arg(fileToRemove), fileToRemove);
+        QFile file(m_updateDirectory + fileToRemove);
+        if(file.exists() && !file.remove())
+            EMIT_WARNING(RemoveFiles, tr("Unable to remove file %1").arg(fileToRemove), fileToRemove);
+    }
+
+    foreach(const QString &dirToRemove, diffDirList)
+    {
+        QDir dir(m_updateDirectory + dirToRemove);
+        if(dir.exists())
+            dir.rmdir(dir.path());
     }
 
     m_localRepository.setFileList(QStringList(m_fileListAfterUpdate.toList()));
+    m_localRepository.setDirList(QStringList(m_dirListAfterUpdate.toList()));
     m_localRepository.setRevision(m_remoteRevision);
     m_localRepository.setUpdateInProgress(false);
     m_localRepository.save();

@@ -57,6 +57,8 @@ Product {
         "operations/operation.h",
         "operations/patchoperation.cpp",
         "operations/patchoperation.h",
+        "operations/adddirectoryoperation.cpp",
+        "operations/adddirectoryoperation.h",
         "operations/removedirectoryoperation.cpp",
         "operations/removedirectoryoperation.h",
         "operations/removeoperation.cpp",

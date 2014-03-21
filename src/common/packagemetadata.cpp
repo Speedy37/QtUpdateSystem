@@ -3,6 +3,7 @@
 #include "jsonutil.h"
 #include "../operations/addoperation.h"
 #include "../operations/patchoperation.h"
+#include "../operations/adddirectoryoperation.h"
 #include "../operations/removedirectoryoperation.h"
 #include "../operations/removeoperation.h"
 
@@ -77,6 +78,8 @@ void PackageMetadata::operationsFromJsonArrayV1(const QJsonArray &operations)
                 op = new AddOperation();
             else if(type == PatchOperation::Action)
                 op = new PatchOperation();
+            else if(type == AddDirectoryOperation::Action)
+                op = new AddDirectoryOperation();
             else
                 throw(QObject::tr("'action' \"%1\" is not supported").arg(type));
 

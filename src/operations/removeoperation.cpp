@@ -39,17 +39,13 @@ Operation::Status RemoveOperation::localDataStatus()
 
 void RemoveOperation::applyData()
 {
-    QFileInfo dirInfo(localFilename());
-    if(dirInfo.isDir())
+    QFileInfo fileInfo(localFilename());
+    if(fileInfo.isFile() && !QFile::remove(localFilename()))
     {
-        throwWarning(QObject::tr("The update was supposed to remove a file, but a directory was found"));
-        if(!QDir().rmdir(localFilename()))
-            throw QObject::tr("Failed to remove directory %1").arg(path());
+        throwWarning(QObject::tr("Failed to remove file"));
     }
     else
     {
-        if(!QFile::remove(localFilename()))
-            throw QObject::tr("The update failed to remove the file %1").arg(path());
         qCDebug(LOG_RMFILEOP) << "File removed" << path();
     }
 }

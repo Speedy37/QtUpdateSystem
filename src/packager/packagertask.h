@@ -15,7 +15,8 @@ public:
         Add,
         Patch,
         RemoveDir,
-        RemoveFile
+        RemoveFile,
+        AddDir
     };
 
     PackagerTask(Type operationType, QString path, QString oldFilename = QString(), QString newFilename = QString());

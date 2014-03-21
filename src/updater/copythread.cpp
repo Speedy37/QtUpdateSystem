@@ -18,11 +18,19 @@ void CopyThread::run()
     {
         LocalRepository destRepository(m_destinationDir);
         QSet<QString> sourcefiles = m_sourceRepository.fileList().toSet();
+        QSet<QString> dirfiles = m_sourceRepository.dirList().toSet();
 
         int i = 0;
         QFileInfo destFileInfo;
         QDir dir;
         QString src, dest;
+
+        foreach(const QString &dirname, dirfiles)
+        {
+            dest = m_destinationDir + dirname;
+            if(!dir.mkpath(dest))
+                EMIT_WARNING(CopyMkPath, tr("Unable to create path %1").arg(dest), dirname);
+        }
 
         foreach(const QString &filename, sourcefiles)
         {
@@ -31,26 +39,35 @@ void CopyThread::run()
 
             destFileInfo.setFile(dest);
             if(!dir.mkpath(destFileInfo.absolutePath()))
-                throw tr("Unable to create path %1").arg(destFileInfo.absolutePath());
+                EMIT_WARNING(CopyMkPath, tr("Unable to create path %1").arg(destFileInfo.absolutePath()), filename);
 
             if(QFile::exists(dest) && !QFile::remove(dest))
-                throw tr("Unable to remove %1").arg(dest);
+                EMIT_WARNING(CopyRemove, tr("Unable to remove %1").arg(dest), filename);
 
             if(!QFile::copy(src, dest))
-                throw tr("Unable to copy %1 to %2").arg(src, dest);
+                EMIT_WARNING(Copy, tr("Unable to copy %1 to %2").arg(src, dest), filename);
 
             emit progression(++i, sourcefiles.size());
         }
 
-        QSet<QString> diffFiles = destRepository.fileList().toSet() - sourcefiles;
+        QSet<QString> diffFiles = destRepository.fileList().toSet() - sourcefiles - dirfiles;
         foreach(const QString &filename, diffFiles)
         {
             dest = m_destinationDir + filename;
             if(QFile::exists(dest) && !QFile::remove(dest))
-                EMIT_WARNING(RemoveFiles, tr("Unable to remove %1").arg(dest), filename);
+                EMIT_WARNING(CopyRemove, tr("Unable to remove %1").arg(dest), filename);
+        }
+
+        QSet<QString> diffDirList = destRepository.dirList().toSet() - sourcefiles - dirfiles;
+        foreach(const QString &dirToRemove, diffDirList)
+        {
+            QDir dir(m_destinationDir + dirToRemove);
+            if(dir.exists())
+                dir.rmdir(dir.path());
         }
 
         destRepository.setFileList(m_sourceRepository.fileList());
+        destRepository.setDirList(m_sourceRepository.dirList());
         destRepository.setRevision(m_sourceRepository.revision());
         destRepository.setUpdateInProgress(m_sourceRepository.updateInProgress());
         destRepository.save();

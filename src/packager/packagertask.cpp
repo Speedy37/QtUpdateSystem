@@ -2,6 +2,7 @@
 #include <QLoggingCategory>
 #include "../operations/operation.h"
 #include "../operations/addoperation.h"
+#include "../operations/adddirectoryoperation.h"
 #include "../operations/patchoperation.h"
 #include "../operations/removeoperation.h"
 #include "../operations/removedirectoryoperation.h"
@@ -50,6 +51,13 @@ void PackagerTask::run()
         case RemoveDir:
         {
             RemoveDirectoryOperation * op = new RemoveDirectoryOperation();
+            operation = QSharedPointer<Operation>(op);
+            op->create(path);
+            break;
+        }
+        case AddDir:
+        {
+            AddDirectoryOperation * op = new AddDirectoryOperation();
             operation = QSharedPointer<Operation>(op);
             op->create(path);
             break;
