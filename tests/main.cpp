@@ -21,13 +21,14 @@ int main(int argc, char *argv[])
     Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma");
 #endif
     int ret = 0;
+
     {
-        TestRepository t;
+        TestPackager t;
         ret += QTest::qExec(&t, QStringList());
     }
 
     {
-        TestPackager t;
+        TestRepository t;
         ret += QTest::qExec(&t, QStringList());
     }
 

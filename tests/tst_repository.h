@@ -12,9 +12,9 @@ public:
 
 private Q_SLOTS:
     void initTestCase();
-    void testNewRepository();
-    void testAddPackage();
-    void testFixRepository();
+    void newRepository();
+    void addPackage();
+    void fixRepository();
     void cleanupTestCase();
 };
 

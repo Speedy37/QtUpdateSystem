@@ -11,9 +11,10 @@ public:
     TestPackager() {}
 
 private Q_SLOTS:
-    void packageTest1NewOld();
-    void packageTest1New();
-    void packageTest1Old();
+    void initTestCase();
+    void createPatch();
+    void createComplete();
+    void cleanupTestCase();
 };
 
 #endif // TST_PACKAGER_H

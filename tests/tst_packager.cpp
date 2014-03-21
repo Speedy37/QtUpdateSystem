@@ -1,31 +1,44 @@
 #include "tst_packager.h"
+#include "testutils.h"
 #include <QString>
 #include <QtTest>
 #include <iostream>
 #include <packager.h>
 
-const QString testDir = QString(SRCDIR);
-const QString testNew = "packager_test1";
+const QString testOutput = testDir + "/tst_packager_output";
 
-void TestPackager::packageTest1NewOld()
+void TestPackager::initTestCase()
+{
+    FORCED_CLEANUP
+    QVERIFY(QDir().mkpath(testOutput));
+    QVERIFY(QDir().mkpath(testOutput + "/tmp"));
+}
+
+void TestPackager::cleanupTestCase()
+{
+    if(!TestUtils::cleanup)
+        return;
+
+    QDir(testOutput).removeRecursively();
+}
+
+void TestPackager::createPatch()
 {
     Packager packager;
-    packager.setNewSource(testDir + testNew + "\\new", "REV1");
-    QCOMPARE(packager.newDirectoryPath(), testDir + testNew + "/new/");
+    packager.setNewSource(dataDir + "\\rev1", "REV1");
+    QCOMPARE(packager.newDirectoryPath(), dataDir + "/rev1/");
     QCOMPARE(packager.newRevisionName(), QStringLiteral("REV1"));
 
-    packager.setOldSource(testDir + testNew + "\\old", QStringLiteral("REV2"));
-    QCOMPARE(packager.oldDirectoryPath(), testDir + testNew + "/old/");
+    packager.setOldSource(dataDir + "/rev2", QStringLiteral("REV2"));
+    QCOMPARE(packager.oldDirectoryPath(), dataDir + "/rev2/");
     QCOMPARE(packager.oldRevisionName(), QStringLiteral("REV2"));
 
-    packager.setTmpDirectoryPath(testDir + testNew + "\\tmp");
-    QCOMPARE(packager.tmpDirectoryPath(),testDir + testNew + "/tmp/");
+    packager.setTmpDirectoryPath(testOutput + "\\tmp");
+    QCOMPARE(packager.tmpDirectoryPath(), testOutput + "/tmp/");
 
-    packager.setDeltaFilename(testDir + testNew + "/deltafile_new_old");
-    QCOMPARE(packager.deltaFilename(), testDir + testNew + "/deltafile_new_old");
-    QCOMPARE(packager.deltaMetadataFilename(), testDir + testNew + "/deltafile_new_old.metadata");
-    QFile::remove(packager.deltaFilename());
-    QFile::remove(packager.deltaMetadataFilename());
+    packager.setDeltaFilename(testOutput + "/deltafile_new_old");
+    QCOMPARE(packager.deltaFilename(), testOutput + "/deltafile_new_old");
+    QCOMPARE(packager.deltaMetadataFilename(), testOutput + "/deltafile_new_old.metadata");
     try {
         packager.generate();
     } catch(QString & msg) {
@@ -33,49 +46,22 @@ void TestPackager::packageTest1NewOld()
     }
 }
 
-void TestPackager::packageTest1New()
+void TestPackager::createComplete()
 {
     Packager packager;
-    packager.setNewSource(testDir + testNew + "\\new", "REV1");
-    QCOMPARE(packager.newDirectoryPath(), testDir + testNew + "/new/");
+    packager.setNewSource(dataDir + "\\rev1", "REV1");
+    QCOMPARE(packager.newDirectoryPath(), dataDir + "/rev1/");
     QCOMPARE(packager.newRevisionName(), QStringLiteral("REV1"));
-
     QCOMPARE(packager.oldDirectoryPath(), QString());
     QCOMPARE(packager.oldRevisionName(), QString());
 
-    packager.setTmpDirectoryPath(testDir + testNew + "\\tmp");
-    QCOMPARE(packager.tmpDirectoryPath(),testDir + testNew + "/tmp/");
+    packager.setTmpDirectoryPath(testOutput + "\\tmp");
+    QCOMPARE(packager.tmpDirectoryPath(), testOutput + "/tmp/");
 
-    packager.setDeltaFilename(testDir + testNew + "/deltafile_new");
-    QCOMPARE(packager.deltaFilename(), testDir + testNew + "/deltafile_new");
-    QCOMPARE(packager.deltaMetadataFilename(), testDir + testNew + "/deltafile_new.metadata");
-    QFile::remove(packager.deltaFilename());
-    QFile::remove(packager.deltaMetadataFilename());
-    try {
-        packager.generate();
-    } catch(QString & msg) {
-        QFAIL(msg.toLatin1());
-    }
-}
-
-void TestPackager::packageTest1Old()
-{
-    Packager packager;
-    packager.setNewSource(testDir + testNew + "\\old", "REV1");
-    QCOMPARE(packager.newDirectoryPath(), testDir + testNew + "/old/");
-    QCOMPARE(packager.newRevisionName(), QStringLiteral("REV1"));
-
-    QCOMPARE(packager.oldDirectoryPath(), QString());
-    QCOMPARE(packager.oldRevisionName(), QString());
-
-    packager.setTmpDirectoryPath(testDir + testNew + "\\tmp");
-    QCOMPARE(packager.tmpDirectoryPath(),testDir + testNew + "/tmp/");
-
-    packager.setDeltaFilename(testDir + testNew + "/deltafile_old");
-    QCOMPARE(packager.deltaFilename(), testDir + testNew + "/deltafile_old");
-    QCOMPARE(packager.deltaMetadataFilename(), testDir + testNew + "/deltafile_old.metadata");
-    QFile::remove(packager.deltaFilename());
-    QFile::remove(packager.deltaMetadataFilename());
+    packager.setDeltaFilename(testOutput + "/deltafile_new");
+    QCOMPARE(packager.deltaFilename(), testOutput + "/deltafile_new");
+    packager.setDeltaMetadataFilename(testOutput + "/deltafile_new_metadata");
+    QCOMPARE(packager.deltaMetadataFilename(), testOutput + "/deltafile_new_metadata");
     try {
         packager.generate();
     } catch(QString & msg) {

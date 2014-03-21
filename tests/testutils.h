@@ -18,4 +18,8 @@ public:
     static bool compareJson(const QString &file1, const QString &file2, bool expectParseError = false);
 };
 
+
+const QString testDir = QString(SRCDIR);
+const QString dataDir = QString(SRCDIR) + "data";
+
 #endif // TESTUTILS_H

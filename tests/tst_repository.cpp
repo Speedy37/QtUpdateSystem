@@ -3,19 +3,23 @@
 #include <repository.h>
 #include <QString>
 
-const QString testDir = QString(SRCDIR);
-const QString testNew = testDir + "repository_testNew";
-const QString testAdd = testDir + "repository_testAdd";
+const QString testOutput = testDir + "/tst_repository_output";
+const QString testOutputNew = testOutput + "/new";
+const QString testOutputAddPackage= testOutput + "/add_package";
+const QString dataAddDir = dataDir + "/repository_add";
+const QString dataNewDir = dataDir + "/repository_new";
 
 void TestRepository::initTestCase()
 {
     FORCED_CLEANUP
-    if(!QFile::copy(testAdd + "/init/versions", testAdd + "/dir/versions"))
-        QFAIL("Unable to copy init/versions to dir/versions");
-    if(!QFile::copy(testAdd + "/init/packages", testAdd + "/dir/packages"))
-        QFAIL("Unable to copy init/packages to dir/packages");
-    if(!QFile::copy(testAdd + "/init/current", testAdd + "/dir/current"))
-        QFAIL("Unable to copy init/current to dir/current");
+    QVERIFY(QDir().mkpath(testOutput));
+    QVERIFY(QDir().mkpath(testOutputNew));
+    QVERIFY(QDir().mkpath(testOutputAddPackage));
+    QVERIFY(QFile::copy(dataAddDir + "/init/versions", testOutputAddPackage + "/versions"));
+    QVERIFY(QFile::copy(dataAddDir + "/init/packages", testOutputAddPackage + "/packages"));
+    QVERIFY(QFile::copy(dataAddDir + "/init/current", testOutputAddPackage + "/current"));
+    QVERIFY(QFile::copy(dataAddDir + "/init/test2", testOutputAddPackage + "/test2"));
+    QVERIFY(QFile::copy(dataAddDir + "/init/test2.metadata", testOutputAddPackage + "/test2.metadata"));
 }
 
 void TestRepository::cleanupTestCase()
@@ -23,20 +27,17 @@ void TestRepository::cleanupTestCase()
     if(!TestUtils::cleanup)
         return;
 
-    QFile::remove(testAdd + "/dir/versions");
-    QFile::remove(testAdd + "/dir/packages");
-    QFile::remove(testAdd + "/dir/current");
+    QDir(testOutput).removeRecursively();
 }
 
-void TestRepository::testNewRepository()
+void TestRepository::newRepository()
 {
-    QString dir = testNew + "\\dir";
     Repository pm;
 
     QCOMPARE(pm.directory(), QString());
 
-    pm.setDirectory(dir);
-    QCOMPARE(pm.directory(), testNew + "/dir/");
+    pm.setDirectory(testOutput + "\\new");
+    QCOMPARE(pm.directory(), testOutput + "/new/");
 
     try {
         pm.load();
@@ -49,16 +50,16 @@ void TestRepository::testNewRepository()
 
     try {
         pm.save();
-        QVERIFY(!QFile::exists(testNew + "/expected/current"));
-        QVERIFY(TestUtils::compareJson(testNew + "/dir/packages", testNew + "/expected/packages"));
-        QVERIFY(TestUtils::compareJson(testNew + "/dir/versions", testNew + "/expected/versions"));
+        QVERIFY(!QFile::exists(testOutputNew + "/current"));
+        QVERIFY(TestUtils::compareJson(testOutputNew + "/packages", dataNewDir + "/packages"));
+        QVERIFY(TestUtils::compareJson(testOutputNew + "/versions", dataNewDir + "/versions"));
     } catch(QString & msg) {
         QFAIL(("Save failed : " + msg).toLatin1());
     }
 
     try {
         Repository pm2;
-        pm2.setDirectory(testNew + "/dir");
+        pm2.setDirectory(testOutputNew);
         pm2.load();
         QCOMPARE(pm2.packages().size(), 0);
         QCOMPARE(pm2.versions().size(), 0);
@@ -68,11 +69,11 @@ void TestRepository::testNewRepository()
     }
 }
 
-void TestRepository::testAddPackage()
+void TestRepository::addPackage()
 {
     Repository pm;
-    pm.setDirectory(testAdd + "/dir");
-    QCOMPARE(pm.directory(), testAdd + "/dir/");
+    pm.setDirectory(testOutputAddPackage);
+    QCOMPARE(pm.directory(), testOutputAddPackage + "/");
 
     try {
         pm.load();
@@ -83,10 +84,14 @@ void TestRepository::testAddPackage()
         QFAIL(("Load failed : " + msg).toLatin1());
     }
 
-    pm.addPackage("test2");
-    QCOMPARE(pm.packages().size(), 2);
-    QCOMPARE(pm.versions().size(), 2);
-    QCOMPARE(pm.currentRevision(), QString("REV1"));
+    try {
+        pm.addPackage("test2");
+        QCOMPARE(pm.packages().size(), 2);
+        QCOMPARE(pm.versions().size(), 2);
+        QCOMPARE(pm.currentRevision(), QString("REV1"));
+    } catch(QString & msg) {
+        QFAIL(("Add package failed : " + msg).toLatin1());
+    }
 
     QCOMPARE(pm.setCurrentRevision(QString("REV2")), true);
     QCOMPARE(pm.currentRevision(), QString("REV2"));
@@ -96,16 +101,16 @@ void TestRepository::testAddPackage()
 
     try {
         pm.save();
-        QVERIFY(TestUtils::compareJson(testAdd + "/dir/current", testAdd + "/expected/current"));
-        QVERIFY(TestUtils::compareJson(testAdd + "/dir/packages", testAdd + "/expected/packages"));
-        QVERIFY(TestUtils::compareJson(testAdd + "/dir/versions", testAdd + "/expected/versions"));
+        QVERIFY(TestUtils::compareJson(testOutputAddPackage + "/current", dataAddDir + "/expected/current"));
+        QVERIFY(TestUtils::compareJson(testOutputAddPackage + "/packages", dataAddDir + "/expected/packages"));
+        QVERIFY(TestUtils::compareJson(testOutputAddPackage + "/versions", dataAddDir + "/expected/versions"));
     } catch(QString & msg) {
         QFAIL(("Save failed : " + msg).toLatin1());
     }
 
     try {
         Repository pm2;
-        pm2.setDirectory(testAdd + "/dir");
+        pm2.setDirectory(testOutputAddPackage);
         pm2.load();
         QCOMPARE(pm2.packages().size(), 2);
         QCOMPARE(pm2.versions().size(), 2);
@@ -115,7 +120,7 @@ void TestRepository::testAddPackage()
     }
 }
 
-void TestRepository::testFixRepository()
+void TestRepository::fixRepository()
 {
     QWARN("test not implemented");
 }

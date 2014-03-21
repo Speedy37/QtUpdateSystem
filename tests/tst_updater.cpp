@@ -2,18 +2,18 @@
 #include "testutils.h"
 #include <updater.h>
 
-const QString testDir = QString(SRCDIR);
-const QString testCopy = testDir + "updater_copy";
+const QString dataCopy = dataDir + "/updater_copy";
+const QString testOutput = testDir + "/tst_updater_output";
+const QString testOutputCopy = testOutput + "/copy";
 
 void TestUpdater::initTestCase()
 {
     FORCED_CLEANUP
-    {
-        QDir dir(testCopy);
-        dir.mkpath("local_copy");
-        QFile::copy(testCopy + "/init_repo/status.ini", testCopy + "/local_copy/status.ini");
-        QFile::copy(testCopy + "/init_repo/add.txt", testCopy + "/local_copy/add.txt");
-    }
+    QVERIFY(QDir().mkpath(testOutput));
+    QVERIFY(QDir().mkpath(testOutputCopy));
+    QVERIFY(QDir().mkpath(testOutput + "/tmp"));
+    QVERIFY(QFile::copy(dataCopy + "/init_repo/status.ini", testOutputCopy + "/status.ini"));
+    QVERIFY(QFile::copy(dataCopy + "/init_repo/add.txt", testOutputCopy + "/add.txt"));
 }
 
 void TestUpdater::cleanupTestCase()
@@ -21,25 +21,24 @@ void TestUpdater::cleanupTestCase()
     if(!TestUtils::cleanup)
         return;
 
-    QDir(testCopy + "/local_copy").removeRecursively();
+    QDir(testOutput).removeRecursively();
 }
 
 void TestUpdater::updaterCopy()
 {
-    QVERIFY(QFile::exists(testCopy + "/local_copy/add.txt"));
     Updater u;
-    u.setLocalRepository(testCopy + "/local_repo");
-    u.copy(testCopy + "/local_copy");
+    u.setLocalRepository(dataCopy + "/local_repo");
+    u.copy(testOutputCopy);
     QSignalSpy spy(&u, SIGNAL(copyFinished(bool)));
     QVERIFY(spy.wait());
 
     try {
-        (TestUtils::assertFileEquals(testCopy + "/local_repo/patch_same.txt", testCopy + "/local_copy/patch_same.txt"));
-        (TestUtils::assertFileEquals(testCopy + "/local_repo/path_diff.txt", testCopy + "/local_copy/path_diff.txt"));
-        (TestUtils::assertFileEquals(testCopy + "/local_repo/path_diff2.txt", testCopy + "/local_copy/path_diff2.txt"));
-        (TestUtils::assertFileEquals(testCopy + "/local_repo/rmfile.txt", testCopy + "/local_copy/rmfile.txt"));
+        (TestUtils::assertFileEquals(dataCopy + "/local_repo/patch_same.txt", testOutputCopy + "/patch_same.txt"));
+        (TestUtils::assertFileEquals(dataCopy + "/local_repo/path_diff.txt", testOutputCopy + "/path_diff.txt"));
+        (TestUtils::assertFileEquals(dataCopy + "/local_repo/path_diff2.txt", testOutputCopy + "/path_diff2.txt"));
+        (TestUtils::assertFileEquals(dataCopy + "/local_repo/rmfile.txt", testOutputCopy + "/rmfile.txt"));
     } catch(QString &msg) {
         QFAIL(msg.toLatin1());
     }
-    QVERIFY(!QFile::exists(testCopy + "/local_copy/add.txt"));
+    QVERIFY(!QFile::exists(testOutputCopy + "/add.txt"));
 }
