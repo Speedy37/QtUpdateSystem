@@ -22,6 +22,9 @@ int main(int argc, char *argv[])
 #endif
     int ret = 0;
 
+    QDir().mkpath(dataDir + "/rev1/empty_dir");
+    QDir().mkpath(dataDir + "/rev1/empty_dir2");
+
     {
         TestPackager t;
         ret += QTest::qExec(&t, QStringList());

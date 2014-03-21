@@ -76,14 +76,15 @@ void TestUpdateChain::updateToV1()
         QCOMPARE(spyWarnings.size(), 0);
     }
     try {
-        (TestUtils::assertFileEquals(testOutputLocalRepo + "/patch_same.txt", dataDir + "/rev1/patch_same.txt"));
+        (TestUtils::assertFileEquals(testOutputLocalRepo + "/dir2/patch_same.txt", dataDir + "/rev1/dir2/patch_same.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff.txt", dataDir + "/rev1/path_diff.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev1/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/rmfile.txt", dataDir + "/rev1/rmfile.txt"));
     } catch(QString &msg) {
         QFAIL(msg.toLatin1());
     }
-    QVERIFY(!QFile::exists(testOutputLocalRepo + "/local_repo/add.txt"));
+    QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir").isDir());
+    QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
 }
 
 void TestUpdateChain::createPatchV1toV2()
@@ -134,14 +135,16 @@ void TestUpdateChain::updateToV2()
         QCOMPARE(spyWarnings.size(), 0);
     }
     try{
-        (TestUtils::assertFileEquals(testOutputLocalRepo + "/patch_same.txt", dataDir + "/rev2/patch_same.txt"));
+        (TestUtils::assertFileEquals(testOutputLocalRepo + "/dir2/patch_same.txt", dataDir + "/rev2/dir2/patch_same.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff.txt", dataDir + "/rev2/path_diff.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev2/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/add.txt", dataDir + "/rev2/add.txt"));
+        (TestUtils::assertFileEquals(testOutputLocalRepo + "/empty_dir", dataDir + "/rev2/empty_dir"));
     } catch(QString &msg) {
         QFAIL(msg.toLatin1());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/rmfile.txt"));
+    QVERIFY(!QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
 }
 
 void TestUpdateChain::fallbackToV1()
@@ -173,10 +176,11 @@ void TestUpdateChain::fallbackToV1()
         QCOMPARE(spy[0][0].toBool(), true);
         QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
         QCOMPARE(u.localRevision(), QString("1"));
-        QCOMPARE(spyWarnings.size(), 4);
+        QCOMPARE(spyWarnings.size(), 1);
+        qDebug() << (spyWarnings[0][0].value<Warning>().message());
     }
     try{
-        (TestUtils::assertFileEquals(testOutputLocalRepo + "/patch_same.txt", dataDir + "/rev1/patch_same.txt"));
+        (TestUtils::assertFileEquals(testOutputLocalRepo + "/dir2/patch_same.txt", dataDir + "/rev1/dir2/patch_same.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff.txt", dataDir + "/rev1/path_diff.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev1/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/rmfile.txt", dataDir + "/rev1/rmfile.txt"));
@@ -184,6 +188,8 @@ void TestUpdateChain::fallbackToV1()
         QFAIL(msg.toLatin1());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/add.txt"));
+    QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir").isDir());
+    QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
 }
 
 void TestUpdateChain::updateToV2WithFailures()
@@ -222,14 +228,16 @@ void TestUpdateChain::updateToV2WithFailures()
         QCOMPARE(spyWarnings[0][0].value<Warning>().type(), Warning::OperationPreparation);
     }
     try {
-        (TestUtils::assertFileEquals(testOutputLocalRepo + "/patch_same.txt", dataDir + "/rev2/patch_same.txt"));
+        (TestUtils::assertFileEquals(testOutputLocalRepo + "/dir2/patch_same.txt", dataDir + "/rev2/dir2/patch_same.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff.txt", dataDir + "/rev2/path_diff.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev2/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/add.txt", dataDir + "/rev2/add.txt"));
+        (TestUtils::assertFileEquals(testOutputLocalRepo + "/empty_dir", dataDir + "/rev2/empty_dir"));
     } catch(QString &msg) {
         QFAIL(msg.toLatin1());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/rmfile.txt"));
+    QVERIFY(!QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
 }
 
 void TestUpdateChain::integrityCheck()
@@ -256,11 +264,14 @@ void TestUpdateChain::integrityCheck()
         QCOMPARE(u.localRevision(), QString("2"));
     }
     try {
-        (TestUtils::assertFileEquals(testOutputLocalRepo + "/patch_same.txt", dataDir + "/rev2/patch_same.txt"));
+        (TestUtils::assertFileEquals(testOutputLocalRepo + "/dir2/patch_same.txt", dataDir + "/rev2/dir2/patch_same.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff.txt", dataDir + "/rev2/path_diff.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev2/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/add.txt", dataDir + "/rev2/add.txt"));
+        (TestUtils::assertFileEquals(testOutputLocalRepo + "/empty_dir", dataDir + "/rev2/empty_dir"));
     } catch(QString &msg) {
         QFAIL(msg.toLatin1());
     }
+    QVERIFY(!QFile::exists(testOutputLocalRepo + "/rmfile.txt"));
+    QVERIFY(!QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
 }

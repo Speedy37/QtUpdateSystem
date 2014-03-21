@@ -151,8 +151,6 @@ Operation::Status AddOperation::localDataStatus()
             qCDebug(LOG_ADDOP) << "File is already at the right version" << path();
             return Valid;
         }
-
-        throwWarning(QObject::tr("File already exists and will be overwrited"));
     }
 
     file.setFileName(dataFilename());

@@ -28,7 +28,7 @@ void RemoveOperation::create(const QString &path, const QString &oldFilename)
 Operation::Status RemoveOperation::localDataStatus()
 {
     QFileInfo fileInfo(localFilename());
-    if(!fileInfo.exists())
+    if(!fileInfo.isFile())
     {
         qCDebug(LOG_RMFILEOP) << "File was already removed" << path();
         return Valid;

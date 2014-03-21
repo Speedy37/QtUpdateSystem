@@ -16,7 +16,7 @@ void RemoveDirectoryOperation::create(const QString &path)
 Operation::Status RemoveDirectoryOperation::localDataStatus()
 {
     QFileInfo dirInfo(localFilename());
-    if(!dirInfo.exists())
+    if(!dirInfo.isDir())
     {
         qCDebug(LOG_RMDIROP) << "Directory " << path() << " was already removed";
         return Valid;
