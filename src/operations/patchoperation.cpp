@@ -203,7 +203,7 @@ void PatchOperation::create(const QString &path, const QString &oldFilename, con
         m_localSize = file.size();
     }
 
-    if(m_localSize == m_finalSize && m_finalSha1 == m_finalSha1)
+    if(m_localSize == m_finalSize && m_localSha1 == m_finalSha1)
     {
         return;
     }
