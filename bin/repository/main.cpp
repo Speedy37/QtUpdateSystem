@@ -117,9 +117,9 @@ int main(int argc, char *argv[])
             Repository repository(args.at(1));
             repository.load();
             if(command == "addpackage")
-                repository.addPackage(args.at(1));
+                repository.addPackage(args.at(2));
             else
-                repository.removePackage(args.at(1));
+                repository.removePackage(args.at(2));
             return 0;
         }
     }
