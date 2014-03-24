@@ -54,6 +54,9 @@ public:
 
     QString errorString() const;
     Status status() const;
+
+    // Update methods
+    void setup(const QString &updateDir, const QString &tmpUpdateDir, int uniqueid);
     void checkLocalData(); // FileManager thread
     void apply(); // FileManager thread
     virtual void cleanup();  // DownloadManager thread
@@ -65,6 +68,7 @@ public:
     void setWarningListener(std::function<void(const QString &message)> listener);
 
 private:
+    Status m_status;
     QString m_localFilename, m_dataFilename;
     Q_DISABLE_COPY(Operation)
 
@@ -79,7 +83,6 @@ protected:
     std::function<void(const QString &message)> m_warningListener;
     qint64 m_offset, m_size;
     QString m_path, m_sha1, m_errorString;
-    Status m_status;
 };
 
 inline qint64 Operation::offset() const

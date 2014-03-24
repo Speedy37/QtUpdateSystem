@@ -149,10 +149,7 @@ void DownloadManager::updatePackageLoop()
 {
     if(downloadPathPos < downloadPath.size())
     {
-        const Package & package = downloadPath.at(downloadPathPos);
-        metadata.setPackage(package);
-        metadataRequest = get(package.metadataUrl());
-        connect(metadataRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackageMetadataFinished);
+        loadPackageMetadata();
     }
     else
     {
@@ -191,10 +188,7 @@ void DownloadManager::updatePackageLoop()
             if(isFixingError())
             {
                 downloadPathPos = 0;
-                const Package & package = downloadPath.at(downloadPathPos);
-                metadata.setPackage(package);
-                metadataRequest = get(package.metadataUrl());
-                connect(metadataRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackageMetadataFinished);
+                loadPackageMetadata();
             }
             else
             {
@@ -217,6 +211,23 @@ void DownloadManager::updatePackageLoop()
     }
 }
 
+void DownloadManager::loadPackageMetadata()
+{
+    const Package & package = downloadPath.at(downloadPathPos);
+    metadata.setPackage(package);
+    auto it = m_cachedMetadata.find(package.url());
+    if(it != m_cachedMetadata.end())
+    {
+        metadata = it.value();
+        packageMetadataReady();
+    }
+    else
+    {
+        metadataRequest = get(package.metadataUrl());
+        connect(metadataRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackageMetadataFinished);
+    }
+}
+
 /**
    \brief Handle the download package metadata
    Parse package metadata's
@@ -231,66 +242,72 @@ void DownloadManager::updatePackageMetadataFinished()
             throw metadataRequest->errorString();
 
         metadata.fromJsonObject(JsonUtil::fromJson(metadataRequest->readAll()));
-        metadata.setup(m_updateDirectory, m_updateTmpDirectory);
-
-        if(metadata.operationCount() == 0)
-        {
-            ++downloadPathPos;
-            updatePackageLoop();
-            return;
-        }
-
-        preparedOperationIndex = -1;
-        operationIndex = 0;
-        operation = metadata.operation(0);
-        dataRequest = nullptr;
-
-        if(!isFixingError())
-        {
-            Q_ASSERT(!isLastPackage() || m_fileListAfterUpdate.size() == 0);
-            Q_ASSERT(!isLastPackage() || m_dirListAfterUpdate.size() == 0);
-            foreach(QSharedPointer<Operation> op, metadata.operations())
-            {
-                if(isLastPackage())
-                {
-                    switch (op->fileType()) {
-                    case Operation::File:
-                        m_fileListAfterUpdate.insert(op->path());
-                        break;
-                    case Operation::Folder:
-                        m_dirListAfterUpdate.insert(op->path());
-                        break;
-                    default:
-                        break;
-                    }
-                }
-
-                // Ask the file manager to take care of pre-apply job
-                // Jobs are automatically queued by Qt signals & slots
-                emit operationLoaded(op);
-            }
-        }
-        else
-        {
-            while(operationIndex < metadata.operationCount())
-            {
-                operation = metadata.operation(operationIndex);
-                if(operation->path() == fixingPath)
-                {
-                    preparedOperationIndex = operationIndex;
-                    updateDataStartDownload(operation->offset() + operation->size());
-                    return;
-                }
-                ++operationIndex;
-            }
-            if(isLastPackage())
-                failure(fixingPath, Fixed);
-            updatePackageLoop();
-        }
+        m_cachedMetadata.insert(metadata.package().url(), metadata);
+        packageMetadataReady();
     }
     catch(const QString & msg)
     {
         emit finished(msg);
+    }
+}
+
+void DownloadManager::packageMetadataReady()
+{
+    metadata.setup(m_updateDirectory, m_updateTmpDirectory);
+
+    if(metadata.operationCount() == 0)
+    {
+        ++downloadPathPos;
+        updatePackageLoop();
+        return;
+    }
+
+    preparedOperationIndex = -1;
+    operationIndex = 0;
+    operation = metadata.operation(0);
+    dataRequest = nullptr;
+
+    if(!isFixingError())
+    {
+        Q_ASSERT(!isLastPackage() || m_fileListAfterUpdate.size() == 0);
+        Q_ASSERT(!isLastPackage() || m_dirListAfterUpdate.size() == 0);
+        foreach(QSharedPointer<Operation> op, metadata.operations())
+        {
+            if(isLastPackage())
+            {
+                switch (op->fileType()) {
+                case Operation::File:
+                    m_fileListAfterUpdate.insert(op->path());
+                    break;
+                case Operation::Folder:
+                    m_dirListAfterUpdate.insert(op->path());
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            // Ask the file manager to take care of pre-apply job
+            // Jobs are automatically queued by Qt signals & slots
+            emit operationLoaded(op);
+        }
+    }
+    else
+    {
+        while(operationIndex < metadata.operationCount())
+        {
+            operation = metadata.operation(operationIndex);
+            if(operation->path() == fixingPath)
+            {
+                preparedOperationIndex = operationIndex;
+                updateDataStartDownload(operation->offset() + operation->size());
+                return;
+            }
+            ++operationIndex;
+        }
+        if(isLastPackage())
+            failure(fixingPath, Fixed);
+        updatePackageLoop();
     }
 }
 

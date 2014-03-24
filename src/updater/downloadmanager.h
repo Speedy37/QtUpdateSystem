@@ -57,6 +57,8 @@ private:
     void success();
     void failure(const QString &path, Failure reason);
     void updatePackageLoop();
+    void loadPackageMetadata();
+    void packageMetadataReady();
     void updateDataReadAll();
     void updateDataStartDownload();
     void updateDataStartDownload(qint64 endOffset);
@@ -84,6 +86,9 @@ private:
     // Network
     QNetworkAccessManager *m_manager;
     QNetworkReply *packagesListRequest, *metadataRequest, *dataRequest;
+
+    // Cache
+    QMap<QString, PackageMetadata> m_cachedMetadata;
 
     // Packages
     Packages m_packages;

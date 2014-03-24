@@ -2,6 +2,7 @@
 #include <QLoggingCategory>
 #include <QFile>
 #include <QCryptographicHash>
+#include <QRegularExpression>
 
 Q_LOGGING_CATEGORY(LOG_OP, "updatesystem.common.operation")
 
@@ -28,6 +29,13 @@ QString Operation::sha1(QFile * file) const
     file->close();
 
     return QString(sha1Hash.result().toHex());
+}
+
+void Operation::setup(const QString &updateDir, const QString &tmpUpdateDir, int uniqueid)
+{
+    m_status = Unknown;
+    setDataFilename(tmpUpdateDir + "Operation" + QString::number(uniqueid));
+    setUpdateDirectory(updateDir);
 }
 
 void Operation::checkLocalData()

@@ -201,6 +201,7 @@ void TestUpdateChain::updateToV2WithFailures()
     pm.save();
 
     QFile::remove(testOutputLocalRepo + "/path_diff.txt");
+    QFile::remove(testOutputLocalRepo + "/path_diff2.txt");
     Updater u;
     u.setLocalRepository(testOutputLocalRepo);
     QCOMPARE(u.localRevision(), QString("1"));
@@ -222,10 +223,13 @@ void TestUpdateChain::updateToV2WithFailures()
         QCOMPARE(spy[0][0].toBool(), true);
         QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
         QCOMPARE(u.localRevision(), QString("2"));
-        QCOMPARE(spyWarnings.size(), 1);
+        QCOMPARE(spyWarnings.size(), 2);
         QCOMPARE(spyWarnings[0].size(), 1);
         QCOMPARE(spyWarnings[0][0].typeName(), "Warning");
         QCOMPARE(spyWarnings[0][0].value<Warning>().type(), Warning::OperationPreparation);
+        QCOMPARE(spyWarnings[1].size(), 1);
+        QCOMPARE(spyWarnings[1][0].typeName(), "Warning");
+        QCOMPARE(spyWarnings[1][0].value<Warning>().type(), Warning::OperationPreparation);
     }
     try {
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/dir2/patch_same.txt", dataDir + "/rev2/dir2/patch_same.txt"));
