@@ -6,7 +6,7 @@
 #include <QLoggingCategory>
 #include <QCryptographicHash>
 #include <QProcess>
-#include <QTemporaryFile>
+#include <QTemporaryDir>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLoggingCategory>
@@ -19,9 +19,14 @@
 
 Q_LOGGING_CATEGORY(LOG_PACKAGER, "updatesystem.packager")
 
-Packager::Packager(QObject *parent) : QObject(parent)
+Packager::Packager(QObject *parent) : QObject(parent), m_temporaryDir(nullptr)
 {
 
+}
+
+Packager::~Packager()
+{
+    delete m_temporaryDir;
 }
 
 /**
@@ -90,6 +95,14 @@ PackageMetadata Packager::generate()
 
     qCDebug(LOG_PACKAGER) << "Creating operations...";
     {
+        if(tmpDirectoryPath().isEmpty())
+        {
+            m_temporaryDir = new QTemporaryDir;
+            if(!m_temporaryDir->isValid())
+                throw tr("Unable to create a temporary directory");
+            setTmpDirectoryPath(m_temporaryDir->path());
+        }
+
         QThreadPool threadPool;
         for(size_t i = 0; i < m_tasks.size(); ++i)
         {

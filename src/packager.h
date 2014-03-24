@@ -21,6 +21,8 @@ private:
 
 public:
     Packager(QObject * parent = 0);
+    ~Packager();
+
     PackageMetadata generateForRepository(const QString &repositoryPath);
     PackageMetadata generate();
 
@@ -49,6 +51,9 @@ private:
     QString m_newDirectoryPath, m_newRevisionName;
     QString m_deltaFilename, m_deltaMetadataFilename;
     QString m_tmpDirectoryPath;
+
+    // Internal
+    QTemporaryDir *m_temporaryDir;
 
 private:
     QFileInfoList dirList(const QDir &dir);

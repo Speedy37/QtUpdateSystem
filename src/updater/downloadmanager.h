@@ -13,6 +13,7 @@
 
 class QNetworkReply;
 class QNetworkAccessManager;
+class QTemporaryDir;
 class Operation;
 
 class DownloadManager : public QObject
@@ -87,8 +88,9 @@ private:
     QNetworkAccessManager *m_manager;
     QNetworkReply *packagesListRequest, *metadataRequest, *dataRequest;
 
-    // Cache
+    // Internal
     QMap<QString, PackageMetadata> m_cachedMetadata;
+    QTemporaryDir * m_temporaryDir;
 
     // Packages
     Packages m_packages;

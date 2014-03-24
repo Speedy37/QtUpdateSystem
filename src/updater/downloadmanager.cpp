@@ -10,6 +10,7 @@
 #include <QNetworkReply>
 #include <QAuthenticator>
 #include <QDir>
+#include <QTemporaryDir>
 
 Q_LOGGING_CATEGORY(LOG_DLMANAGER, "updatesystem.updater.dlmanager")
 
@@ -17,7 +18,7 @@ Q_DECLARE_METATYPE(QSharedPointer<Operation>)
 int OperationPointerMetaType = qMetaTypeId< QSharedPointer<Operation> >();
 
 DownloadManager::DownloadManager(const LocalRepository &sourceRepository, Updater *updater) :
-    QObject(), m_localRepository(sourceRepository)
+    QObject(), m_localRepository(sourceRepository), m_temporaryDir(nullptr)
 {
 
     // Make a safe copy of important properties
@@ -69,7 +70,7 @@ DownloadManager::DownloadManager(const LocalRepository &sourceRepository, Update
 
 DownloadManager::~DownloadManager()
 {
-
+    delete m_temporaryDir;
 }
 
 /**
@@ -83,6 +84,17 @@ DownloadManager::~DownloadManager()
  */
 void DownloadManager::update()
 {
+    if(m_updateTmpDirectory.isEmpty())
+    {
+        m_temporaryDir = new QTemporaryDir;
+        if(!m_temporaryDir->isValid())
+        {
+            emit finished(tr("Unable to create a temporary directory"));
+            return;
+        }
+        m_updateTmpDirectory = Utils::cleanPath(m_temporaryDir->path());
+    }
+
     packagesListRequest = get(QStringLiteral("packages"));
     connect(packagesListRequest, &QNetworkReply::finished, this, &DownloadManager::updatePackagesListRequestFinished);
 }
