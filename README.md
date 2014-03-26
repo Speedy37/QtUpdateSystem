@@ -9,7 +9,33 @@ The goals of this library is to provide a very efficient system to update files 
  - working over HTTP(s) with optional basic authentication
  - publishing updating in a matter of seconds
  - checking & applying updates at the same the files are downloaded
+ - automatic error handling and files corrections
+ - checking local file integrity
 
 To achieve thoses goals this library depends on :
  - xdelta3 : for creating patches (http://xdelta.org/)
  - lzma : as a powerfull data compressor (http://tukaani.org/xz/)
+
+How to use
+--------------
+
+The library is composed of 3 classes :
+ - updater : for client side update
+ - packager : for packages creation
+ - repository : for managing packages and versions
+
+Here is list of the most useful functions and a brief description of what it does
+
+**Updater**
+ - checkForUpdates : check from the remote repository if an update is available
+ - update : update files
+ - copy : copy the repository to another place
+
+**Packager**
+ - generate : generate a package
+
+**Repository**
+ - addPackage : add a package to the repository
+ - removePackage : remove a package from the repository
+ - simplify : remove useless packages
+ - setCurrentRevision : change the current revision of the repository
