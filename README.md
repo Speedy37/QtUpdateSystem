@@ -16,6 +16,18 @@ To achieve thoses goals this library depends on :
  - xdelta3 : for creating patches (http://xdelta.org/)
  - lzma : as a powerfull data compressor (http://tukaani.org/xz/)
 
+How to install
+--------------
+
+Once you have cloned this repository, the prefered way to compile the library is to use the Qbs build suite.
+You can enable it in QtCreator : Help > About Plugins > QbsProjectManager
+Simply load the QtUpdateSystem.qbs or src/src.qbs and you are ready.
+
+Qbs allow easy inclusion of library by adding  : 
+`Depends { name: "qtupdatesystem" }`
+
+For more informations about Qt : http://qt-project.org/wiki/qbs
+
 How to use
 --------------
 
