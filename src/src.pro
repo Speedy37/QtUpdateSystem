@@ -4,13 +4,11 @@ QT       -= gui
 TARGET = QtUpdateSystem
 TEMPLATE = lib
 
-DEFINES += QTUPDATESYSTEM_LIBRARY LZMA_API_STATIC
+DEFINES += QTUPDATESYSTEM_LIBRARY
 
 Release:DEFINES += NOLOGDEBUG NOLOGTRACE
 
 CONFIG += c++11
-
-INCLUDEPATH += ../QtLog/
 
 SOURCES += \
     operations/addoperation.cpp \
@@ -32,7 +30,8 @@ SOURCES += \
     common/utils.cpp \
     repository.cpp \
     updater/copythread.cpp \
-    updater/localrepository.cpp
+    updater/localrepository.cpp \
+    errors/warning.cpp
 
 HEADERS +=\
     qtupdatesystem_global.h \
@@ -56,7 +55,8 @@ HEADERS +=\
     repository.h \
     updater/oneobjectthread.h \
     updater/copythread.h \
-    updater/localrepository.h
+    updater/localrepository.h \
+    errors/warning.h
 
 unix {
     target.path = /usr/lib
