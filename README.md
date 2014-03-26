@@ -1,6 +1,9 @@
 QtUpdateSystem
 ==============
 
+Provide an easy to use and very efficient update system for small to big archives.
+With this library you can auto update your application or whatever you want (size limit is at 2^64-1) with only a static file based repository.
+
 This library is still experimental and currently used by the Stargate No Limits and Stargate Network teams to publish their updates.
 
 The goals of this library is to provide a very efficient system to update files by :
