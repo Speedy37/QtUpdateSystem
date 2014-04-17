@@ -10,7 +10,7 @@ const QString AddDirectoryOperation::Action = QStringLiteral("mkdir");
 
 void AddDirectoryOperation::create(const QString &path)
 {
-    m_path = path;
+    setPath(path);
 }
 
 Operation::FileType AddDirectoryOperation::fileType() const

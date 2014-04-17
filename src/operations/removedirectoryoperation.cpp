@@ -10,7 +10,7 @@ const QString RemoveDirectoryOperation::Action = QStringLiteral("rmdir");
 
 void RemoveDirectoryOperation::create(const QString &path)
 {
-    m_path = path;
+    setPath(path);
 }
 
 Operation::Status RemoveDirectoryOperation::localDataStatus()
