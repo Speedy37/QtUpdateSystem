@@ -9,9 +9,9 @@
 #include <QDebug>
 
 #if defined(ERROR_CONTEXT)
-#  define EMIT_WARNING(type, message, operation) emit warning(Warning(Warning::##type, message, operation, __FILE__, __LINE__, Q_FUNC_INFO))
+#  define EMIT_WARNING(type, message, operation) emit warning(Warning(Warning::type, message, operation, __FILE__, __LINE__, Q_FUNC_INFO))
 #else
-#  define EMIT_WARNING(type, message, operation) emit warning(Warning(Warning::##type, message, operation))
+#  define EMIT_WARNING(type, message, operation) emit warning(Warning(Warning::type, message, operation))
 #endif
 
 class QTUPDATESYSTEMSHARED_EXPORT Warning
