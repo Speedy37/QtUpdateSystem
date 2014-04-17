@@ -1,6 +1,7 @@
 #include "tst_updater.h"
 #include "testutils.h"
 #include <updater.h>
+#include <QFileInfo>
 
 const QString dataCopy = dataDir + "/updater_copy";
 const QString dataRev1Local = dataDir + "/rev1_local";
@@ -69,6 +70,14 @@ void TestUpdater::updaterRemoveOtherFiles()
     QVERIFY(QFile::exists(testOutputIsManaged + "/status.ini"));
     QVERIFY(QFile::exists(testOutputIsManaged + "/unmanaged.ini"));
     QVERIFY(QDir(testOutputIsManaged + "/dirs/empty_dir1").exists());
+
+    u.removeOtherFiles([](QFileInfo file) {
+        return file.fileName() != "unmanaged.ini";
+    });
+    QVERIFY(QFile::exists(testOutputIsManaged + "/status.ini"));
+    QVERIFY(QFile::exists(testOutputIsManaged + "/unmanaged.ini"));
+    QVERIFY(!QDir(testOutputIsManaged + "/dirs/empty_dir1").exists());
+
     u.removeOtherFiles();
     QVERIFY(QFile::exists(testOutputIsManaged + "/status.ini"));
     QVERIFY(!QFile::exists(testOutputIsManaged + "/unmanaged.ini"));
