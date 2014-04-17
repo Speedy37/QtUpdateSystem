@@ -12,6 +12,8 @@ public:
 private Q_SLOTS:
     void initTestCase();
     void updaterCopy();
+    void updaterIsManaged();
+    void updaterRemoveOtherFiles();
     void cleanupTestCase();
 };
 

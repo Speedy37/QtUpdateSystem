@@ -84,7 +84,7 @@ void TestUpdateChain::updateToV1()
         QFAIL(msg.toLatin1());
     }
     QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir").isDir());
-    QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
+    QVERIFY(QFileInfo(testOutputLocalRepo + "/dirs/empty_dir2").isDir());
 }
 
 void TestUpdateChain::createPatchV1toV2()
@@ -144,7 +144,7 @@ void TestUpdateChain::updateToV2()
         QFAIL(msg.toLatin1());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/rmfile.txt"));
-    QVERIFY(!QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
+    QVERIFY(!QFileInfo(testOutputLocalRepo + "/dirs/empty_dir2").isDir());
 }
 
 void TestUpdateChain::fallbackToV1()
@@ -189,7 +189,7 @@ void TestUpdateChain::fallbackToV1()
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/add.txt"));
     QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir").isDir());
-    QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
+    QVERIFY(QFileInfo(testOutputLocalRepo + "/dirs/empty_dir2").isDir());
 }
 
 void TestUpdateChain::updateToV2WithFailures()
@@ -241,7 +241,7 @@ void TestUpdateChain::updateToV2WithFailures()
         QFAIL(msg.toLatin1());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/rmfile.txt"));
-    QVERIFY(!QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
+    QVERIFY(!QFileInfo(testOutputLocalRepo + "/dirs/empty_dir2").isDir());
 }
 
 void TestUpdateChain::integrityCheck()
@@ -277,5 +277,5 @@ void TestUpdateChain::integrityCheck()
         QFAIL(msg.toLatin1());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/rmfile.txt"));
-    QVERIFY(!QFileInfo(testOutputLocalRepo + "/empty_dir2").isDir());
+    QVERIFY(!QFileInfo(testOutputLocalRepo + "/dirs/empty_dir2").isDir());
 }
