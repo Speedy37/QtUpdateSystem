@@ -41,8 +41,8 @@ void TestPackager::createPatch()
     QCOMPARE(packager.deltaMetadataFilename(), testOutput + "/deltafile_new_old.metadata");
     try {
         packager.generate();
-    } catch(QString & msg) {
-        QFAIL(msg.toLatin1());
+    } catch(std::exception & msg) {
+        QFAIL(msg.what());
     }
 }
 
@@ -64,7 +64,7 @@ void TestPackager::createComplete()
     QCOMPARE(packager.deltaMetadataFilename(), testOutput + "/deltafile_new_metadata");
     try {
         packager.generate();
-    } catch(QString & msg) {
-        QFAIL(msg.toLatin1());
+    } catch(std::exception & msg) {
+        QFAIL(msg.what());
     }
 }

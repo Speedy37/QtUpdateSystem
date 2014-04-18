@@ -78,9 +78,9 @@ int main(int argc, char *argv[])
             packager.generate();
             return 0;
         }
-        catch(QString &str)
+        catch(std::exception &e)
         {
-            qCritical() << str.toLatin1();
+            qCritical() << e.what();
             return 2;
         }
     }

@@ -1,6 +1,7 @@
 #include "downloadmanager.h"
 #include "oneobjectthread.h"
 #include "filemanager.h"
+#include "../exceptions.h"
 #include "../common/packages.h"
 #include "../common/jsonutil.h"
 #include "../common/packagemetadata.h"
@@ -111,7 +112,7 @@ void DownloadManager::updatePackagesListRequestFinished()
     try
     {
         if(packagesListRequest->error() != QNetworkReply::NoError)
-            throw packagesListRequest->errorString();
+            THROW(RequestFailed, packagesListRequest->errorString());
 
         qCDebug(LOG_DLMANAGER) << "Packages list downloaded";
 
@@ -145,9 +146,9 @@ void DownloadManager::updatePackagesListRequestFinished()
 
         updatePackageLoop();
     }
-    catch(const QString & msg)
+    catch(std::exception & msg)
     {
-        emit finished(msg);
+        emit finished(msg.what());
     }
 }
 
@@ -251,15 +252,14 @@ void DownloadManager::updatePackageMetadataFinished()
     try
     {
         if(metadataRequest->error() != QNetworkReply::NoError)
-            throw metadataRequest->errorString();
-
+            THROW(RequestFailed, metadataRequest->errorString());
         metadata.fromJsonObject(JsonUtil::fromJson(metadataRequest->readAll()));
         m_cachedMetadata.insert(metadata.package().url(), metadata);
         packageMetadataReady();
     }
-    catch(const QString & msg)
+    catch(std::exception & msg)
     {
-        emit finished(msg);
+        emit finished(msg.what());
     }
 }
 

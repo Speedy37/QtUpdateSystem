@@ -2,6 +2,7 @@
 #include "testutils.h"
 #include <repository.h>
 #include <QString>
+#include <exceptions.h>
 
 const QString testOutput = testDir + "/tst_repository_output";
 const QString testOutputNew = testOutput + "/new";
@@ -44,8 +45,8 @@ void TestRepository::newRepository()
         QCOMPARE(pm.packages().size(), 0);
         QCOMPARE(pm.versions().size(), 0);
         QVERIFY(pm.currentRevision().isEmpty());
-    } catch(QString & msg) {
-        QFAIL(("Load failed : " + msg).toLatin1());
+    } catch(std::exception & msg) {
+        QFAIL(QStringLiteral("Load failed : %1").arg(msg.what()).toLatin1());
     }
 
     try {
@@ -53,8 +54,8 @@ void TestRepository::newRepository()
         QVERIFY(!QFile::exists(testOutputNew + "/current"));
         QVERIFY(TestUtils::compareJson(testOutputNew + "/packages", dataNewDir + "/packages"));
         QVERIFY(TestUtils::compareJson(testOutputNew + "/versions", dataNewDir + "/versions"));
-    } catch(QString & msg) {
-        QFAIL(("Save failed : " + msg).toLatin1());
+    } catch(std::exception & msg) {
+        QFAIL(QStringLiteral("Save failed : %1").arg(msg.what()).toLatin1());
     }
 
     try {
@@ -64,8 +65,8 @@ void TestRepository::newRepository()
         QCOMPARE(pm2.packages().size(), 0);
         QCOMPARE(pm2.versions().size(), 0);
         QVERIFY(pm2.currentRevision().isEmpty());
-    } catch(QString & msg) {
-        QFAIL(("2nd load failed : " + msg).toLatin1());
+    } catch(std::exception & msg) {
+        QFAIL(QStringLiteral("2nd Load failed : %1").arg(msg.what()).toLatin1());
     }
 }
 
@@ -80,8 +81,8 @@ void TestRepository::addPackage()
         QCOMPARE(pm.packages().size(), 1);
         QCOMPARE(pm.versions().size(), 1);
         QCOMPARE(pm.currentRevision(), QString("REV1"));
-    } catch(QString & msg) {
-        QFAIL(("Load failed : " + msg).toLatin1());
+    } catch(std::exception & msg) {
+        QFAIL(QStringLiteral("Load failed : %1").arg(msg.what()).toLatin1());
     }
 
     try {
@@ -89,8 +90,8 @@ void TestRepository::addPackage()
         QCOMPARE(pm.packages().size(), 2);
         QCOMPARE(pm.versions().size(), 2);
         QCOMPARE(pm.currentRevision(), QString("REV1"));
-    } catch(QString & msg) {
-        QFAIL(("Add package failed : " + msg).toLatin1());
+    } catch(std::exception & e) {
+        QFAIL(QStringLiteral("Add package failed : %1").arg(e.what()).toLatin1());
     }
 
     QCOMPARE(pm.setCurrentRevision(QString("REV2")), true);
@@ -104,8 +105,8 @@ void TestRepository::addPackage()
         QVERIFY(TestUtils::compareJson(testOutputAddPackage + "/current", dataAddDir + "/expected/current"));
         QVERIFY(TestUtils::compareJson(testOutputAddPackage + "/packages", dataAddDir + "/expected/packages"));
         QVERIFY(TestUtils::compareJson(testOutputAddPackage + "/versions", dataAddDir + "/expected/versions"));
-    } catch(QString & msg) {
-        QFAIL(("Save failed : " + msg).toLatin1());
+    } catch(std::exception & e) {
+        QFAIL(QStringLiteral("Save failed : %1").arg(e.what()).toLatin1());
     }
 
     try {
@@ -115,8 +116,8 @@ void TestRepository::addPackage()
         QCOMPARE(pm2.packages().size(), 2);
         QCOMPARE(pm2.versions().size(), 2);
         QCOMPARE(pm2.currentRevision(), QString("REV2"));
-    } catch(QString & msg) {
-        QFAIL(("2nd load failed : " + msg).toLatin1());
+    } catch(std::exception & e) {
+        QFAIL(QStringLiteral("2nd load failed : %1").arg(e.what()).toLatin1());
     }
 }
 

@@ -2,6 +2,7 @@
 #include "common/utils.h"
 #include "common/package.h"
 #include "operations/operation.h"
+#include "exceptions.h"
 
 #include <QLoggingCategory>
 #include <QCryptographicHash>
@@ -61,26 +62,26 @@ PackageMetadata Packager::generate()
     qCDebug(LOG_PACKAGER) << "Checking packager configuration...";
 
     if(newDirectoryPath().isEmpty())
-        throw tr("New directory path is empty");
+        THROW(InitializationError, tr("New directory path is empty"));
 
     if(newRevisionName().isEmpty())
-        throw tr("New revision name is empty");
+        THROW(InitializationError, tr("New revision name is empty"));
 
     QDir oldDir(oldDirectoryPath());
     if(!oldDir.exists() && !oldDirectoryPath().isEmpty())
-        throw tr("Old directory doesn't exists");
+        THROW(InitializationError, tr("Old directory doesn't exists"));
 
     QDir newDir(newDirectoryPath());
     if(!newDir.exists())
-        throw tr("New directory doesn't exists");
+        THROW(InitializationError, tr("New directory doesn't exists"));
 
     QFile deltaFile(deltaFilename());
     if(deltaFile.exists())
-        throw tr("Delta file already exists");
+        THROW(InitializationError, tr("Delta file already exists"));
 
     QFile metadataFile(deltaMetadataFilename());
     if(metadataFile.exists())
-        throw tr("Delta metadata file already exists");
+        THROW(InitializationError, tr("Delta metadata file already exists"));
 
     qCDebug(LOG_PACKAGER) << "Packager configuration checked in" << Utils::formatMs(stepTimer.restart());
 
@@ -99,7 +100,7 @@ PackageMetadata Packager::generate()
         {
             m_temporaryDir = new QTemporaryDir;
             if(!m_temporaryDir->isValid())
-                throw tr("Unable to create a temporary directory");
+                THROW(InitializationError, tr("Unable to create a temporary directory"));
             setTmpDirectoryPath(m_temporaryDir->path());
         }
 
@@ -121,7 +122,7 @@ PackageMetadata Packager::generate()
     PackageMetadata metadata;
     {
         if(!deltaFile.open(QFile::WriteOnly))
-            throw tr("Unable to create new delta file");
+            THROW(PackagingFailed, tr("Unable to create new delta file"));
         qint64 totalSize = 0;
         qint64 read;
         char buffer[8096];
@@ -131,18 +132,18 @@ PackageMetadata Packager::generate()
             PackagerTask & task = m_tasks[i];
 
             if(!task.errorString.isNull())
-                throw task.errorString;
+                THROW(PackagingFailed, task.errorString);
 
             if(task.operation->size() > 0)
             {
                 operationFile.setFileName(task.operation->dataFilename());
                 if(!operationFile.open(QFile::ReadOnly))
-                    throw tr("Unable to open %1").arg(operationFile.fileName());
+                    THROW(UnableToOpenFile, operationFile.fileName());
 
                 while((read = operationFile.read(buffer, sizeof(buffer))) > 0)
                 {
                     if(deltaFile.write(buffer, read) != read)
-                         throw tr("Unable to write %1").arg(deltaFile.fileName());
+                         THROW(WriteFailure, operationFile.fileName());
                 }
 
                 operationFile.close();
@@ -154,7 +155,7 @@ PackageMetadata Packager::generate()
         metadata.setPackage(Package(newRevisionName(), oldRevisionName(), totalSize));
 
         if(!deltaFile.flush())
-             throw tr("Unable to flush %1").arg(deltaFile.fileName());
+             THROW(WriteFailure, deltaFile.fileName());
 
         deltaFile.close();
     }
@@ -162,7 +163,7 @@ PackageMetadata Packager::generate()
 
     qCDebug(LOG_PACKAGER) << "Writing metadata";
     if(!metadataFile.open(QFile::WriteOnly | QFile::Text))
-        throw tr("Unable to create new delta metadata file");
+        THROW(UnableToOpenFile, metadataFile.fileName());
     metadataFile.write(QJsonDocument(metadata.toJsonObject()).toJson(QJsonDocument::Indented));
     metadataFile.close();
     qCDebug(LOG_PACKAGER) << "Metadata written in" << Utils::formatMs(stepTimer.restart());

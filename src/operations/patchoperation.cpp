@@ -224,10 +224,7 @@ void PatchOperation::create(const QString &filepath, const QString &oldFilename,
                 m_patchtype = JsonUtil::asString(object, PathType);
                 return;
             }
-            catch(const QString &msg)
-            {
-                Q_UNUSED(msg);
-            }
+            catch(...) { }
             metadataFile.close();
         }
     }

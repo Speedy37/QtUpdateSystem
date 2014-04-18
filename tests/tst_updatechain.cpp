@@ -42,9 +42,9 @@ void TestUpdateChain::newRepository()
         PackageMetadata metadata = p.generateForRepository(pm.directory());
         pm.addPackage(metadata);
     }
-    catch(QString & msg)
+    catch(std::exception & msg)
     {
-        QFAIL(("Complete to v1 : " +msg).toLatin1());
+        QFAIL((QStringLiteral("Complete to v1 : ") +msg.what()).toLatin1());
     }
     QVERIFY(pm.setCurrentRevision("1"));
     pm.save();
@@ -80,8 +80,8 @@ void TestUpdateChain::updateToV1()
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff.txt", dataDir + "/rev1/path_diff.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev1/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/rmfile.txt", dataDir + "/rev1/rmfile.txt"));
-    } catch(QString &msg) {
-        QFAIL(msg.toLatin1());
+    } catch(std::exception &msg) {
+        QFAIL(msg.what());
     }
     QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir").isDir());
     QVERIFY(QFileInfo(testOutputLocalRepo + "/dirs/empty_dir2").isDir());
@@ -101,9 +101,9 @@ void TestUpdateChain::createPatchV1toV2()
         PackageMetadata metadata = p.generateForRepository(pm.directory());
         pm.addPackage(metadata);
     }
-    catch(QString & msg)
+    catch(std::exception & msg)
     {
-        QFAIL(("Patch v1 to v2 : " +msg).toLatin1());
+        QFAIL((QStringLiteral("Patch v1 to v2 : ") +msg.what()).toLatin1());
     }
     QVERIFY(pm.setCurrentRevision("2"));
     pm.save();
@@ -140,8 +140,8 @@ void TestUpdateChain::updateToV2()
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev2/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/add.txt", dataDir + "/rev2/add.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/empty_dir", dataDir + "/rev2/empty_dir"));
-    } catch(QString &msg) {
-        QFAIL(msg.toLatin1());
+    } catch(std::exception &msg) {
+        QFAIL(msg.what());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/rmfile.txt"));
     QVERIFY(!QFileInfo(testOutputLocalRepo + "/dirs/empty_dir2").isDir());
@@ -184,8 +184,8 @@ void TestUpdateChain::fallbackToV1()
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff.txt", dataDir + "/rev1/path_diff.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev1/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/rmfile.txt", dataDir + "/rev1/rmfile.txt"));
-    } catch(QString &msg) {
-        QFAIL(msg.toLatin1());
+    } catch(std::exception &msg) {
+        QFAIL(msg.what());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/add.txt"));
     QVERIFY(QFileInfo(testOutputLocalRepo + "/empty_dir").isDir());
@@ -237,8 +237,8 @@ void TestUpdateChain::updateToV2WithFailures()
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev2/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/add.txt", dataDir + "/rev2/add.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/empty_dir", dataDir + "/rev2/empty_dir"));
-    } catch(QString &msg) {
-        QFAIL(msg.toLatin1());
+    } catch(std::exception &msg) {
+        QFAIL(msg.what());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/rmfile.txt"));
     QVERIFY(!QFileInfo(testOutputLocalRepo + "/dirs/empty_dir2").isDir());
@@ -273,8 +273,8 @@ void TestUpdateChain::integrityCheck()
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/path_diff2.txt", dataDir + "/rev2/path_diff2.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/add.txt", dataDir + "/rev2/add.txt"));
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/empty_dir", dataDir + "/rev2/empty_dir"));
-    } catch(QString &msg) {
-        QFAIL(msg.toLatin1());
+    } catch(std::exception &msg) {
+        QFAIL(msg.what());
     }
     QVERIFY(!QFile::exists(testOutputLocalRepo + "/rmfile.txt"));
     QVERIFY(!QFileInfo(testOutputLocalRepo + "/dirs/empty_dir2").isDir());

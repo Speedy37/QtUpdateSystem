@@ -1,4 +1,5 @@
 #include "updater.h"
+#include "exceptions.h"
 #include "common/jsonutil.h"
 #include "common/utils.h"
 #include "updater/downloadmanager.h"
@@ -77,7 +78,7 @@ void Updater::onInfoFinished()
     try
     {
         if(m_currentRequest->error() != QNetworkReply::NoError)
-            throw m_currentRequest->errorString();
+            THROW(RequestFailed, m_currentRequest->errorString());
 
         qCDebug(LOG_UPDATER) << "Remote informations downloaded";
 
@@ -110,9 +111,9 @@ void Updater::onInfoFinished()
         }
         emit checkForUpdatesFinished(true);
     }
-    catch(const QString & msg)
+    catch(std::exception & msg)
     {
-        setErrorString(msg);
+        setErrorString(QString(msg.what()));
         setState(Idle);
         emit checkForUpdatesFinished(false);
     }

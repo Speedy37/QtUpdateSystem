@@ -36,7 +36,7 @@ void AddDirectoryOperation::applyData()
     if(dirInfo.exists() && !dirInfo.isDir())
     {        
         throwWarning(QObject::tr("The update was supposed to add a directory, but a file was found"));
-        if(!QFile::remove(localFilename()))
+        if(!QFile::remove(localFilename()))            
             throw QObject::tr("The update failed to remove the file %1").arg(path());
     }
 

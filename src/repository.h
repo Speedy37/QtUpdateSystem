@@ -16,6 +16,9 @@
  *  - packages : a json file that hold a list of available packages (from/to/size)
  *  - PACKNAME.metadata : a json file that hold informations about a package (operations/size/...)
  *  - PACKNAME : a data file that contains all data necessary for a package
+ *
+ * The Repository class have functions that can be slow and not like Updater there is async system implemented.
+ * Because this class isn't supposed to be in the same program as the Updater is, this is not a problem.
  */
 class QTUPDATESYSTEMSHARED_EXPORT Repository : public QObject
 {
@@ -28,6 +31,8 @@ public:
     void setDirectory(const QString &directory);
 
     Packages packages() const;
+    Packages packages(const Version &version) const;
+    Packages packages(const QString &version) const;
     void addPackage(const QString &packageFullName);
     void addPackage(const PackageMetadata &packageMetadata);
     void addPackage(const Package &package);
@@ -62,6 +67,11 @@ inline QString Repository::directory() const
 inline Packages Repository::packages() const
 {
     return m_packages;
+}
+
+inline Packages Repository::packages(const Version &version) const
+{
+    return packages(version.revision);
 }
 
 inline void Repository::addPackage(const PackageMetadata &packageMetadata)

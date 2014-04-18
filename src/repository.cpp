@@ -1,6 +1,7 @@
 #include "repository.h"
 #include "common/jsonutil.h"
 #include "common/utils.h"
+#include "exceptions.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -29,13 +30,24 @@ void Repository::setDirectory(const QString &directory)
     m_directory = Utils::cleanPath(directory);
 }
 
+Packages Repository::packages(const QString &version) const
+{
+    Packages packages;
+    foreach(const Package & package, m_packages)
+    {
+        if(package.to == version)
+            packages.append(package);
+    }
+    return packages;
+}
+
 void Repository::load(bool safetyChecks)
 {
     try
     {
         m_versions.fromJsonObject(JsonUtil::fromJsonFile(m_directory + VersionsFile));
     }
-    catch(const QString &) {}
+    catch(...) {}
 
     try
     {
@@ -52,7 +64,7 @@ void Repository::load(bool safetyChecks)
             m_versions.append(version);
         }
     }
-    catch(const QString &)
+    catch(...)
     {
         m_currentVersion = m_versions.size()-1;
     }
@@ -61,7 +73,7 @@ void Repository::load(bool safetyChecks)
     {
         m_packages.fromJsonObject(JsonUtil::fromJsonFile(m_directory + PackagesFile));
     }
-    catch(const QString &) {}
+    catch(...) {}
 
     if(safetyChecks)
     {
@@ -96,6 +108,16 @@ void Repository::load(bool safetyChecks)
     }
 }
 
+/*!
+   \brief Add a package to this repository
+   \param packageFullName Name of the package to add.
+       The package must be in the repository directory and have a valid conventionnal name.
+   \throw FileMissing
+   \throw UnableToOpenFile
+   \throw InvalidPackageName
+   \throw InvalidPackage
+   \sa importPackage()
+ */
 void Repository::addPackage(const QString &packageFullName)
 {
     QFile metadataFile(m_directory + packageFullName + PackageMetadata::FileExtension);
@@ -105,12 +127,31 @@ void Repository::addPackage(const QString &packageFullName)
         {
             PackageMetadata packageMetadata;
             packageMetadata.fromJsonObject(JsonUtil::fromJson(metadataFile.readAll()), false);
+
+            if(packageMetadata.dataUrl() != packageFullName)
+                THROW(InvalidPackageName, packageFullName, packageMetadata.dataUrl());
+
             addPackage(packageMetadata);
             return;
         }
-        throw tr("Unable to open %1").arg(metadataFile.fileName());
+        THROW(UnableToOpenFile, metadataFile.fileName());
     }
-    throw tr("%1 doesn't exists").arg(metadataFile.fileName());
+    THROW(FileMissing, metadataFile.fileName());
+}
+
+/*!
+   \brief Add a package to this repository
+   \param packageFullName Name of the package to add.
+       The package must be in the repository directory and have a valid conventionnal name.
+   \throw InvalidPackage
+   \sa importPackage()
+ */
+void Repository::addPackage(const Package &package)
+{
+    if(package.to.isEmpty())
+        THROW(InvalidPackage, tr("the 'to' property is empty"));
+    ensurePackageVersionExists(package);
+    m_packages.append(package);
 }
 
 void Repository::removePackage(const QString &packageFullName)
@@ -125,9 +166,9 @@ void Repository::removePackage(const QString &packageFullName)
             removePackage(packageMetadata);
             return;
         }
-        throw tr("Unable to open %1").arg(metadataFile.fileName());
+        THROW(UnableToOpenFile, metadataFile.fileName());
     }
-    throw tr("%1 doesn't exists").arg(metadataFile.fileName());
+    THROW(FileMissing, metadataFile.fileName());
 }
 
 void Repository::removePackage(const Package &package)
@@ -136,6 +177,7 @@ void Repository::removePackage(const Package &package)
     if(pos != -1)
     {
         m_packages.remove(pos);
+        return;
     }
 }
 
@@ -194,6 +236,10 @@ bool Repository::setCurrentRevision(const QString &revision)
     return false;
 }
 
+/*!
+   \brief Makes sure both the 'from' and 'to' versions of package exists
+   \param package
+ */
 void Repository::ensurePackageVersionExists(const Package &package)
 {
     int toIndex = 0, len = m_versions.size();
@@ -217,12 +263,4 @@ void Repository::ensurePackageVersionExists(const Package &package)
     {
         m_versions.append(package.to);
     }
-}
-
-void Repository::addPackage(const Package &package)
-{
-    if(package.to.isEmpty())
-        throw tr("Package invalid, the 'to' property is empty");
-    ensurePackageVersionExists(package);
-    m_packages.append(package);
 }

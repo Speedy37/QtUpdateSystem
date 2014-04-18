@@ -72,10 +72,7 @@ void AddOperation::create(const QString &filepath, const QString &newFilename, c
                 m_compression = JsonUtil::asString(object, DataCompression);
                 return;
             }
-            catch(const QString &msg)
-            {
-                Q_UNUSED(msg);
-            }
+            catch(...) { }
             metadataFile.close();
         }
     }

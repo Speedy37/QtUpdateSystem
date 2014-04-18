@@ -51,6 +51,7 @@ Product {
         "common/versions.h",
         "errors/warning.cpp",
         "errors/warning.h",
+        "exceptions.h",
         "operations/addoperation.cpp",
         "operations/addoperation.h",
         "operations/operation.cpp",
