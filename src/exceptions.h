@@ -27,7 +27,7 @@ public:
         m_message(message) THROW_CONTEXT_INIT {}
 
     QString message() const;
-    const char* what() const noexcept {
+    const char* what() const Q_DECL_NOEXCEPT {
         if(m_8bitmessage.isNull())
             const_cast<QByteArray&>(m_8bitmessage) = m_message.toLocal8Bit();
         return m_8bitmessage.constData();
