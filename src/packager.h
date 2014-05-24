@@ -5,8 +5,9 @@
 #include "common/packagemetadata.h"
 #include "common/utils.h"
 #include "packager/packagertask.h"
-#include <vector>
+#include <QVector>
 #include <QString>
+#include <QSharedPointer>
 #include <QFileInfoList>
 #include <QDir>
 
@@ -45,6 +46,9 @@ public:
 
     QString errorString() const;
 
+signals:
+    void progress(int pos, int max);
+
 private:
     // Configurable attributes
     QString m_oldDirectoryPath, m_oldRevisionName;
@@ -57,7 +61,7 @@ private:
 
 private:
     QFileInfoList dirList(const QDir &dir);
-    std::vector<PackagerTask> m_tasks;
+    QVector<QSharedPointer<PackagerTask>> m_tasks;
     void compareDirectories(QString path, const QFileInfoList &newFiles, const QFileInfoList &oldFiles);
     void addTask(PackagerTask::Type operationType, QString path, QString newFilename = QString(), QString oldFilename = QString());
     void addRemoveDirTask(QString path, QFileInfo &pathInfo);

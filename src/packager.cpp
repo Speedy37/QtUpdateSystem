@@ -104,14 +104,18 @@ PackageMetadata Packager::generate()
         }
 
         QThreadPool threadPool;
-        for(size_t i = 0; i < m_tasks.size(); ++i)
+        int pos = 0, size = m_tasks.size();
+        for(int i = 0; i < m_tasks.size(); ++i)
         {
-            PackagerTask & task = m_tasks[i];
-            task.tmpDirectory = tmpDirectoryPath();
-            if(task.isRunSlow())
-                threadPool.start(&task);
+            PackagerTask * task = m_tasks[i].data();
+            connect(task, &PackagerTask::done, [&]() {
+                emit progress(++pos, size);
+            });
+            task->tmpDirectory = tmpDirectoryPath();
+            if(task->isRunSlow())
+                threadPool.start(task);
             else
-                task.run();
+                task->run();
         }
         threadPool.waitForDone();
     }
@@ -126,9 +130,9 @@ PackageMetadata Packager::generate()
         qint64 read;
         char buffer[8096];
         QFile operationFile;
-        for(size_t i = 0; i < m_tasks.size(); ++i)
+        for(int i = 0; i < m_tasks.size(); ++i)
         {
-            PackagerTask & task = m_tasks[i];
+            PackagerTask & task = *m_tasks[i].data();
 
             if(!task.errorString.isNull())
                 throw task.errorString;
@@ -292,6 +296,6 @@ void Packager::compareDirectories(QString path, const QFileInfoList & newFiles, 
 
 void Packager::addTask(PackagerTask::Type operationType, QString path, QString newFilename, QString oldFilename)
 {
-    m_tasks.push_back(PackagerTask(operationType, path, oldFilename, newFilename));
+    m_tasks.append(QSharedPointer<PackagerTask>(new PackagerTask(operationType, path, oldFilename, newFilename)));
 }
 

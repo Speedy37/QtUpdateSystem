@@ -40,7 +40,11 @@ void TestPackager::createPatch()
     QCOMPARE(packager.deltaFilename(), testOutput + "/deltafile_new_old");
     QCOMPARE(packager.deltaMetadataFilename(), testOutput + "/deltafile_new_old.metadata");
     try {
+        QSignalSpy spy(&packager, SIGNAL(progress(int,int)));
         packager.generate();
+        QCOMPARE(spy.count(), 4);
+        QCOMPARE(spy.first().first().toInt(), 1);
+        QCOMPARE(spy.first().last().toInt(), 4);
     } catch(QString & msg) {
         QFAIL(msg.toLatin1());
     }

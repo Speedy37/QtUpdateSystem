@@ -75,7 +75,15 @@ int main(int argc, char *argv[])
 
         try
         {
+            printf("Progression ...");
+            fflush(stdout);
+            QObject::connect(&packager, &Packager::progress, [](int pos, int total) {
+                printf("\rProgression %d/%d", pos, total);
+                fflush(stdout);
+            });
+
             packager.generate();
+            printf("\nPackage generated\n");
             return 0;
         }
         catch(QString &str)
