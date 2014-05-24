@@ -19,8 +19,8 @@ void TestRepository::initTestCase()
     QVERIFY(QFile::copy(dataAddDir + "/init/versions", testOutputAddPackage + "/versions"));
     QVERIFY(QFile::copy(dataAddDir + "/init/packages", testOutputAddPackage + "/packages"));
     QVERIFY(QFile::copy(dataAddDir + "/init/current", testOutputAddPackage + "/current"));
-    QVERIFY(QFile::copy(dataAddDir + "/init/test2", testOutputAddPackage + "/test2"));
-    QVERIFY(QFile::copy(dataAddDir + "/init/test2.metadata", testOutputAddPackage + "/test2.metadata"));
+    QVERIFY(QFile::copy(dataAddDir + "/init/patchREV1_REV2", testOutputAddPackage + "/patchREV1_REV2"));
+    QVERIFY(QFile::copy(dataAddDir + "/init/patchREV1_REV2.metadata", testOutputAddPackage + "/patchREV1_REV2.metadata"));
 }
 
 void TestRepository::cleanupTestCase()
@@ -87,6 +87,13 @@ void TestRepository::addPackage()
 
     try {
         pm.addPackage("test2");
+        QFAIL("Add package should fail with :Invalid package name test2, patchREV1_REV2 expected");
+    } catch(std::exception &) {
+
+    }
+
+    try {
+        pm.addPackage("patchREV1_REV2");
         QCOMPARE(pm.packages().size(), 2);
         QCOMPARE(pm.versions().size(), 2);
         QCOMPARE(pm.currentRevision(), QString("REV1"));

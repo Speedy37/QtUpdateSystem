@@ -42,9 +42,12 @@ void TestPackager::createPatch()
     try {
         QSignalSpy spy(&packager, SIGNAL(progress(int,int)));
         packager.generate();
-        QCOMPARE(spy.count(), 4);
-        QCOMPARE(spy.first().first().toInt(), 1);
-        QCOMPARE(spy.first().last().toInt(), 4);
+        QCOMPARE(spy.count(), 10);
+        for(int i = 0; i < 10; ++i) {
+            QCOMPARE(spy.at(i).first().toInt(), i+1);
+            QCOMPARE(spy.at(i).last().toInt(), 10);
+            QCOMPARE(spy.at(i).size(), 2);
+        }
     } catch(std::exception & msg) {
         QFAIL(msg.what());
     }
