@@ -9,6 +9,12 @@
 #include "tst_updater.h"
 #include "tst_updatechain.h"
 
+#ifdef QT_DEBUG
+    const char * mode = "DEBUG";
+#else
+    const char * mode = "RELEASE";
+#endif
+
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
@@ -44,6 +50,8 @@ int main(int argc, char *argv[])
         TestUpdateChain t;
         ret += QTest::qExec(&t, QStringList());
     }
+
+    printf("Tests %s in %s mode\n", ret == 0 ? "PASSED" : "FAILED", mode);
 
     return ret;
 }
