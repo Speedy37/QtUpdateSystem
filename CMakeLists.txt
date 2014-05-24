@@ -21,4 +21,4 @@ find_package(Qt5Core)
 
 add_subdirectory (src) 
 add_subdirectory (tests)
-add_subdirectory (bin)
+add_subdirectory (utils)
