@@ -12,7 +12,7 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-
+    QLoggingCategory::setFilterRules(QStringLiteral("*.debug=false"));
     TestUtils::cleanup = true;
 #ifdef Q_OS_WIN
     Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma.exe");
