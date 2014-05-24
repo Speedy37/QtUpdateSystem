@@ -43,8 +43,8 @@ int main(int argc, char *argv[])
     parser.addOption(verbose);
     parser.addPositionalArgument("local_repository", QCoreApplication::tr("Path to the local repository."), "<local_repository>");
     parser.addPositionalArgument("remote_repository", QCoreApplication::tr("Path to the remote repository."), "<remote_repository>");
-    parser.addPositionalArgument("username", QCoreApplication::tr("Username for the remote repository."), "<username>");
-    parser.addPositionalArgument("password", QCoreApplication::tr("Password for the remote repository."), "<password>");
+    parser.addPositionalArgument("username", QCoreApplication::tr("Username for the remote repository."), "[<username>");
+    parser.addPositionalArgument("password", QCoreApplication::tr("Password for the remote repository."), "<password>]");
     parser.process(app);
 
     QLoggingCategory::setFilterRules(QStringLiteral("updatesystem.*.debug=%1").arg(parser.isSet(verbose) ? "true" : "false"));
