@@ -22,14 +22,7 @@ To achieve thoses goals this library depends on :
 How to install
 --------------
 
-Once you have cloned this repository, the prefered way to compile the library is to use the Qbs build suite.
-You can enable it in QtCreator : Help > About Plugins > QbsProjectManager
-Simply load the QtUpdateSystem.qbs or src/src.qbs and you are ready.
-
-Qbs allow easy inclusion of library by adding  : 
-`Depends { name: "qtupdatesystem" }`
-
-For more informations about Qt : http://qt-project.org/wiki/qbs
+Once you have cloned this repository, the prefered way to compile the library is to use the cmake build suite.
 
 How to use
 --------------
