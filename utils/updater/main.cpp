@@ -128,6 +128,13 @@ int main(int argc, char *argv[])
                     fflush(stdout);
                 });
                 loop.exec();
+
+                if(updater.state() != Updater::Uptodate)
+                {
+                    fprintf(stderr, "Failure : %s\n", qPrintable(updater.errorString()));
+                    return 2;
+                }
+
                 printf("\nUpdated\n");
             }
             else
