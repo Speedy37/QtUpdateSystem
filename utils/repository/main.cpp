@@ -23,7 +23,14 @@ int main(int argc, char *argv[])
                                                                  "\n - setversion"
                                                                  "\n - simplify"
                                                                  ), "<command>");
+
+    QCommandLineOption verbose(QStringList() << "verbose"
+         , QCoreApplication::tr("Run in verbose mode."));
+    parser.addOption(verbose);
+
     parser.parse(QCoreApplication::arguments());
+
+    QLoggingCategory::setFilterRules(QStringLiteral("updatesystem.*.debug=%1").arg(parser.isSet(verbose) ? "true" : "false"));
 
     const QStringList args = parser.positionalArguments();
     const QString command = args.isEmpty() ? QString() : args.first();

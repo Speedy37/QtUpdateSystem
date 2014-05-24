@@ -4,7 +4,7 @@
 #include <QFileInfo>
 #include <QDir>
 
-Q_LOGGING_CATEGORY(LOG_MKDIROP, "updatesystem.common.mkdir")
+Q_LOGGING_CATEGORY(LOG_MKDIROP, "updatesystem.adddirectoryoperation")
 
 const QString AddDirectoryOperation::Action = QStringLiteral("mkdir");
 

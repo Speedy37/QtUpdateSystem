@@ -177,7 +177,6 @@ void TestUpdateChain::fallbackToV1()
         QVERIFY2(u.state() == Updater::Uptodate, u.errorString().toLatin1());
         QCOMPARE(u.localRevision(), QString("1"));
         QCOMPARE(spyWarnings.size(), 1);
-        qDebug() << (spyWarnings[0][0].value<Warning>().message());
     }
     try{
         (TestUtils::assertFileEquals(testOutputLocalRepo + "/dir2/patch_same.txt", dataDir + "/rev1/dir2/patch_same.txt"));

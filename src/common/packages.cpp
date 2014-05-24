@@ -6,7 +6,7 @@
 #include <QMap>
 #include <QElapsedTimer>
 
-Q_LOGGING_CATEGORY(LOG_PACKAGES, "updatesystem.common.packages")
+Q_LOGGING_CATEGORY(LOG_PACKAGES, "updatesystem.packages")
 
 void Packages::fromJsonObject(const QJsonObject & object)
 {

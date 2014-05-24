@@ -4,7 +4,7 @@
 #include <QFileInfo>
 #include <QDir>
 
-Q_LOGGING_CATEGORY(LOG_RMDIROP, "updatesystem.common.rmdir")
+Q_LOGGING_CATEGORY(LOG_RMDIROP, "updatesystem.removedirectoryoperation")
 
 const QString RemoveDirectoryOperation::Action = QStringLiteral("rmdir");
 

@@ -7,7 +7,7 @@
 #include <QProcess>
 #include <QJsonDocument>
 
-Q_LOGGING_CATEGORY(LOG_PATCHOP, "updatesystem.common.patchoperation")
+Q_LOGGING_CATEGORY(LOG_PATCHOP, "updatesystem.patchoperation")
 
 const QString PatchOperation::Action = QStringLiteral("patch");
 

@@ -7,7 +7,7 @@
 #include <QDir>
 #include <QJsonDocument>
 
-Q_LOGGING_CATEGORY(LOG_ADDOP, "updatesystem.common.addoperation")
+Q_LOGGING_CATEGORY(LOG_ADDOP, "updatesystem.addoperation")
 
 const QString AddOperation::Action = QStringLiteral("add");
 

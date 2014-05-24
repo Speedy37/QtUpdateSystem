@@ -5,7 +5,7 @@
 #include <QFileInfo>
 #include <QDir>
 
-Q_LOGGING_CATEGORY(LOG_RMFILEOP, "updatesystem.common.rmfile")
+Q_LOGGING_CATEGORY(LOG_RMFILEOP, "updatesystem.removeoperation")
 
 const QString RemoveOperation::Action = QStringLiteral("rm");
 

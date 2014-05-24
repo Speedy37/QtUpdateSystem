@@ -17,6 +17,9 @@ int main(int argc, char *argv[])
     QCommandLineOption checkonly(QStringList() << "c" << "checkonly"
          , QCoreApplication::tr("Only check for updates."));
 
+    QCommandLineOption verbose(QStringList() << "verbose"
+         , QCoreApplication::tr("Run in verbose mode."));
+
     QCommandLineOption force(QStringList() << "f" << "force"
          , QCoreApplication::tr("Force integrity checks if the local repository is uptodate."));
 
@@ -37,11 +40,14 @@ int main(int argc, char *argv[])
     parser.addOption(tmpDirectoryPath);
     parser.addOption(lzmaPath);
     parser.addOption(xdeltaPath);
+    parser.addOption(verbose);
     parser.addPositionalArgument("local_repository", QCoreApplication::tr("Path to the local repository."), "<local_repository>");
     parser.addPositionalArgument("remote_repository", QCoreApplication::tr("Path to the remote repository."), "<remote_repository>");
     parser.addPositionalArgument("username", QCoreApplication::tr("Username for the remote repository."), "<username>");
     parser.addPositionalArgument("password", QCoreApplication::tr("Password for the remote repository."), "<password>");
     parser.process(app);
+
+    QLoggingCategory::setFilterRules(QStringLiteral("updatesystem.*.debug=%1").arg(parser.isSet(verbose) ? "true" : "false"));
 
     const QStringList args = parser.positionalArguments();
     if(args.size() < 1)

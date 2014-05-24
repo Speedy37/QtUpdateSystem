@@ -4,7 +4,7 @@
 #include <QCryptographicHash>
 #include <QRegularExpression>
 
-Q_LOGGING_CATEGORY(LOG_OP, "updatesystem.common.operation")
+Q_LOGGING_CATEGORY(LOG_OP, "updatesystem.operation")
 
 const QString Operation::Path = QStringLiteral("path");
 

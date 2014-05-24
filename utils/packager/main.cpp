@@ -40,7 +40,13 @@ int main(int argc, char *argv[])
          , "xdelta3_bin");
     parser.addOption(xdeltaPath);
 
+    QCommandLineOption verbose(QStringList() << "verbose"
+         , QCoreApplication::tr("Run in verbose mode."));
+    parser.addOption(verbose);
+
     parser.process(app);
+
+    QLoggingCategory::setFilterRules(QStringLiteral("updatesystem.*.debug=%1").arg(parser.isSet(verbose) ? "true" : "false"));
 
     const QStringList args = parser.positionalArguments();
     if(args.size() < 1)

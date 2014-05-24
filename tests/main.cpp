@@ -18,8 +18,25 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
-    QLoggingCategory::setFilterRules(QStringLiteral("*.debug=false"));
-    TestUtils::cleanup = true;
+
+    QCommandLineParser parser;
+    parser.setApplicationDescription(QCoreApplication::tr("tests"));
+    parser.addHelpOption();
+    parser.addVersionOption();
+
+    QCommandLineOption verbose(QStringList() << "verbose"
+         , QCoreApplication::tr("Run in verbose mode."));
+    parser.addOption(verbose);
+
+    QCommandLineOption keep(QStringList() << "k" << "keep"
+         , QCoreApplication::tr("Keep generated files."));
+    parser.addOption(keep);
+
+    parser.process(app);
+
+    TestUtils::cleanup = !parser.isSet(keep);
+    QLoggingCategory::setFilterRules(QStringLiteral("updatesystem.*.debug=%1").arg(parser.isSet(verbose) ? "true" : "false"));
+
 #ifdef Q_OS_WIN
     Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma.exe");
     Utils::setXdeltaProgram(QString(SRCDIR)+ "../xdelta3.exe");

@@ -13,7 +13,7 @@
 #include <QDir>
 #include <QTemporaryDir>
 
-Q_LOGGING_CATEGORY(LOG_DLMANAGER, "updatesystem.updater.dlmanager")
+Q_LOGGING_CATEGORY(LOG_DLMANAGER, "updatesystem.downloadmanager")
 
 Q_DECLARE_METATYPE(QSharedPointer<Operation>)
 int OperationPointerMetaType = qMetaTypeId< QSharedPointer<Operation> >();
