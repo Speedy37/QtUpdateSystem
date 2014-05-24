@@ -1,5 +1,6 @@
 #include "packages.h"
 #include "jsonutil.h"
+#include "../exceptions.h"
 
 #include <QLoggingCategory>
 #include <QMap>
@@ -13,7 +14,7 @@ void Packages::fromJsonObject(const QJsonObject & object)
     if(version == "1")
         fromJsonArrayV1(JsonUtil::asArray(object, QStringLiteral("packages")));
     else
-        throw(QObject::tr("Unsupported version %1").arg(version));
+        THROW(UnsupportedVersion, version);
 }
 
 QJsonObject Packages::toJsonObject() const

@@ -45,8 +45,8 @@ void TestPackager::createPatch()
         QCOMPARE(spy.count(), 4);
         QCOMPARE(spy.first().first().toInt(), 1);
         QCOMPARE(spy.first().last().toInt(), 4);
-    } catch(QString & msg) {
-        QFAIL(msg.toLatin1());
+    } catch(std::exception & msg) {
+        QFAIL(msg.what());
     }
 }
 
@@ -68,7 +68,7 @@ void TestPackager::createComplete()
     QCOMPARE(packager.deltaMetadataFilename(), testOutput + "/deltafile_new_metadata");
     try {
         packager.generate();
-    } catch(QString & msg) {
-        QFAIL(msg.toLatin1());
+    } catch(std::exception & msg) {
+        QFAIL(msg.what());
     }
 }

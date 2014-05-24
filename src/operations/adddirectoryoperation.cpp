@@ -10,7 +10,7 @@ const QString AddDirectoryOperation::Action = QStringLiteral("mkdir");
 
 void AddDirectoryOperation::create(const QString &path)
 {
-    m_path = path;
+    setPath(path);
 }
 
 Operation::FileType AddDirectoryOperation::fileType() const
@@ -36,7 +36,7 @@ void AddDirectoryOperation::applyData()
     if(dirInfo.exists() && !dirInfo.isDir())
     {        
         throwWarning(QObject::tr("The update was supposed to add a directory, but a file was found"));
-        if(!QFile::remove(localFilename()))
+        if(!QFile::remove(localFilename()))            
             throw QObject::tr("The update failed to remove the file %1").arg(path());
     }
 

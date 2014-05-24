@@ -78,7 +78,7 @@ Operation::FileType Operation::fileType() const
 
 void Operation::fromJsonObjectV1(const QJsonObject &object)
 {
-    m_path = object.value(Path).toString();
+    setPath(object.value(Path).toString());
 }
 
 QJsonObject Operation::toJsonObjectV1()
@@ -93,5 +93,5 @@ QJsonObject Operation::toJsonObjectV1()
 void Operation::fillJsonObjectV1(QJsonObject &object)
 {
     object.insert(QStringLiteral("type"), type());
-    object.insert(Path, m_path);
+    object.insert(Path, path());
 }

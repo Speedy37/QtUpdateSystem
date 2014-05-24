@@ -11,7 +11,7 @@ namespace Utils {
     QString lzma = QStringLiteral("lzma.exe");
 #endif
 
-QString cleanPath(const QString &pathName)
+QString cleanPath(const QString &pathName, bool separatorAtEnd)
 {
     if(pathName.isEmpty())
         return pathName;
@@ -19,8 +19,16 @@ QString cleanPath(const QString &pathName)
     QString cleaned = pathName;
     cleaned.replace('\\', '/');
 
-    if(!cleaned.endsWith('/'))
-        cleaned += '/';
+    if(separatorAtEnd)
+    {
+        if(!cleaned.endsWith('/'))
+            cleaned += '/';
+    }
+    else
+    {
+        if(cleaned.endsWith('/'))
+            cleaned.chop(1);
+    }
 
     return cleaned;
 }

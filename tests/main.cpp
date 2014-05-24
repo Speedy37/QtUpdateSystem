@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     int ret = 0;
 
     QDir().mkpath(dataDir + "/rev1/empty_dir");
-    QDir().mkpath(dataDir + "/rev1/empty_dir2");
+    QDir().mkpath(dataDir + "/rev1/dirs/empty_dir2");
 
     {
         TestPackager t;

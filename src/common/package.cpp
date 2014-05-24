@@ -1,5 +1,6 @@
 #include "package.h"
 #include "jsonutil.h"
+#include "../exceptions.h"
 
 #include <QObject>
 
@@ -34,7 +35,7 @@ void Package::fromJsonObjectV1(const QJsonObject &packageObject)
     bool ok;
     size = JsonUtil::asString(packageObject, QStringLiteral("size")).toLongLong(&ok);
     if(!ok)
-        throw(QObject::tr("package 'size' is not a qint64 string"));
+        THROW(JsonError, QObject::tr("package 'size' is not a qint64 string"));
 }
 
 QJsonObject Package::toJsonObjectV1() const

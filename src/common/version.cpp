@@ -1,5 +1,6 @@
 #include "version.h"
 #include "jsonutil.h"
+#include "../exceptions.h"
 
 #include <QObject>
 
@@ -15,7 +16,7 @@ void Version::fromJsonObject(const QJsonObject &object)
     if(version == "1")
         fromJsonObjectV1(JsonUtil::asObject(object, QStringLiteral("current")));
     else
-        throw QObject::tr("Unsupported version");
+        THROW(UnsupportedVersion, version);
 }
 
 QJsonObject Version::toJsonObject() const

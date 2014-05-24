@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QFile>
 #include <functional>
+#include "../common/utils.h"
 
 class QFile;
 class DownloadManager;
@@ -70,6 +71,7 @@ public:
 private:
     Status m_status;
     QString m_localFilename, m_dataFilename;
+    QString m_path;
     Q_DISABLE_COPY(Operation)
 
 protected:
@@ -79,10 +81,11 @@ protected:
     virtual QString type() const = 0;
     virtual void fillJsonObjectV1(QJsonObject & object);
     void throwWarning(const QString &warning);
+    void setPath(const QString &path);
 
     std::function<void(const QString &message)> m_warningListener;
     qint64 m_offset, m_size;
-    QString m_path, m_sha1, m_errorString;
+    QString m_sha1, m_errorString;
 };
 
 inline qint64 Operation::offset() const
@@ -122,7 +125,7 @@ inline QString Operation::localFilename() const
 
 inline void Operation::setUpdateDirectory(const QString &updateDirectory)
 {
-    m_localFilename = updateDirectory + m_path;
+    m_localFilename = updateDirectory + path();
 }
 
 inline QString Operation::path() const
@@ -154,6 +157,11 @@ inline void Operation::throwWarning(const QString &warning)
 {
     if(m_warningListener)
         m_warningListener(warning);
+}
+
+inline void Operation::setPath(const QString &path)
+{
+    m_path = Utils::cleanPath(path, false);
 }
 
 #endif // UPDATER_OPERATION_H

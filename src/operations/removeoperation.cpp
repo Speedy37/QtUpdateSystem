@@ -22,7 +22,7 @@ void RemoveOperation::create(const QString &path, const QString &oldFilename)
 
     m_localSha1 = sha1(&file);
     m_localSize = file.size();
-    m_path = path;
+    setPath(path);
 }
 
 Operation::Status RemoveOperation::localDataStatus()

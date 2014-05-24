@@ -179,9 +179,9 @@ void PatchOperation::fromJsonObjectV1(const QJsonObject &object)
     m_patchtype = JsonUtil::asString(object, PathType);
 }
 
-void PatchOperation::create(const QString &path, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory)
+void PatchOperation::create(const QString &filepath, const QString &oldFilename, const QString &newFilename, const QString &tmpDirectory)
 {
-    m_path = path;
+    setPath(filepath);
 
     // New file informations
     {
@@ -224,10 +224,7 @@ void PatchOperation::create(const QString &path, const QString &oldFilename, con
                 m_patchtype = JsonUtil::asString(object, PathType);
                 return;
             }
-            catch(const QString &msg)
-            {
-                Q_UNUSED(msg);
-            }
+            catch(...) { }
             metadataFile.close();
         }
     }
@@ -296,7 +293,7 @@ void PatchOperation::create(const QString &path, const QString &oldFilename, con
     // Writing metadata
     {
         QJsonObject object;
-        object.insert(Path, m_path);
+        object.insert(Path, path());
         object.insert(DataSize, QString::number(m_size));
         object.insert(DataSha1, m_sha1);
         object.insert(DataCompression, m_compression);

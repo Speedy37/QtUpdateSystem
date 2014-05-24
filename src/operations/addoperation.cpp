@@ -43,9 +43,9 @@ void AddOperation::fromJsonObjectV1(const QJsonObject &object)
     m_finalSha1 = JsonUtil::asString(object, FinalSha1);
 }
 
-void AddOperation::create(const QString &path, const QString &newFilename, const QString &tmpDirectory)
+void AddOperation::create(const QString &filepath, const QString &newFilename, const QString &tmpDirectory)
 {
-    m_path = path;
+    setPath(filepath);
 
     // Final file informations
     {
@@ -72,10 +72,7 @@ void AddOperation::create(const QString &path, const QString &newFilename, const
                 m_compression = JsonUtil::asString(object, DataCompression);
                 return;
             }
-            catch(const QString &msg)
-            {
-                Q_UNUSED(msg);
-            }
+            catch(...) { }
             metadataFile.close();
         }
     }
@@ -125,7 +122,7 @@ void AddOperation::create(const QString &path, const QString &newFilename, const
     // Writing metadata
     {
         QJsonObject object;
-        object.insert(Path, m_path);
+        object.insert(Path, path());
         object.insert(DataSize, QString::number(m_size));
         object.insert(DataSha1, m_sha1);
         object.insert(DataCompression, m_compression);

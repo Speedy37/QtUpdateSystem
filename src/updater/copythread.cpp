@@ -74,8 +74,8 @@ void CopyThread::run()
 
         emit copyFinished(QString());
     }
-    catch(const QString &msg)
+    catch(std::exception &msg)
     {
-        emit copyFinished(msg);
+        emit copyFinished(msg.what());
     }
 }

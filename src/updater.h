@@ -1,11 +1,13 @@
 #ifndef REMOTEUPDATE_H
 #define REMOTEUPDATE_H
 
+#include <functional>
 #include "qtupdatesystem_global.h"
 #include "common/version.h"
 #include "updater/localrepository.h"
 #include "errors/warning.h"
 
+#include <QFileInfo>
 #include <QObject>
 
 class QNetworkAccessManager;
@@ -43,6 +45,7 @@ public:
 
     bool isIdle() const;
     bool isUpdateAvailable() const;
+    bool isManaged(const QFileInfo &file) const;
 
     QString localRevision() const;
     QString remoteRevision() const;
@@ -68,6 +71,7 @@ public slots:
     void checkForUpdates();
     void update();
     void copy(const QString& copyDirectory);
+    void removeOtherFiles(std::function<bool(QFileInfo)> testFunction = std::function<bool(QFileInfo)>());
 
 signals:
     void checkForUpdatesFinished(bool success);
@@ -91,6 +95,7 @@ private:
     void clearError();
     void setErrorString(const QString & msg);
     void setState(State newState);
+    void removeOtherFiles(const QString &directory, std::function<bool(QFileInfo)> testFunction);
 
 private:
     // Network
@@ -125,6 +130,14 @@ inline bool Updater::isIdle() const
 inline bool Updater::isUpdateAvailable() const
 {
     return state() == UpdateRequired;
+}
+
+/*!
+    Returns \c true if the given file is managed; otherwise returns \c false.
+*/
+inline bool Updater::isManaged(const QFileInfo &file) const
+{
+    return m_localRepository.isManaged(file);
 }
 
 /*!

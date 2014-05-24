@@ -91,9 +91,9 @@ int main(int argc, char *argv[])
                 repository.save();
                 return 0;
             }
-            catch(QString &str)
+            catch(std::exception &e)
             {
-                qWarning() << str.toLatin1();
+                qWarning() << e.what();
                 return 2;
             }
         }
@@ -150,9 +150,9 @@ int main(int argc, char *argv[])
                 repository.save();
                 return 0;
             }
-            catch(QString &str)
+            catch(std::exception &e)
             {
-                qCritical() << str.toLatin1();
+                qCritical() << e.what();
                 return 2;
             }
         }

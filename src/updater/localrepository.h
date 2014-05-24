@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QFileInfo>
 #include "../common/utils.h"
 
 class QSettings;
@@ -12,8 +13,8 @@ class LocalRepository
 public:
     LocalRepository();
     LocalRepository(const QString &directory);
-    void load();
-    void save();
+    bool load();
+    bool save();
 
     QString directory() const;
     void setDirectory(const QString &directory);
@@ -21,6 +22,7 @@ public:
     QString revision() const;
     void setRevision(const QString &revision);
 
+    bool isManaged(const QFileInfo &file) const;
     bool isConsistent() const;
     bool updateInProgress() const;
     void setUpdateInProgress(bool updateInProgress);
@@ -41,12 +43,6 @@ private:
 inline QString LocalRepository::directory() const
 {
     return m_directory;
-}
-
-inline void LocalRepository::setDirectory(const QString &directory)
-{
-    m_directory = Utils::cleanPath(directory);
-    load();
 }
 
 inline QString LocalRepository::revision() const

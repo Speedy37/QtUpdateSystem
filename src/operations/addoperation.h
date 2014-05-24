@@ -14,7 +14,7 @@ public:
     static const QString Action;
     virtual FileType fileType() const Q_DECL_OVERRIDE;
     virtual void fromJsonObjectV1(const QJsonObject &object) Q_DECL_OVERRIDE;
-    void create(const QString &path, const QString &newFilename, const QString &tmpDirectory);
+    void create(const QString &filepath, const QString &newFilename, const QString &tmpDirectory);
 protected:
     static const QString DataOffset;
     static const QString DataSize;

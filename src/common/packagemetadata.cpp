@@ -1,6 +1,7 @@
 #include "packagemetadata.h"
 
 #include "jsonutil.h"
+#include "../exceptions.h"
 #include "../operations/addoperation.h"
 #include "../operations/patchoperation.h"
 #include "../operations/adddirectoryoperation.h"
@@ -42,7 +43,7 @@ void PackageMetadata::fromJsonObject(const QJsonObject &object, bool loadOperati
     }
     else
     {
-        throw(QObject::tr("Unsupported version %1").arg(version));
+        THROW(UnsupportedVersion, version);
     }
 }
 
@@ -80,7 +81,7 @@ void PackageMetadata::operationsFromJsonArrayV1(const QJsonArray &operations)
             else if(type == AddDirectoryOperation::Action)
                 op = new AddDirectoryOperation();
             else
-                throw(QObject::tr("'action' \"%1\" is not supported").arg(type));
+                THROW(JsonError, QObject::tr("'action' \"%1\" is not supported").arg(type));
 
             m_operations[i] = QSharedPointer<Operation>(op);
             op->fromJsonObjectV1(jsonOperation);

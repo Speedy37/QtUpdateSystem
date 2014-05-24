@@ -1,4 +1,5 @@
 #include "testutils.h"
+#include <exceptions.h>
 #include <QFile>
 #include <QJsonDocument>
 #include <QTest>
@@ -11,18 +12,18 @@ void TestUtils::assertFileEquals(const QString &file1, const QString &file2)
     QFile f2(file2);
 
     if(!f1.exists())
-        throw(QString("file %1 doesn't exists").arg(file1));
+        THROW(FileMissing, file1);
 
     if(!f2.exists())
-        throw(QString("file %1 doesn't exists").arg(file2));
+        THROW(FileMissing, file2);
 
     if(f1.size() != f2.size())
-        throw(QString("file1 size %1 != file2 size %2 (%3, %4)").arg(f1.size()).arg(f2.size()).arg(f1.fileName()).arg(f2.fileName()));
+        THROW(Exception, QString("file1 size %1 != file2 size %2 (%3, %4)").arg(f1.size()).arg(f2.size()).arg(f1.fileName()).arg(f2.fileName()));
 
     if(!f1.open(QFile::ReadOnly))
-        throw(QString("Can't open %1").arg(file1));
+        THROW(UnableToOpenFile, file1);
     if(!f2.open(QFile::ReadOnly))
-        throw(QString("Can't open %1").arg(file1));
+        THROW(UnableToOpenFile, file2);
 
     char buffer1[8096];
     char buffer2[8096];
@@ -32,9 +33,9 @@ void TestUtils::assertFileEquals(const QString &file1, const QString &file2)
     while(read1 > 0 || read2 > 0)
     {
         if(read1 != read2)
-            throw(QString("read1 %1 != read2 %2 (%3, %4)").arg(read1).arg(read2).arg(f1.fileName()).arg(f2.fileName()));
+            THROW(Exception, QString("read1 %1 != read2 %2 (%3, %4)").arg(read1).arg(read2).arg(f1.fileName()).arg(f2.fileName()));
         if(memcmp(buffer1, buffer2, read1) != 0)
-            throw(QString("Content differ %1 != %2").arg(f1.fileName()).arg(f2.fileName()));
+            THROW(Exception, QString("Content differ %1 != %2").arg(f1.fileName()).arg(f2.fileName()));
 
         read1 = f1.read(buffer1, sizeof(buffer1));
         read2 = f2.read(buffer2, sizeof(buffer2));

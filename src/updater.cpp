@@ -1,4 +1,5 @@
 #include "updater.h"
+#include "exceptions.h"
 #include "common/jsonutil.h"
 #include "common/utils.h"
 #include "updater/downloadmanager.h"
@@ -10,6 +11,7 @@
 #include <QLoggingCategory>
 #include <QSettings>
 #include <QAuthenticator>
+#include <QDir>
 
 Q_LOGGING_CATEGORY(LOG_UPDATER, "updatesystem.updater")
 
@@ -76,7 +78,7 @@ void Updater::onInfoFinished()
     try
     {
         if(m_currentRequest->error() != QNetworkReply::NoError)
-            throw m_currentRequest->errorString();
+            THROW(RequestFailed, m_currentRequest->errorString());
 
         qCDebug(LOG_UPDATER) << "Remote informations downloaded";
 
@@ -109,9 +111,9 @@ void Updater::onInfoFinished()
         }
         emit checkForUpdatesFinished(true);
     }
-    catch(const QString & msg)
+    catch(std::exception & msg)
     {
-        setErrorString(msg);
+        setErrorString(QString(msg.what()));
         setState(Idle);
         emit checkForUpdatesFinished(false);
     }
@@ -235,6 +237,56 @@ void Updater::onCopyFinished(const QString &errorString)
     setErrorString(errorString);
     setState(m_beforeCopyState);
     emit copyFinished(errorString.isEmpty());
+}
+
+/*!
+    \brief Search in the managed directory for non managed files
+    \param testFunction Called for each file/dir with the file/dir as parameter.
+                        If the function return true, the file is deleted.
+*/
+void Updater::removeOtherFiles(std::function<bool(QFileInfo)> testFunction)
+{
+    if(isIdle())
+    {
+        removeOtherFiles(m_localRepository.directory(), testFunction);
+    }
+    else
+    {
+        qWarning("Updater::removeOtherFiles : Called while not Idle");
+    }
+}
+
+void Updater::removeOtherFiles(const QString &directory, std::function<bool(QFileInfo)> testFunction)
+{
+    QDir dir(directory);
+    QFileInfoList list = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden, QDir::Name);
+    foreach(const QFileInfo &file, list)
+    {
+        if(!isManaged(file))
+        {
+            if(!testFunction || testFunction(file))
+            {
+                if(file.isDir())
+                {
+                    if(!dir.rmpath(file.absoluteFilePath()))
+                    {
+                        qCWarning(LOG_UPDATER) << "Unable to remove dir" << file.path();
+                    }
+                }
+                else
+                {
+                    if(!QFile::remove(file.absoluteFilePath()))
+                    {
+                        qCWarning(LOG_UPDATER) << "Unable to remove file" << file.path();
+                    }
+                }
+            }
+        }
+        else if(file.isDir())
+        {
+            removeOtherFiles(file.absoluteFilePath(), testFunction);
+        }
+    }
 }
 
 void Updater::authenticationRequired(QNetworkReply *, QAuthenticator *authenticator)

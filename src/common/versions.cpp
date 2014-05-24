@@ -1,5 +1,6 @@
 #include "versions.h"
 #include "jsonutil.h"
+#include "../exceptions.h"
 
 #include <QLoggingCategory>
 
@@ -9,7 +10,7 @@ void Versions::fromJsonObject(const QJsonObject & object)
     if(version == "1")
         fromJsonArrayV1(JsonUtil::asArray(object, QStringLiteral("versions")));
     else
-        throw(QObject::tr("Unsupported version %1").arg(version));
+        THROW(UnsupportedVersion, version);
 }
 
 QJsonObject Versions::toJsonObject() const

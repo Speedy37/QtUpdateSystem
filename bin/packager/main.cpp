@@ -86,9 +86,9 @@ int main(int argc, char *argv[])
             printf("\nPackage generated\n");
             return 0;
         }
-        catch(QString &str)
+        catch(std::exception &e)
         {
-            qCritical() << str.toLatin1();
+            qCritical() << e.what();
             return 2;
         }
     }
