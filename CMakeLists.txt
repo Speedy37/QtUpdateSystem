@@ -9,6 +9,14 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(CMAKE_PREFIX_PATH "C:\\Qt\\5.3\\msvc2013")
 
+# Workaround for : http://public.kitware.com/Bug/view.php?id=14292
+if(CMAKE_VERSION VERSION_LESS 2.8.12)
+    if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        message(STATUS "cmake version < 2.8.12, adding QT_NO_DEBUG manually")
+        add_definitions(-DQT_NO_DEBUG)
+    endif()
+endif()
+
 if(UNIX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 endif()
