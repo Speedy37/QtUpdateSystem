@@ -8,7 +8,7 @@
 #include "../operations/removedirectoryoperation.h"
 
 PackagerTask::PackagerTask(PackagerTask::Type operationType, QString path, QString oldFilename, QString newFilename)
-    : QRunnable(), QObject()
+    : QObject(), QRunnable()
 {
     this->operationType = operationType;
     this->path = path;

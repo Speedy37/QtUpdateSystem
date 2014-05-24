@@ -25,6 +25,7 @@ class QTUPDATESYSTEMSHARED_EXPORT Exception : public std::exception
 public:
     Exception(const QString &message THROW_CONTEXT_PARAMS) :
         m_message(message) THROW_CONTEXT_INIT {}
+    ~Exception() Q_DECL_NOEXCEPT {}
 
     QString message() const;
     const char* what() const Q_DECL_NOEXCEPT {
