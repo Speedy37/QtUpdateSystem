@@ -1,0 +1,91 @@
+{
+    "operations": [
+        {
+            "dataCompression": "lzma",
+            "dataOffset": "0",
+            "dataSha1": "66eea8519f5448bc4bc6773b4bfae296cf7bac38",
+            "dataSize": "21",
+            "finalSha1": "5058f49cb031abf9ee445be6ec7cd9cd9fe6444b",
+            "finalSize": "4",
+            "path": "add.txt",
+            "type": "add"
+        },
+        {
+            "path": "dir2",
+            "type": "mkdir"
+        },
+        {
+            "dataCompression": "",
+            "dataOffset": "0",
+            "dataSha1": "",
+            "dataSize": "0",
+            "finalSha1": "36e994f96c731a1159e4460cf34bc0293c0f2dcd",
+            "finalSize": "1950",
+            "localSha1": "36e994f96c731a1159e4460cf34bc0293c0f2dcd",
+            "localSize": "1950",
+            "patchType": "",
+            "path": "dir2/patch_same.txt",
+            "type": "patch"
+        },
+        {
+            "path": "dirs/empty_dir2",
+            "type": "rmdir"
+        },
+        {
+            "path": "dirs",
+            "type": "rmdir"
+        },
+        {
+            "path": "empty_dir",
+            "type": "rmdir"
+        },
+        {
+            "dataCompression": "lzma",
+            "dataOffset": "21",
+            "dataSha1": "cf8f848fde5809f242cf7226181c38393508dc00",
+            "dataSize": "401",
+            "finalSha1": "44368b3202b092272f628b099282632020b5a07d",
+            "finalSize": "609",
+            "path": "empty_dir",
+            "type": "add"
+        },
+        {
+            "dataCompression": "lzma",
+            "dataOffset": "422",
+            "dataSha1": "d121e14c6dc28f412ebb335666a7cb1abe4490fe",
+            "dataSize": "63",
+            "finalSha1": "ed4c2049b33e5d23577543146c23fd105a8d8d0b",
+            "finalSize": "1672",
+            "localSha1": "daf8427625ebdf124e618b1b3e118e108ceb6fec",
+            "localSize": "2713",
+            "patchType": "xdelta",
+            "path": "path_diff.txt",
+            "type": "patch"
+        },
+        {
+            "dataCompression": "lzma",
+            "dataOffset": "485",
+            "dataSha1": "d5923c1c972799b51a1173c8f9703c8808981c99",
+            "dataSize": "1157",
+            "finalSha1": "ab55b798b91049fba16493307da1b3ef3793009e",
+            "finalSize": "3751",
+            "localSha1": "f03bf4f88e18dc56cb963759e4ed73c8d3063b36",
+            "localSize": "1520",
+            "patchType": "xdelta",
+            "path": "path_diff2.txt",
+            "type": "patch"
+        },
+        {
+            "localSha1": "cb55c59f799791ae7c0a1130436eb8471166ed97",
+            "localSize": "1392",
+            "path": "rmfile.txt",
+            "type": "rm"
+        }
+    ],
+    "package": {
+        "from": "1",
+        "size": "1642",
+        "to": "2"
+    },
+    "version": "1"
+}

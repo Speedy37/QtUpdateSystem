@@ -14,6 +14,8 @@ private Q_SLOTS:
     void updaterCopy();
     void updaterIsManaged();
     void updaterRemoveOtherFiles();
+    void updateToV1();
+    void updateToV2();
     void cleanupTestCase();
 };
 
