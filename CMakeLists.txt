@@ -17,7 +17,10 @@ if(CMAKE_VERSION VERSION_LESS 2.8.12)
     endif()
 endif()
 
-if(UNIX)
+if(MSVC)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /w34100 /w34189")
+else()
+    # clang || gcc
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
 endif()
 
