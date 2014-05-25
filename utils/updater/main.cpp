@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
             if(!updater.errorString().isEmpty())
             {
                 fprintf(stderr, "Failure : %s\n", qPrintable(updater.errorString()));
+                return 2;
             }
 
             if(updater.isUpdateAvailable())
