@@ -91,11 +91,19 @@ int main(int argc, char *argv[])
 
             try
             {
+                printf("Progression ...");
+                fflush(stdout);
+                QObject::connect(&packager, &Packager::progress, [](int pos, int total) {
+                    printf("\rProgression %d/%d", pos, total);
+                    fflush(stdout);
+                });
+
                 Repository repository;
                 repository.setDirectory(args.at(1));
                 repository.load();
                 repository.addPackage(packager.generateForRepository(repository.directory()));
                 repository.save();
+                printf("\nPackage generated\n");
                 return 0;
             }
             catch(std::exception &e)
