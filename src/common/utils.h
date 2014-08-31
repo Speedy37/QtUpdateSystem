@@ -5,8 +5,8 @@
 #include "../qtupdatesystem_global.h"
 
 namespace Utils {
-    QString cleanPath(const QString &pathName, bool separatorAtEnd = true);
-    QString formatMs(qint64 millisec);
+    QTUPDATESYSTEMSHARED_EXPORT QString cleanPath(const QString &pathName, bool separatorAtEnd = true);
+    QTUPDATESYSTEMSHARED_EXPORT QString formatMs(qint64 millisec);
 
     QTUPDATESYSTEMSHARED_EXPORT QString xdeltaProgram();
     QTUPDATESYSTEMSHARED_EXPORT void setXdeltaProgram(const QString &program);

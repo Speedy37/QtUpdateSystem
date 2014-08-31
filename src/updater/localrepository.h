@@ -8,7 +8,7 @@
 
 class QSettings;
 
-class LocalRepository
+class QTUPDATESYSTEMSHARED_EXPORT LocalRepository
 {
 public:
     LocalRepository();
@@ -16,25 +16,24 @@ public:
     bool load();
     bool save();
 
-    QString directory() const;
+    inline QString directory() const;
     void setDirectory(const QString &directory);
 
-    QString revision() const;
-    void setRevision(const QString &revision);
+    inline QString revision() const;
+    inline void setRevision(const QString &revision);
 
     bool isManaged(const QFileInfo &file) const;
-    bool isConsistent() const;
-    bool updateInProgress() const;
-    void setUpdateInProgress(bool updateInProgress);
+    inline bool isConsistent() const;
+    inline bool updateInProgress() const;
+    inline void setUpdateInProgress(bool updateInProgress);
 
-    QStringList fileList() const;
-    void setFileList(const QStringList &files);
+    inline QStringList fileList() const;
+    inline void setFileList(const QStringList &files);
 
-    QStringList dirList() const;
-    void setDirList(const QStringList &dirList);
+    inline QStringList dirList() const;
+    inline void setDirList(const QStringList &dirList);
 
 private:
-    static const QString Revision, UpdateInProgress, FileList, DirList, StatusFileName;
     QStringList m_fileList, m_dirList;
     QString m_directory, m_localRevision;
     bool m_updateInProgress;

@@ -7,8 +7,6 @@ set(CMAKE_AUTOMOC ON)
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-set(CMAKE_PREFIX_PATH "C:\\Qt\\5.3\\msvc2013")
-
 # Workaround for : http://public.kitware.com/Bug/view.php?id=14292
 if(CMAKE_VERSION VERSION_LESS 2.8.12)
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -34,6 +32,7 @@ if(NOT DEFINED QtUpdateSystem_NOOUPUTPATH)
     endif()
 endif()
 
+find_package(Qt5Network)
 find_package(Qt5Core)
 
 add_subdirectory (src) 

@@ -4,12 +4,11 @@
 #include <QDir>
 #include <QSettings>
 
-
-const QString LocalRepository::Revision = QStringLiteral("Revision");
-const QString LocalRepository::UpdateInProgress = QStringLiteral("UpdateInProgress");
-const QString LocalRepository::FileList = QStringLiteral("FileList");
-const QString LocalRepository::DirList = QStringLiteral("DirList");
-const QString LocalRepository::StatusFileName = QStringLiteral("status.ini");
+static const QString Revision = QStringLiteral("Revision");
+static const QString UpdateInProgress = QStringLiteral("UpdateInProgress");
+static const QString FileList = QStringLiteral("FileList");
+static const QString DirList = QStringLiteral("DirList");
+static const QString StatusFileName = QStringLiteral("status.ini");
 
 LocalRepository::LocalRepository()
 {

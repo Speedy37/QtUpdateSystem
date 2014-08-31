@@ -43,29 +43,29 @@ public:
     Updater(QObject * parent = 0);
     ~Updater();
 
-    bool isIdle() const;
-    bool isUpdateAvailable() const;
-    bool isManaged(const QFileInfo &file) const;
+    inline bool isIdle() const;
+    inline bool isUpdateAvailable() const;
+    inline bool isManaged(const QFileInfo &file) const;
 
-    QString localRevision() const;
-    QString remoteRevision() const;
-    Version remoteVersion() const;
+    inline QString localRevision() const;
+    inline QString remoteRevision() const;
+    inline Version remoteVersion() const;
 
-    QString localRepository() const;
-    void setLocalRepository(const QString &localRepository);
+    inline QString localRepository() const;
+    inline void setLocalRepository(const QString &localRepository);
 
-    QString tmpDirectory() const;
-    void setTmpDirectory(const QString &tmpDirectory);
+    inline QString tmpDirectory() const;
+    inline void setTmpDirectory(const QString &tmpDirectory);
 
-    QString remoteRepository() const;
-    void setRemoteRepository(const QString &remoteRepository);
+    inline QString remoteRepository() const;
+    inline void setRemoteRepository(const QString &remoteRepository);
 
-    QString username() const;
-    QString password() const;
-    void setCredentials(const QString &username, const QString &password);
+    inline QString username() const;
+    inline QString password() const;
+    inline void setCredentials(const QString &username, const QString &password);
 
-    QString errorString() const;
-    State state() const;
+    inline QString errorString() const;
+    inline State state() const;
 
 public slots:
     void checkForUpdates();
