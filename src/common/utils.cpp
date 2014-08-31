@@ -3,7 +3,7 @@
 
 namespace Utils {
 
-#ifdef Q_OS_LINUX
+#ifdef Q_OS_UNIX
     QString xdelta = QStringLiteral("xdelta3");
     QString lzma = QStringLiteral("lzma");
 #elif defined(Q_OS_WIN)
