@@ -215,16 +215,16 @@ set(liblzma_FILES
     ../deps/xz/src/liblzma/simple/simple_decoder.h
     ../deps/xz/src/liblzma/simple/simple_encoder.h
     ../deps/xz/src/liblzma/simple/simple_private.h
-    ../deps/xz/windows/config.h
+    ../src/tools/lzma/config.h
     )
 
-check_type_size("size_t" XD3_SIZEOF_SIZE_T)
+check_type_size("size_t" SIZEOF_SIZE_T)
 set(XD3_COMPILE_DEFINITIONS 
 	XD3_DEBUG=0
 	SECONDARY_DJW=0
 	SECONDARY_FGK=0
 	EXTERNAL_COMPRESSION=0
-	SIZEOF_SIZE_T=${XD3_SIZEOF_SIZE_T})
+	SIZEOF_SIZE_T=${SIZEOF_SIZE_T})
 if (WIN32)
 	set(XD3_COMPILE_DEFINITIONS "${XD3_COMPILE_DEFINITIONS} _CRT_SECURE_NO_WARNINGS")
 endif(WIN32)
@@ -235,6 +235,7 @@ endforeach()
 
 foreach(LZMA_SOURCE_FILE ${liblzma_FILES})
         set_property(SOURCE ${LZMA_SOURCE_FILE} APPEND PROPERTY COMPILE_DEFINITIONS
+	        SIZEOF_SIZE_T=${SIZEOF_SIZE_T}
             LZMA_API_STATIC=1
             HAVE_CONFIG_H=1)
 endforeach()
@@ -247,7 +248,7 @@ include_directories(
     ../deps/xz/src/liblzma/lzma
     ../deps/xz/src/liblzma/delta
     ../deps/xz/src/liblzma/simple
-    ../deps/xz/windows
+    ../src/tools/lzma
     ../deps/xz/src/common)
 
 add_library(QtUpdateSystem SHARED ${QtUpdateSystem_FILES} ${xdelta3_FILES} ${liblzma_FILES})

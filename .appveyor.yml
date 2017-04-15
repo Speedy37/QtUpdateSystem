@@ -21,5 +21,8 @@ build_script:
   - if "%APPVEYOR_REPO_TAG%"=="true" (set CONFIGURATION=RelWithDebInfo) else (set CONFIGURATION=Debug)
   - cmake --build build --config "%CONFIGURATION%" -- %MSBUILD_FLAGS%
 
+after_build:
+  - build\bin\%CONFIGURATION%\tests.exe
+
 artifacts:
-  - path: build/
+  - path: build/bin/

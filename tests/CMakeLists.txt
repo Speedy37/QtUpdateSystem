@@ -18,3 +18,4 @@ add_executable(tests
 target_link_libraries(tests QtUpdateSystem)
 target_link_libraries(tests Qt5::Core)
 target_link_libraries(tests Qt5::Test)
+
