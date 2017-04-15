@@ -1,5 +1,6 @@
 #include "lzma.h"
 #include <QIODevice>
+#define LZMA_API_STATIC 1
 #include "../deps/xz/src/liblzma/api/lzma.h"
 
 class LZMACompressorQIODevice : public QIODevice
