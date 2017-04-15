@@ -384,7 +384,11 @@ typedef struct {
 } shortbuf;
 
 #ifndef PRINTF_ATTRIBUTE
+#ifdef _MSC_VER
+#define PRINTF_ATTRIBUTE(x,y)
+#else
 #define PRINTF_ATTRIBUTE(x,y) __attribute__ ((__format__ (__printf__, x, y)))
+#endif
 #endif
 
 /* Underlying xprintf() */
