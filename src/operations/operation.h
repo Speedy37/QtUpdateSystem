@@ -11,12 +11,6 @@
 class QFile;
 class DownloadManager;
 
-inline bool waitForFinished(QProcess & process)
-{
-    return (process.state() == QProcess::NotRunning || process.waitForFinished()) &&
-            process.exitCode() == 0;
-}
-
 class Operation
 {
 public:

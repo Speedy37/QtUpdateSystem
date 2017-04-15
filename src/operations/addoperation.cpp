@@ -1,6 +1,8 @@
 #include "addoperation.h"
 #include "../common/jsonutil.h"
 #include "../common/utils.h"
+#include "../tools/brotli.h"
+#include "../tools/lzma.h"
 #include <QLoggingCategory>
 #include <QFile>
 #include <QFileInfo>
@@ -19,6 +21,7 @@ const QString AddOperation::FinalSize = QStringLiteral("finalSize");
 const QString AddOperation::FinalSha1 = QStringLiteral("finalSha1");
 
 const QString COMPRESSION_LZMA = QStringLiteral("lzma");
+const QString COMPRESSION_BROTLI = QStringLiteral("brotli");
 const QString COMPRESSION_NONE = QStringLiteral("none");
 
 AddOperation::AddOperation() : Operation()
@@ -43,23 +46,34 @@ void AddOperation::fromJsonObjectV1(const QJsonObject &object)
     m_finalSha1 = JsonUtil::asString(object, FinalSha1);
 }
 
+void AddOperation::readAll(QIODevice *from, QIODevice *to, QCryptographicHash *hash)
+{
+    char buffer[65536];
+    qint64 read;
+    while ((read = from->read(buffer, sizeof(buffer))) > 0)
+    {
+        hash->addData(buffer, read);
+        if (to->write(buffer, read) != read)
+            throw QObject::tr("Write failed: %1").arg(to->errorString());
+    }
+    if (read == -1)
+        throw QObject::tr("Read failed: %1").arg(from->errorString());
+}
+
 void AddOperation::create(const QString &filepath, const QString &newFilename, const QString &tmpDirectory)
 {
+	// Final file informations
+    QFile file(newFilename);
+	if (!file.exists(newFilename))
+		throw QObject::tr("File %1 doesn't exists").arg(newFilename);
+	m_finalSha1 = sha1(&file);
+	m_finalSize = file.size();
     setPath(filepath);
+    setDataFilename(tmpDirectory + "add_" + m_finalSha1);
 
-    // Final file informations
-    {
-        QFile file(newFilename);
-        if(!file.exists(newFilename))
-            throw QObject::tr("File %1 doesn't exists").arg(newFilename);
-
-        m_finalSha1 = sha1(&file);
-        m_finalSize = file.size();
-    }
-
-    setDataFilename(tmpDirectory+"add_"+m_finalSha1);
     QFile dataFile(dataFilename());
     QFile metadataFile(dataFilename() + ".metadata");
+
     if(dataFile.exists() && metadataFile.exists())
     {
         if (metadataFile.open(QFile::ReadOnly | QFile::Text))
@@ -75,7 +89,10 @@ void AddOperation::create(const QString &filepath, const QString &newFilename, c
             catch(...) { }
             metadataFile.close();
         }
-    }
+	}
+
+	if (!file.open(QFile::ReadOnly))
+		throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
 
     if(!dataFile.open(QFile::WriteOnly | QFile::Truncate))
         throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
@@ -83,41 +100,20 @@ void AddOperation::create(const QString &filepath, const QString &newFilename, c
     if (!metadataFile.open(QFile::WriteOnly | QFile::Truncate | QFile::Text))
         throw QObject::tr("Unable to open file %1 for writing : %2").arg(metadataFile.fileName(), metadataFile.errorString());
 
-    QProcess compressor;
-    QStringList arguments;
-    arguments << "e" << "-so" << newFilename;
-    m_compression = COMPRESSION_LZMA;
-    compressor.start(Utils::lzmaProgram(), arguments);
-
-    if(!compressor.waitForStarted())
-        throw QObject::tr("Unable to start %1").arg(compressor.program());
-
+    QScopedPointer<QIODevice> compressor(BrotliCompressor(&file));
+    m_compression = COMPRESSION_BROTLI;
+	
     QCryptographicHash sha1Hash(QCryptographicHash::Sha1);
-    char buffer[8192];
-    qint64 read;
-    while(compressor.waitForReadyRead())
-    {
-        while((read = compressor.read(buffer, sizeof(buffer))) > 0)
-        {
-            sha1Hash.addData(buffer, read);
-            if(dataFile.write(buffer, read) != read)
-                throw QObject::tr("Failed to write to %1").arg(dataFile.fileName());
-        }
-    }
+    readAll(compressor.data(), &dataFile, &sha1Hash);
 
-    if(!waitForFinished(compressor))
-    {
-        qCCritical(LOG_ADDOP) << compressor.readAllStandardError();
-        throw QObject::tr("%1 failed").arg(compressor.program());
-    }
-
-    m_sha1 = QString(sha1Hash.result().toHex());
+	m_sha1 = QString(sha1Hash.result().toHex());
     m_size = dataFile.size();
 
     if(!dataFile.flush())
         throw QObject::tr("Unable to flush all compressed data");
 
-    dataFile.close();
+	dataFile.close();
+	file.close();
 
     // Writing metadata
     {
@@ -159,6 +155,7 @@ Operation::Status AddOperation::localDataStatus()
             qCDebug(LOG_ADDOP) << "File data is valid" << path();
             return ApplyRequired;
         }
+        QString s1 = sha1(&file);
         throwWarning(QObject::tr("File data is invalid and will be downloaded again"));
     }
 
@@ -183,40 +180,21 @@ void AddOperation::applyData()
         qCDebug(LOG_ADDOP) << "Rename succeeded" << path();
         return;
     }
-    else if(m_compression == COMPRESSION_LZMA)
+    else if(m_compression == COMPRESSION_BROTLI || m_compression == COMPRESSION_LZMA)
     {
-        qCDebug(LOG_ADDOP) << "Decompressing" << dataFilename() << "to" << path() << "by lzma";
+        qCDebug(LOG_ADDOP) << "Decompressing" << dataFilename() << "to" << path() << "by" << m_compression;
 
         QFile file(localFilename());
         if(!file.open(QFile::WriteOnly | QFile::Truncate))
             throw QObject::tr("Unable to open file %1 for writing").arg(file.fileName());
 
-        QProcess decompressor;
-        QStringList arguments;
-        arguments << "d" << dataFilename() << "-so";
-        decompressor.start(Utils::lzmaProgram(), arguments);
+        QFile dataFile(dataFilename());
+		if (!dataFile.open(QFile::ReadOnly))
+			throw QObject::tr("Unable to open file %1 for reading").arg(dataFile.fileName());
 
-        if(!decompressor.waitForStarted())
-            throw QObject::tr("Unable to start %1").arg(decompressor.program());
-
+        QScopedPointer<QIODevice> decompressor(m_compression == COMPRESSION_BROTLI ? BrotliDecompressor(&dataFile) : LZMADecompressor(&dataFile));
         QCryptographicHash sha1Hash(QCryptographicHash::Sha1);
-        char buffer[8192];
-        qint64 read;
-        while(decompressor.waitForReadyRead())
-        {
-            while((read = decompressor.read(buffer, sizeof(buffer))) > 0)
-            {
-                sha1Hash.addData(buffer, read);
-                if(file.write(buffer, read) != read)
-                    throw QObject::tr("Failed to write to %1").arg(file.fileName());
-            }
-        }
-
-        if(!waitForFinished(decompressor))
-        {
-            qCDebug(LOG_ADDOP) << decompressor.readAllStandardError();
-            throw QObject::tr("%1 failed").arg(decompressor.program());
-        }
+        readAll(decompressor.data(), &file, &sha1Hash);
 
         if(QString(sha1Hash.result().toHex()) != m_finalSha1)
             throw QObject::tr("Final sha1 file signature doesn't match");
@@ -225,6 +203,7 @@ void AddOperation::applyData()
             throw QObject::tr("Unable to flush all extracted data");
 
         file.close();
+        dataFile.close();
 
         Q_ASSERT(sha1(&file) == m_finalSha1);
 

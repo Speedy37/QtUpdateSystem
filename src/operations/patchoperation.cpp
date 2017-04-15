@@ -1,6 +1,9 @@
 #include "patchoperation.h"
 #include "../common/jsonutil.h"
 #include "../common/utils.h"
+#include "../tools/brotli.h"
+#include "../tools/lzma.h"
+#include "../tools/xdelta3.h"
 #include <QLoggingCategory>
 #include <QFile>
 #include <QFileInfo>
@@ -16,6 +19,7 @@ const QString PatchOperation::LocalSha1 = QStringLiteral("localSha1");
 const QString PatchOperation::PathType = QStringLiteral("patchType");
 
 const QString COMPRESSION_LZMA = QStringLiteral("lzma");
+const QString COMPRESSION_BROTLI = QStringLiteral("brotli");
 const QString COMPRESSION_NONE = QStringLiteral("none");
 
 const QString PATCHTYPE_XDELTA = QStringLiteral("xdelta");
@@ -80,60 +84,26 @@ void PatchOperation::applyData()
         if(!file.open(QFile::WriteOnly | QFile::Truncate))
             throw QObject::tr("Unable to open file %1 for writing").arg(file.fileName());
 
-        QProcess decompressor, xdelta;
-        QStringList xdeltaArguments;
-        bool hasCompression;
+		QFile baseFile(localFilename());
+        if (!baseFile.open(QFile::ReadOnly))
+			throw QObject::tr("Unable to open file %1 for writing").arg(baseFile.fileName());
 
-        xdeltaArguments << "-d" << "-c" << "-s" << localFilename();
+        QFile dataFile(dataFilename());
+		if (!dataFile.open(QFile::ReadOnly))
+			throw QObject::tr("Unable to open file %1 for reading").arg(dataFile.fileName());
+
+        QScopedPointer<QIODevice> source;
         if(m_compression == COMPRESSION_NONE)
-        {
-            xdeltaArguments << dataFilename();
-            hasCompression = false;
-        }
-        else if(m_compression == COMPRESSION_LZMA)
-        {
-            QStringList decompressorArguments;
-            decompressor.setStandardOutputProcess(&xdelta);
-            decompressorArguments << "d" << dataFilename() << "-so";
-            decompressor.start(Utils::lzmaProgram(), decompressorArguments);
-            hasCompression = true;
-        }
+            source.reset(&dataFile);
+        else if (m_compression == COMPRESSION_BROTLI)
+            source.reset(BrotliDecompressor(&dataFile));
+        else if (m_compression == COMPRESSION_LZMA)
+            source.reset(LZMADecompressor(&dataFile));
         else
-        {
             throw QObject::tr("Unsupported compression %1").arg(m_compression);
-        }
-        xdelta.start(Utils::xdeltaProgram(), xdeltaArguments);
-
-        if(hasCompression && !decompressor.waitForStarted())
-            throw QObject::tr("Unable to start %1").arg(decompressor.program());
-
-        if(!xdelta.waitForStarted())
-            throw QObject::tr("Unable to start %1").arg(xdelta.program());
-
         QCryptographicHash sha1Hash(QCryptographicHash::Sha1);
-        char buffer[8192];
-        qint64 read;
-        while(xdelta.waitForReadyRead())
-        {
-            while((read = xdelta.read(buffer, sizeof(buffer))) > 0)
-            {
-                sha1Hash.addData(buffer, read);
-                if(file.write(buffer, read) != read)
-                    throw QObject::tr("Failed to write to %1").arg(file.fileName());
-            }
-        }
-
-        if(hasCompression && !waitForFinished(decompressor))
-        {
-            qCDebug(LOG_PATCHOP) << decompressor.readAllStandardError();
-            throw QObject::tr("Decompression by %1 failed").arg(decompressor.program());
-        }
-
-        if(!waitForFinished(xdelta))
-        {
-            qCDebug(LOG_PATCHOP) << xdelta.readAllStandardError();
-            throw QObject::tr("%1 failed").arg(xdelta.program());
-        }
+        QScopedPointer<QIODevice> xd3(XDelta3(source.data(), &baseFile, false));
+        readAll(xd3.data(), &file, &sha1Hash);
 
         if(QString(sha1Hash.result().toHex()) != m_finalSha1)
             throw QObject::tr("Final sha1 file signature doesn't match");
@@ -141,13 +111,15 @@ void PatchOperation::applyData()
         if(!file.flush())
             throw QObject::tr("Unable to flush all extracted data");
 
+        baseFile.close();
         file.close();
+        dataFile.close();
 
         Q_ASSERT(sha1(&file) == m_finalSha1);
 
         qCDebug(LOG_PATCHOP) << "Patch succeeded" << path();
 
-        if(!QFile(localFilename()).remove())
+        if(!baseFile.remove())
             throw QObject::tr("Unable to remove local file %1").arg(path());
 
         if(!file.rename(localFilename()))
@@ -183,24 +155,25 @@ void PatchOperation::create(const QString &filepath, const QString &oldFilename,
 {
     setPath(filepath);
 
+	QFile newFile(newFilename);
+	QFile oldFile(oldFilename);
+
     // New file informations
     {
-        QFile file(newFilename);
-        if(!file.exists(newFilename))
+        if(!newFile.exists(newFilename))
             throw QObject::tr("File %1 doesn't exists").arg(newFilename);
 
-        m_finalSha1 = sha1(&file);
-        m_finalSize = file.size();
+        m_finalSha1 = sha1(&newFile);
+        m_finalSize = newFile.size();
     }
 
     // Old file informations
     {
-        QFile file(oldFilename);
-        if(!file.exists(oldFilename))
+        if(!oldFile.exists(oldFilename))
             throw QObject::tr("File %1 doesn't exists").arg(oldFilename);
 
-        m_localSha1 = sha1(&file);
-        m_localSize = file.size();
+        m_localSha1 = sha1(&oldFile);
+        m_localSize = oldFile.size();
     }
 
     if(m_localSize == m_finalSize && m_localSha1 == m_finalSha1)
@@ -230,55 +203,25 @@ void PatchOperation::create(const QString &filepath, const QString &oldFilename,
     }
 
 
+	if (!newFile.open(QFile::ReadOnly))
+		throw QObject::tr("Unable to open file %1 for reading").arg(newFile.fileName());
+
+	if (!oldFile.open(QFile::ReadOnly))
+		throw QObject::tr("Unable to open file %1 for reading").arg(oldFile.fileName());
+
     if(!dataFile.open(QFile::WriteOnly | QFile::Truncate))
         throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
 
     if (!metadataFile.open(QFile::WriteOnly | QFile::Truncate | QFile::Text))
         throw QObject::tr("Unable to open file %1 for writing : %2").arg(metadataFile.fileName(), metadataFile.errorString());
 
-    m_compression = COMPRESSION_LZMA;
+    m_compression = COMPRESSION_BROTLI;
     m_patchtype = PATCHTYPE_XDELTA;
-
-    QProcess compressor, xdelta;
-    QStringList xdeltaArguments;
-    QStringList compressorArguments;
-
-    xdeltaArguments << "-e" << "-c" << "-s" << oldFilename << newFilename;
-    xdelta.setStandardOutputProcess(&compressor);
-    compressorArguments << "e" << "-si" << "-so";
-    xdelta.start(Utils::xdeltaProgram(), xdeltaArguments);
-    compressor.start(Utils::lzmaProgram(), compressorArguments);
-
-    if(!xdelta.waitForStarted())
-        throw QObject::tr("Unable to start %1").arg(xdelta.program());
-
-    if(!compressor.waitForStarted())
-        throw QObject::tr("Unable to start %1").arg(compressor.program());
-
+	
     QCryptographicHash sha1Hash(QCryptographicHash::Sha1);
-    char buffer[8192];
-    qint64 read;
-    while(compressor.waitForReadyRead())
-    {
-        while((read = compressor.read(buffer, sizeof(buffer))) > 0)
-        {
-            sha1Hash.addData(buffer, read);
-            if(dataFile.write(buffer, read) != read)
-                throw QObject::tr("Failed to write to %1").arg(dataFile.fileName());
-        }
-    }
-
-    if(!waitForFinished(xdelta))
-    {
-        qCCritical(LOG_PATCHOP) << xdelta.readAllStandardError();
-        throw QObject::tr("%1 failed").arg(xdelta.program());
-    }
-
-    if(!waitForFinished(compressor))
-    {
-        qCCritical(LOG_PATCHOP) << compressor.readAllStandardError();
-        throw QObject::tr("Ccompression by %1 failed").arg(compressor.program());
-    }
+    QScopedPointer<QIODevice> xd3(XDelta3(&newFile, &oldFile, true));
+    QScopedPointer<QIODevice> compressor(BrotliCompressor(xd3.data()));
+    readAll(compressor.data(), &dataFile, &sha1Hash);
 
     m_sha1 = QString(sha1Hash.result().toHex());
     m_size = dataFile.size();
