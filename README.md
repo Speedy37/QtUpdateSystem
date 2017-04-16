@@ -1,8 +1,8 @@
 QtUpdateSystem
 ==============
 
-[![Build Status](https://travis-ci.org/Speedy37/QtUpdateSystem.svg?branch=master)](https://travis-ci.org/Speedy37/QtUpdateSystem)
-[![Build status](https://ci.appveyor.com/api/projects/status/59rt25d8yub65j87/branch/master?svg=true)](https://ci.appveyor.com/project/Speedy37/qtupdatesystem/branch/master)
+[![Windows build status](https://img.shields.io/appveyor/ci/Speedy37/QtUpdateSystem/master.svg?label=Windows%20build)](https://ci.appveyor.com/project/Speedy37/qtupdatesystem/branch/master)
+[![Linux / OSX build Status](https://img.shields.io/travis/Speedy37/QtUpdateSystem.svg?branch=master&label=Linux%20%2F%20OSX%20build)](https://travis-ci.org/Speedy37/QtUpdateSystem)
 
 Provide an easy to use and very efficient update system for small to big archives.
 With this library you can auto update your application or whatever you want (size limit is at 2^64-1) with only a static file based repository.
