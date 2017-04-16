@@ -1,5 +1,5 @@
 add_definitions( -DQTUPDATESYSTEM_LIBRARY )
-
+include(CheckTypeSize)
 find_package(Qt5Network)
 
 set(QtUpdateSystem_FILES
@@ -19,6 +19,12 @@ set(QtUpdateSystem_FILES
     common/versions.h
     errors/warning.cpp
     errors/warning.h
+    tools/brotli.cpp
+    tools/brotli.h
+    tools/xdelta3.cpp
+    tools/xdelta3.h
+    tools/lzma.cpp
+    tools/lzma.h
     exceptions.h
     operations/addoperation.cpp
     operations/addoperation.h
@@ -51,6 +57,203 @@ set(QtUpdateSystem_FILES
     updater/localrepository.h
     updater/oneobjectthread.h)
 
-add_library(QtUpdateSystem SHARED ${QtUpdateSystem_FILES})
+
+set(xdelta3_FILES
+    ../deps/xdelta/xdelta3/xdelta3.c
+    ../deps/xdelta/xdelta3/xdelta3-blkcache.h
+    ../deps/xdelta/xdelta3/xdelta3-cfgs.h
+    ../deps/xdelta/xdelta3/xdelta3-decode.h
+    ../deps/xdelta/xdelta3/xdelta3-djw.h
+    ../deps/xdelta/xdelta3/xdelta3-fgk.h
+    ../deps/xdelta/xdelta3/xdelta3-hash.h
+    ../deps/xdelta/xdelta3/xdelta3-internal.h
+    ../deps/xdelta/xdelta3/xdelta3-list.h
+    ../deps/xdelta/xdelta3/xdelta3-lzma.h
+    ../deps/xdelta/xdelta3/xdelta3-main.h
+    ../deps/xdelta/xdelta3/xdelta3-merge.h
+    ../deps/xdelta/xdelta3/xdelta3-second.h
+    ../deps/xdelta/xdelta3/xdelta3-test.h
+    ../deps/xdelta/xdelta3/xdelta3.h)
+
+set(liblzma_FILES
+    ../deps/xz/src/common/tuklib_cpucores.c
+    ../deps/xz/src/common/tuklib_physmem.c
+    ../deps/xz/src/liblzma/check/check.c
+    ../deps/xz/src/liblzma/check/crc32_fast.c
+    ../deps/xz/src/liblzma/check/crc32_table.c
+    ../deps/xz/src/liblzma/check/crc64_fast.c
+    ../deps/xz/src/liblzma/check/crc64_table.c
+    ../deps/xz/src/liblzma/check/sha256.c
+    ../deps/xz/src/liblzma/common/alone_decoder.c
+    ../deps/xz/src/liblzma/common/alone_encoder.c
+    ../deps/xz/src/liblzma/common/auto_decoder.c
+    ../deps/xz/src/liblzma/common/block_buffer_decoder.c
+    ../deps/xz/src/liblzma/common/block_buffer_encoder.c
+    ../deps/xz/src/liblzma/common/block_decoder.c
+    ../deps/xz/src/liblzma/common/block_encoder.c
+    ../deps/xz/src/liblzma/common/block_header_decoder.c
+    ../deps/xz/src/liblzma/common/block_header_encoder.c
+    ../deps/xz/src/liblzma/common/block_util.c
+    ../deps/xz/src/liblzma/common/common.c
+    ../deps/xz/src/liblzma/common/easy_buffer_encoder.c
+    ../deps/xz/src/liblzma/common/easy_decoder_memusage.c
+    ../deps/xz/src/liblzma/common/easy_encoder.c
+    ../deps/xz/src/liblzma/common/easy_encoder_memusage.c
+    ../deps/xz/src/liblzma/common/easy_preset.c
+    ../deps/xz/src/liblzma/common/filter_buffer_decoder.c
+    ../deps/xz/src/liblzma/common/filter_buffer_encoder.c
+    ../deps/xz/src/liblzma/common/filter_common.c
+    ../deps/xz/src/liblzma/common/filter_decoder.c
+    ../deps/xz/src/liblzma/common/filter_encoder.c
+    ../deps/xz/src/liblzma/common/filter_flags_decoder.c
+    ../deps/xz/src/liblzma/common/filter_flags_encoder.c
+    ../deps/xz/src/liblzma/common/hardware_cputhreads.c
+    ../deps/xz/src/liblzma/common/hardware_physmem.c
+    ../deps/xz/src/liblzma/common/index.c
+    ../deps/xz/src/liblzma/common/index_decoder.c
+    ../deps/xz/src/liblzma/common/index_encoder.c
+    ../deps/xz/src/liblzma/common/index_hash.c
+    ../deps/xz/src/liblzma/common/outqueue.c
+    ../deps/xz/src/liblzma/common/stream_buffer_decoder.c
+    ../deps/xz/src/liblzma/common/stream_buffer_encoder.c
+    ../deps/xz/src/liblzma/common/stream_decoder.c
+    ../deps/xz/src/liblzma/common/stream_encoder.c
+    ../deps/xz/src/liblzma/common/stream_encoder_mt.c
+    ../deps/xz/src/liblzma/common/stream_flags_common.c
+    ../deps/xz/src/liblzma/common/stream_flags_decoder.c
+    ../deps/xz/src/liblzma/common/stream_flags_encoder.c
+    ../deps/xz/src/liblzma/common/vli_decoder.c
+    ../deps/xz/src/liblzma/common/vli_encoder.c
+    ../deps/xz/src/liblzma/common/vli_size.c
+    ../deps/xz/src/liblzma/delta/delta_common.c
+    ../deps/xz/src/liblzma/delta/delta_decoder.c
+    ../deps/xz/src/liblzma/delta/delta_encoder.c
+    ../deps/xz/src/liblzma/lzma/fastpos_table.c
+    ../deps/xz/src/liblzma/lzma/lzma2_decoder.c
+    ../deps/xz/src/liblzma/lzma/lzma2_encoder.c
+    ../deps/xz/src/liblzma/lzma/lzma_decoder.c
+    ../deps/xz/src/liblzma/lzma/lzma_encoder.c
+    ../deps/xz/src/liblzma/lzma/lzma_encoder_optimum_fast.c
+    ../deps/xz/src/liblzma/lzma/lzma_encoder_optimum_normal.c
+    ../deps/xz/src/liblzma/lzma/lzma_encoder_presets.c
+    ../deps/xz/src/liblzma/lz/lz_decoder.c
+    ../deps/xz/src/liblzma/lz/lz_encoder.c
+    ../deps/xz/src/liblzma/lz/lz_encoder_mf.c
+    ../deps/xz/src/liblzma/rangecoder/price_table.c
+    ../deps/xz/src/liblzma/simple/arm.c
+    ../deps/xz/src/liblzma/simple/armthumb.c
+    ../deps/xz/src/liblzma/simple/ia64.c
+    ../deps/xz/src/liblzma/simple/powerpc.c
+    ../deps/xz/src/liblzma/simple/simple_coder.c
+    ../deps/xz/src/liblzma/simple/simple_decoder.c
+    ../deps/xz/src/liblzma/simple/simple_encoder.c
+    ../deps/xz/src/liblzma/simple/sparc.c
+    ../deps/xz/src/liblzma/simple/x86.c
+    ../deps/xz/src/common/mythread.h
+    ../deps/xz/src/common/sysdefs.h
+    ../deps/xz/src/common/tuklib_common.h
+    ../deps/xz/src/common/tuklib_config.h
+    ../deps/xz/src/common/tuklib_cpucores.h
+    ../deps/xz/src/common/tuklib_integer.h
+    ../deps/xz/src/common/tuklib_physmem.h
+    ../deps/xz/src/liblzma/api/lzma.h
+    ../deps/xz/src/liblzma/api/lzma/base.h
+    ../deps/xz/src/liblzma/api/lzma/bcj.h
+    ../deps/xz/src/liblzma/api/lzma/block.h
+    ../deps/xz/src/liblzma/api/lzma/check.h
+    ../deps/xz/src/liblzma/api/lzma/container.h
+    ../deps/xz/src/liblzma/api/lzma/delta.h
+    ../deps/xz/src/liblzma/api/lzma/filter.h
+    ../deps/xz/src/liblzma/api/lzma/hardware.h
+    ../deps/xz/src/liblzma/api/lzma/index.h
+    ../deps/xz/src/liblzma/api/lzma/index_hash.h
+    ../deps/xz/src/liblzma/api/lzma/lzma12.h
+    ../deps/xz/src/liblzma/api/lzma/stream_flags.h
+    ../deps/xz/src/liblzma/api/lzma/version.h
+    ../deps/xz/src/liblzma/api/lzma/vli.h
+    ../deps/xz/src/liblzma/check/check.h
+    ../deps/xz/src/liblzma/check/crc32_table_be.h
+    ../deps/xz/src/liblzma/check/crc32_table_le.h
+    ../deps/xz/src/liblzma/check/crc64_table_be.h
+    ../deps/xz/src/liblzma/check/crc64_table_le.h
+    ../deps/xz/src/liblzma/check/crc_macros.h
+    ../deps/xz/src/liblzma/common/alone_decoder.h
+    ../deps/xz/src/liblzma/common/block_buffer_encoder.h
+    ../deps/xz/src/liblzma/common/block_decoder.h
+    ../deps/xz/src/liblzma/common/block_encoder.h
+    ../deps/xz/src/liblzma/common/common.h
+    ../deps/xz/src/liblzma/common/easy_preset.h
+    ../deps/xz/src/liblzma/common/filter_common.h
+    ../deps/xz/src/liblzma/common/filter_decoder.h
+    ../deps/xz/src/liblzma/common/filter_encoder.h
+    ../deps/xz/src/liblzma/common/index.h
+    ../deps/xz/src/liblzma/common/index_encoder.h
+    ../deps/xz/src/liblzma/common/memcmplen.h
+    ../deps/xz/src/liblzma/common/outqueue.h
+    ../deps/xz/src/liblzma/common/stream_decoder.h
+    ../deps/xz/src/liblzma/common/stream_flags_common.h
+    ../deps/xz/src/liblzma/delta/delta_common.h
+    ../deps/xz/src/liblzma/delta/delta_decoder.h
+    ../deps/xz/src/liblzma/delta/delta_encoder.h
+    ../deps/xz/src/liblzma/delta/delta_private.h
+    ../deps/xz/src/liblzma/lzma/fastpos.h
+    ../deps/xz/src/liblzma/lzma/lzma2_decoder.h
+    ../deps/xz/src/liblzma/lzma/lzma2_encoder.h
+    ../deps/xz/src/liblzma/lzma/lzma_common.h
+    ../deps/xz/src/liblzma/lzma/lzma_decoder.h
+    ../deps/xz/src/liblzma/lzma/lzma_encoder.h
+    ../deps/xz/src/liblzma/lzma/lzma_encoder_private.h
+    ../deps/xz/src/liblzma/lz/lz_decoder.h
+    ../deps/xz/src/liblzma/lz/lz_encoder.h
+    ../deps/xz/src/liblzma/lz/lz_encoder_hash.h
+    ../deps/xz/src/liblzma/lz/lz_encoder_hash_table.h
+    ../deps/xz/src/liblzma/rangecoder/price.h
+    ../deps/xz/src/liblzma/rangecoder/range_common.h
+    ../deps/xz/src/liblzma/rangecoder/range_decoder.h
+    ../deps/xz/src/liblzma/rangecoder/range_encoder.h
+    ../deps/xz/src/liblzma/simple/simple_coder.h
+    ../deps/xz/src/liblzma/simple/simple_decoder.h
+    ../deps/xz/src/liblzma/simple/simple_encoder.h
+    ../deps/xz/src/liblzma/simple/simple_private.h
+    ../src/tools/lzma/config.h
+    )
+
+check_type_size("size_t" SIZEOF_SIZE_T)
+set(XD3_COMPILE_DEFINITIONS 
+	XD3_DEBUG=0
+	SECONDARY_DJW=0
+	SECONDARY_FGK=0
+	EXTERNAL_COMPRESSION=0
+	SIZEOF_SIZE_T=${SIZEOF_SIZE_T})
+if (WIN32)
+	set(XD3_COMPILE_DEFINITIONS "${XD3_COMPILE_DEFINITIONS} _CRT_SECURE_NO_WARNINGS")
+endif(WIN32)
+
+foreach(XD3_SOURCE_FILE ../deps/xdelta/xdelta3/xdelta3.c tools/xdelta3.cpp)
+        set_property(SOURCE ${XD3_SOURCE_FILE} APPEND PROPERTY  COMPILE_DEFINITIONS ${XD3_COMPILE_DEFINITIONS})
+endforeach()
+
+foreach(LZMA_SOURCE_FILE ${liblzma_FILES})
+        set_property(SOURCE ${LZMA_SOURCE_FILE} APPEND PROPERTY COMPILE_DEFINITIONS
+	        SIZEOF_SIZE_T=${SIZEOF_SIZE_T}
+            LZMA_API_STATIC=1
+            HAVE_CONFIG_H=1)
+endforeach()
+include_directories(
+    ../deps/xz/src/liblzma/api
+    ../deps/xz/src/liblzma/common
+    ../deps/xz/src/liblzma/check
+    ../deps/xz/src/liblzma/lz
+    ../deps/xz/src/liblzma/rangecoder
+    ../deps/xz/src/liblzma/lzma
+    ../deps/xz/src/liblzma/delta
+    ../deps/xz/src/liblzma/simple
+    ../src/tools/lzma
+    ../deps/xz/src/common)
+add_library(QtUpdateSystem SHARED ${QtUpdateSystem_FILES} ${xdelta3_FILES} ${liblzma_FILES})
+target_link_libraries(QtUpdateSystem brotlicommon)
+target_link_libraries(QtUpdateSystem brotlienc)
+target_link_libraries(QtUpdateSystem brotlidec)
 target_link_libraries(QtUpdateSystem Qt5::Core)
 target_link_libraries(QtUpdateSystem Qt5::Network)
+set_property(TARGET QtUpdateSystem PROPERTY C_STANDARD 99)

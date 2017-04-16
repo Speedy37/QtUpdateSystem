@@ -26,10 +26,10 @@ protected:
     virtual void applyData() Q_DECL_OVERRIDE;
     virtual QString type() const Q_DECL_OVERRIDE;
     virtual void fillJsonObjectV1(QJsonObject & object) Q_DECL_OVERRIDE;
+    void readAll(QIODevice *from, QIODevice *to, QCryptographicHash *hash);
 
     QString m_compression, m_finalSha1;
     qint64 m_finalSize;
-
 };
 
 #endif // UPDATER_ADDOPERATION_H

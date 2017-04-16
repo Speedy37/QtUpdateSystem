@@ -1,12 +1,13 @@
 cmake_minimum_required (VERSION 2.8.11)
 project (QtUpdateSystem)
 
+set(BUILD_SHARED_LIBS OFF)
+
 # Instruct CMake to run moc automatically when needed.
 set(CMAKE_AUTOMOC ON)
 
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 # Workaround for : http://public.kitware.com/Bug/view.php?id=14292
 if(CMAKE_VERSION VERSION_LESS 2.8.12)
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -23,19 +24,15 @@ else()
 endif()
 
 if(NOT DEFINED QtUpdateSystem_NOOUPUTPATH)
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin-debug)
-        set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin-debug)
-    else()
-        set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin-release)
-        set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin-release)
-    endif()
+    set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+    set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 endif()
 
 find_package(Qt5Network)
 find_package(Qt5Core)
 
-add_subdirectory (src) 
+add_subdirectory (src)
+add_subdirectory (deps/brotli) 
 add_subdirectory (tests)
 if(NOT DEFINED QtUpdateSystem_NOUTILS)
     add_subdirectory (utils)
