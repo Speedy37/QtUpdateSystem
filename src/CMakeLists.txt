@@ -250,10 +250,10 @@ include_directories(
     ../deps/xz/src/liblzma/simple
     ../src/tools/lzma
     ../deps/xz/src/common)
-
 add_library(QtUpdateSystem SHARED ${QtUpdateSystem_FILES} ${xdelta3_FILES} ${liblzma_FILES})
 target_link_libraries(QtUpdateSystem brotlicommon)
 target_link_libraries(QtUpdateSystem brotlienc)
 target_link_libraries(QtUpdateSystem brotlidec)
 target_link_libraries(QtUpdateSystem Qt5::Core)
 target_link_libraries(QtUpdateSystem Qt5::Network)
+set_property(TARGET QtUpdateSystem PROPERTY C_STANDARD 99)
