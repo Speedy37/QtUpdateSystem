@@ -1,6 +1,9 @@
 QtUpdateSystem
 ==============
 
+[![Build Status](https://travis-ci.org/Speedy37/QtUpdateSystem.svg?branch=master)](https://travis-ci.org/Speedy37/QtUpdateSystem)
+[![Build status](https://ci.appveyor.com/api/projects/status/59rt25d8yub65j87/branch/master?svg=true)](https://ci.appveyor.com/project/Speedy37/qtupdatesystem/branch/master)
+
 Provide an easy to use and very efficient update system for small to big archives.
 With this library you can auto update your application or whatever you want (size limit is at 2^64-1) with only a static file based repository.
 
@@ -10,13 +13,14 @@ The goals of this library is to provide a very efficient system to update files 
  - minimizing the download size as much as possible
  - no more cost than serving static files for the HTTP server
  - working over HTTP(s) with optional basic authentication
- - publishing updating in a matter of seconds
- - checking & applying updates at the same the files are downloaded
+ - publishing updates in a matter of seconds
+ - checking & applying updates while downloading files
  - automatic error handling and files corrections
  - checking local file integrity
 
 To achieve thoses goals this library depends on :
  - xdelta3 : for creating patches (http://xdelta.org/)
+ - brotli : as a even better data compressor (https://github.com/google/brotli)
  - lzma : as a powerfull data compressor (http://tukaani.org/xz/)
 
 How to install
