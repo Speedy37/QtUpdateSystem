@@ -42,9 +42,10 @@ void TestPackager::createPatch()
     try {
         QSignalSpy spy(&packager, SIGNAL(progress(int,int)));
         packager.generate();
-        QCOMPARE(spy.count(), 10);
-        for(int i = 0; i < 10; ++i) {
-            QCOMPARE(spy.at(i).first().toInt(), i+1);
+        QVERIFY(spy.count() > 0);
+        for(int i = 0, last = 0; i < spy.count(); ++i) {
+            QVERIFY(last < spy.at(i).first().toInt());
+            last = spy.at(i).first().toInt();
             QCOMPARE(spy.at(i).last().toInt(), 10);
             QCOMPARE(spy.at(i).size(), 2);
         }
