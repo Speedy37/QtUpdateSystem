@@ -54,23 +54,23 @@ QIODevice * BrotliDecompressor(QIODevice *source, QObject *parent)
 
 BrotliCompressorQIODevice::BrotliCompressorQIODevice(QIODevice *source, quint32 quality /*= 9*/, quint32 lgwin /*= 0*/, QObject *parent /*= nullptr*/) : QIODevice(parent)
 {
-	setOpenMode(QIODevice::ReadOnly);
-	_state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
-	_source = source;
-	_available_in = 0;
+    setOpenMode(QIODevice::ReadOnly);
+    _state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
+    _source = source;
+    _available_in = 0;
     _op = BROTLI_OPERATION_PROCESS;
-	BrotliEncoderSetParameter(_state, BROTLI_PARAM_QUALITY, quality);
-	BrotliEncoderSetParameter(_state, BROTLI_PARAM_LGWIN, lgwin);
+    BrotliEncoderSetParameter(_state, BROTLI_PARAM_QUALITY, quality);
+    BrotliEncoderSetParameter(_state, BROTLI_PARAM_LGWIN, lgwin);
 }
 
 BrotliCompressorQIODevice::~BrotliCompressorQIODevice()
 {
-	BrotliEncoderDestroyInstance(_state);
+    BrotliEncoderDestroyInstance(_state);
 }
 
 bool BrotliCompressorQIODevice::atEnd() const
 {
-	return BrotliEncoderIsFinished(_state);
+    return BrotliEncoderIsFinished(_state);
 }
 
 qint64 BrotliCompressorQIODevice::readData(char *data, qint64 maxlen)
@@ -107,39 +107,39 @@ qint64 BrotliCompressorQIODevice::writeData(const char *, qint64)
 
 BrotliDecompressorQIODevice::BrotliDecompressorQIODevice(QIODevice *source, QObject *parent /*= nullptr*/) : QIODevice(parent)
 {
-	setOpenMode(QIODevice::ReadOnly);
-	_state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
-	_result = BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT;
-	_source = source;
-	_available_in = 0;
+    setOpenMode(QIODevice::ReadOnly);
+    _state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
+    _result = BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT;
+    _source = source;
+    _available_in = 0;
 }
 
 BrotliDecompressorQIODevice::~BrotliDecompressorQIODevice()
 {
-	BrotliDecoderDestroyInstance(_state);
+    BrotliDecoderDestroyInstance(_state);
 }
 
 bool BrotliDecompressorQIODevice::atEnd() const
 {
-	return BrotliDecoderIsFinished(_state);
+    return BrotliDecoderIsFinished(_state);
 }
 
 qint64 BrotliDecompressorQIODevice::readData(char *data, qint64 maxlen)
 {
-	size_t available_out = maxlen;
-	uint8_t* next_out = (uint8_t*)data;
-	do {
-		if (_result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) {
-			if (this->_source->atEnd()) {
-				this->setErrorString(QStringLiteral("corrupt input"));
+    size_t available_out = maxlen;
+    uint8_t* next_out = (uint8_t*)data;
+    do {
+        if (_result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) {
+            if (this->_source->atEnd()) {
+                this->setErrorString(QStringLiteral("corrupt input"));
                 return -1;
-			}
-			_available_in = _source->read((char*)_buffer, BufferSize);
-			_next_in = _buffer;
-		}
-		_result = BrotliDecoderDecompressStream(_state, &_available_in, &_next_in, &available_out, &next_out, nullptr);
-	} while (_result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT);
-	return maxlen - available_out;
+            }
+            _available_in = _source->read((char*)_buffer, BufferSize);
+            _next_in = _buffer;
+        }
+        _result = BrotliDecoderDecompressStream(_state, &_available_in, &_next_in, &available_out, &next_out, nullptr);
+    } while (_result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT);
+    return maxlen - available_out;
 }
 
 qint64 BrotliDecompressorQIODevice::writeData(const char *, qint64)

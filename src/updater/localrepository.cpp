@@ -24,43 +24,43 @@ LocalRepository::LocalRepository(const QString &directory)
 
 void LocalRepository::fromJsonObject(const QJsonObject & object)
 {
-	const QString version = JsonUtil::asString(object, QStringLiteral("version"));
-	if (version != "1")
-		THROW(UnsupportedVersion, version);
-	m_localRevision = object.value(Revision).toString();
-	m_updateInProgress = object.value(UpdateInProgress).toBool();
-	m_fileList = object.value(FileList).toVariant().toStringList();
-	m_dirList = object.value(DirList).toVariant().toStringList();
+    const QString version = JsonUtil::asString(object, QStringLiteral("version"));
+    if (version != "1")
+        THROW(UnsupportedVersion, version);
+    m_localRevision = object.value(Revision).toString();
+    m_updateInProgress = object.value(UpdateInProgress).toBool();
+    m_fileList = object.value(FileList).toVariant().toStringList();
+    m_dirList = object.value(DirList).toVariant().toStringList();
 }
 
 QJsonObject LocalRepository::toJsonObject() const
 {
-	QJsonObject object;
+    QJsonObject object;
 
-	object.insert(QStringLiteral("version"), QStringLiteral("1"));
-	object.insert(Revision, m_localRevision);
-	object.insert(UpdateInProgress, m_updateInProgress);
-	object.insert(FileList, QJsonValue::fromVariant(m_fileList));
-	object.insert(DirList, QJsonValue::fromVariant(m_dirList));
+    object.insert(QStringLiteral("version"), QStringLiteral("1"));
+    object.insert(Revision, m_localRevision);
+    object.insert(UpdateInProgress, m_updateInProgress);
+    object.insert(FileList, QJsonValue::fromVariant(m_fileList));
+    object.insert(DirList, QJsonValue::fromVariant(m_dirList));
 
-	return object;
+    return object;
 }
 
 bool LocalRepository::load()
 {
-	try
-	{
-		fromJsonObject(JsonUtil::fromJsonFile(m_directory + StatusFileName));
-		return true;
-	}
-	catch (...) {
-		return false;
-	}
+    try
+    {
+        fromJsonObject(JsonUtil::fromJsonFile(m_directory + StatusFileName));
+        return true;
+    }
+    catch (...) {
+        return false;
+    }
 }
 
 void LocalRepository::save()
 {
-	JsonUtil::toJsonFile(m_directory + StatusFileName, toJsonObject());
+    JsonUtil::toJsonFile(m_directory + StatusFileName, toJsonObject());
 }
 
 bool LocalRepository::isManaged(const QFileInfo &file) const

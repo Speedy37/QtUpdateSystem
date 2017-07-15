@@ -62,12 +62,12 @@ void AddOperation::readAll(QIODevice *from, QIODevice *to, QCryptographicHash *h
 
 void AddOperation::create(const QString &filepath, const QString &newFilename, const QString &tmpDirectory)
 {
-	// Final file informations
+    // Final file informations
     QFile file(newFilename);
-	if (!file.exists(newFilename))
-		throw QObject::tr("File %1 doesn't exists").arg(newFilename);
-	m_finalSha1 = sha1(&file);
-	m_finalSize = file.size();
+    if (!file.exists(newFilename))
+        throw QObject::tr("File %1 doesn't exists").arg(newFilename);
+    m_finalSha1 = sha1(&file);
+    m_finalSize = file.size();
     setPath(filepath);
     setDataFilename(tmpDirectory + "add_" + m_finalSha1);
 
@@ -89,10 +89,10 @@ void AddOperation::create(const QString &filepath, const QString &newFilename, c
             catch(...) { }
             metadataFile.close();
         }
-	}
+    }
 
-	if (!file.open(QFile::ReadOnly))
-		throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
+    if (!file.open(QFile::ReadOnly))
+        throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
 
     if(!dataFile.open(QFile::WriteOnly | QFile::Truncate))
         throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
@@ -102,18 +102,18 @@ void AddOperation::create(const QString &filepath, const QString &newFilename, c
 
     QScopedPointer<QIODevice> compressor(BrotliCompressor(&file));
     m_compression = COMPRESSION_BROTLI;
-	
+    
     QCryptographicHash sha1Hash(QCryptographicHash::Sha1);
     readAll(compressor.data(), &dataFile, &sha1Hash);
 
-	m_sha1 = QString(sha1Hash.result().toHex());
+    m_sha1 = QString(sha1Hash.result().toHex());
     m_size = dataFile.size();
 
     if(!dataFile.flush())
         throw QObject::tr("Unable to flush all compressed data");
 
-	dataFile.close();
-	file.close();
+    dataFile.close();
+    file.close();
 
     // Writing metadata
     {
@@ -189,8 +189,8 @@ void AddOperation::applyData()
             throw QObject::tr("Unable to open file %1 for writing").arg(file.fileName());
 
         QFile dataFile(dataFilename());
-		if (!dataFile.open(QFile::ReadOnly))
-			throw QObject::tr("Unable to open file %1 for reading").arg(dataFile.fileName());
+        if (!dataFile.open(QFile::ReadOnly))
+            throw QObject::tr("Unable to open file %1 for reading").arg(dataFile.fileName());
 
         QScopedPointer<QIODevice> decompressor(m_compression == COMPRESSION_BROTLI ? BrotliDecompressor(&dataFile) : LZMADecompressor(&dataFile));
         QCryptographicHash sha1Hash(QCryptographicHash::Sha1);

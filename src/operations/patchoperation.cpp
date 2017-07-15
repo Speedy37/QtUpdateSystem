@@ -84,13 +84,13 @@ void PatchOperation::applyData()
         if(!file.open(QFile::WriteOnly | QFile::Truncate))
             throw QObject::tr("Unable to open file %1 for writing").arg(file.fileName());
 
-		QFile baseFile(localFilename());
+        QFile baseFile(localFilename());
         if (!baseFile.open(QFile::ReadOnly))
-			throw QObject::tr("Unable to open file %1 for writing").arg(baseFile.fileName());
+            throw QObject::tr("Unable to open file %1 for writing").arg(baseFile.fileName());
 
         QFile dataFile(dataFilename());
-		if (!dataFile.open(QFile::ReadOnly))
-			throw QObject::tr("Unable to open file %1 for reading").arg(dataFile.fileName());
+        if (!dataFile.open(QFile::ReadOnly))
+            throw QObject::tr("Unable to open file %1 for reading").arg(dataFile.fileName());
 
         QScopedPointer<QIODevice> source;
         if(m_compression == COMPRESSION_NONE)
@@ -155,8 +155,8 @@ void PatchOperation::create(const QString &filepath, const QString &oldFilename,
 {
     setPath(filepath);
 
-	QFile newFile(newFilename);
-	QFile oldFile(oldFilename);
+    QFile newFile(newFilename);
+    QFile oldFile(oldFilename);
 
     // New file informations
     {
@@ -203,11 +203,11 @@ void PatchOperation::create(const QString &filepath, const QString &oldFilename,
     }
 
 
-	if (!newFile.open(QFile::ReadOnly))
-		throw QObject::tr("Unable to open file %1 for reading").arg(newFile.fileName());
+    if (!newFile.open(QFile::ReadOnly))
+        throw QObject::tr("Unable to open file %1 for reading").arg(newFile.fileName());
 
-	if (!oldFile.open(QFile::ReadOnly))
-		throw QObject::tr("Unable to open file %1 for reading").arg(oldFile.fileName());
+    if (!oldFile.open(QFile::ReadOnly))
+        throw QObject::tr("Unable to open file %1 for reading").arg(oldFile.fileName());
 
     if(!dataFile.open(QFile::WriteOnly | QFile::Truncate))
         throw QObject::tr("Unable to open file %1 for writing").arg(dataFile.fileName());
@@ -217,7 +217,7 @@ void PatchOperation::create(const QString &filepath, const QString &oldFilename,
 
     m_compression = COMPRESSION_BROTLI;
     m_patchtype = PATCHTYPE_XDELTA;
-	
+    
     QCryptographicHash sha1Hash(QCryptographicHash::Sha1);
     QScopedPointer<QIODevice> xd3(XDelta3(&newFile, &oldFile, true));
     QScopedPointer<QIODevice> compressor(BrotliCompressor(xd3.data()));

@@ -40,7 +40,7 @@ QIODevice *XDelta3(QIODevice *source, QIODevice *base, bool encode, QObject *par
 XDelta3QIODevice::XDelta3QIODevice(QIODevice *source, QIODevice *base, bool encode, QObject *parent /*= nullptr*/) :
     QIODevice(parent), _source(source), _base(base), _encode(encode)
 {
-	setOpenMode(QIODevice::ReadOnly);
+    setOpenMode(QIODevice::ReadOnly);
     _ret = XD3_INPUT;
     xd3_init_config(&_xd3config, XD3_ADLER32);
     _xd3config.winsize = BufferSize;
