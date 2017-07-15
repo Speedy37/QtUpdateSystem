@@ -9,7 +9,7 @@ public:
     RemoveOperation();
     static const QString Action;
     void create(const QString &path, const QString &oldFilename);
-    virtual void fromJsonObjectV1(const QJsonObject &object);
+    virtual void fromJsonObjectV1(const QJsonObject &object) override;
 protected:
     virtual void fillJsonObjectV1(QJsonObject & object) Q_DECL_OVERRIDE;
     virtual Status localDataStatus() Q_DECL_OVERRIDE;
