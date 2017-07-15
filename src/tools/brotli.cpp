@@ -96,7 +96,7 @@ qint64 BrotliCompressorQIODevice::readData(char *data, qint64 maxlen)
             return -1;
         }
         len = maxlen - available_out;
-    } while (len < maxlen && !BrotliEncoderIsFinished(_state));
+    } while (len == 0 && !BrotliEncoderIsFinished(_state));
     return len;
 }
 
