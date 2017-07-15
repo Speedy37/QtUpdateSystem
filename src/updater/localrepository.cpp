@@ -1,5 +1,7 @@
 #include "localrepository.h"
 #include "../common/utils.h"
+#include "../common/jsonutil.h"
+#include "../exceptions.h"
 
 #include <QDir>
 #include <QSettings>
@@ -8,7 +10,7 @@ static const QString Revision = QStringLiteral("Revision");
 static const QString UpdateInProgress = QStringLiteral("UpdateInProgress");
 static const QString FileList = QStringLiteral("FileList");
 static const QString DirList = QStringLiteral("DirList");
-static const QString StatusFileName = QStringLiteral("status.ini");
+static const QString StatusFileName = QStringLiteral("status.json");
 
 LocalRepository::LocalRepository()
 {
@@ -20,27 +22,45 @@ LocalRepository::LocalRepository(const QString &directory)
     setDirectory(directory);
 }
 
-bool LocalRepository::load()
+void LocalRepository::fromJsonObject(const QJsonObject & object)
 {
-    QSettings settings(m_directory + StatusFileName, QSettings::IniFormat);
-    m_localRevision = settings.value(Revision).toString();
-    m_updateInProgress  = settings.value(UpdateInProgress).toBool();
-    m_fileList = settings.value(FileList).toStringList();
-    m_dirList = settings.value(DirList).toStringList();
-
-    return settings.status() == QSettings::NoError;
+	const QString version = JsonUtil::asString(object, QStringLiteral("version"));
+	if (version != "1")
+		THROW(UnsupportedVersion, version);
+	m_localRevision = object.value(Revision).toString();
+	m_updateInProgress = object.value(UpdateInProgress).toBool();
+	m_fileList = object.value(FileList).toVariant().toStringList();
+	m_dirList = object.value(DirList).toVariant().toStringList();
 }
 
-bool LocalRepository::save()
+QJsonObject LocalRepository::toJsonObject() const
 {
-    QSettings settings(m_directory + StatusFileName, QSettings::IniFormat);
-    settings.setValue(Revision, m_localRevision);
-    settings.setValue(UpdateInProgress, m_updateInProgress);
-    settings.setValue(FileList, m_fileList);
-    settings.setValue(DirList, m_dirList);
-    settings.sync();
+	QJsonObject object;
 
-    return settings.status() == QSettings::NoError;
+	object.insert(QStringLiteral("version"), QStringLiteral("1"));
+	object.insert(Revision, m_localRevision);
+	object.insert(UpdateInProgress, m_updateInProgress);
+	object.insert(FileList, QJsonValue::fromVariant(m_fileList));
+	object.insert(DirList, QJsonValue::fromVariant(m_dirList));
+
+	return object;
+}
+
+bool LocalRepository::load()
+{
+	try
+	{
+		fromJsonObject(JsonUtil::fromJsonFile(m_directory + StatusFileName));
+		return true;
+	}
+	catch (...) {
+		return false;
+	}
+}
+
+void LocalRepository::save()
+{
+	JsonUtil::toJsonFile(m_directory + StatusFileName, toJsonObject());
 }
 
 bool LocalRepository::isManaged(const QFileInfo &file) const

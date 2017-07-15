@@ -14,7 +14,7 @@ public:
     LocalRepository();
     LocalRepository(const QString &directory);
     bool load();
-    bool save();
+    void save();
 
     inline QString directory() const;
     void setDirectory(const QString &directory);
@@ -34,6 +34,8 @@ public:
     inline void setDirList(const QStringList &dirList);
 
 private:
+	QJsonObject toJsonObject() const;
+	void fromJsonObject(const QJsonObject & object);
     QStringList m_fileList, m_dirList;
     QString m_directory, m_localRevision;
     bool m_updateInProgress;

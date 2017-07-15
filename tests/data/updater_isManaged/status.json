@@ -1,0 +1,16 @@
+{
+    "DirList": [
+        "dirs/empty_dir2",
+        "empty_dir",
+        "dirs",
+        "dir2"
+    ],
+    "FileList": [
+        "rmfile.txt",
+        "path_diff2.txt",
+        "patch_same.txt",
+        "path_diff.txt",
+    ],
+    "Revision": "1",
+    "version": "1"
+}
