@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QCryptographicHash>
 #include <QRegularExpression>
+#include <QDebug>
 
 Q_LOGGING_CATEGORY(LOG_OP, "updatesystem.operation")
 
@@ -47,21 +48,21 @@ void Operation::apply()
 {
     try
     {
-        qCDebug(LOG_OP, "Apply on [%s] %s", type().toLocal8Bit().data(), path().toLocal8Bit().data());
+        qCDebug(LOG_OP).noquote() << "Apply on [" << type() << "] " << path();
         m_errorString = QString();
         Q_ASSERT_X(localDataStatus() == ApplyRequired, __FUNCTION__, (m_path + m_dataFilename).toLocal8Bit().data());
         applyData();
         Q_ASSERT(localDataStatus() == Valid);
         m_status = Valid;
-        qCDebug(LOG_OP, "Apply succeeded on [%s] %s", type().toLocal8Bit().data(), path().toLocal8Bit().data());
+        qCDebug(LOG_OP).noquote() << "Apply succeeded on [" << type() << "] " << path();
     }
     catch(const QString &msg)
     {
         cleanup();
-        qCDebug(LOG_OP) << msg;
+        qCDebug(LOG_OP).noquote() << msg;
         m_errorString = msg;
         m_status = ApplyFailed;
-        qCDebug(LOG_OP, "Apply failed on [%s] %s: %s", type().toLocal8Bit().data(), path().toLocal8Bit().data(), msg.toLocal8Bit().data());
+        qCDebug(LOG_OP).noquote() << "Apply failed on [" << type() << "] " << path() << ": " << msg;
     }
 }
 
