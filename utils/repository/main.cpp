@@ -83,12 +83,6 @@ int main(int argc, char *argv[])
             if(parser.isSet(tmpDirectoryPath))
                 packager.setTmpDirectoryPath(parser.value(tmpDirectoryPath));
 
-            if(parser.isSet(lzmaPath))
-                Utils::setLzmaProgram(parser.value(lzmaPath));
-
-            if(parser.isSet(xdeltaPath))
-                Utils::setXdeltaProgram(parser.value(xdeltaPath));
-
             try
             {
                 printf("Progression ...");

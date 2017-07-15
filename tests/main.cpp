@@ -37,12 +37,6 @@ int main(int argc, char *argv[])
     TestUtils::cleanup = !parser.isSet(keep);
     QLoggingCategory::setFilterRules(QStringLiteral("updatesystem.*.debug=%1").arg(parser.isSet(verbose) ? "true" : "false"));
 
-#ifdef Q_OS_WIN
-    Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma.exe");
-    Utils::setXdeltaProgram(QString(SRCDIR)+ "../xdelta3.exe");
-#else
-    Utils::setLzmaProgram(QString(SRCDIR)+ "../lzma");
-#endif
     int ret = 0;
 
     QDir().mkpath(dataDir + "/rev1/empty_dir");

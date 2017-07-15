@@ -54,24 +54,4 @@ QString formatMs(qint64 millisec)
     return QStringLiteral("%1 days").arg(time, 0, 'g', 2);
 }
 
-QString xdeltaProgram()
-{
-    return xdelta;
-}
-
-void setXdeltaProgram(const QString &program)
-{
-    xdelta = program;
-}
-
-QString lzmaProgram()
-{
-    return lzma;
-}
-
-void setLzmaProgram(const QString &program)
-{
-    lzma = program;
-}
-
 }

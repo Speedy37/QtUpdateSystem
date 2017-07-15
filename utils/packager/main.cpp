@@ -30,16 +30,6 @@ int main(int argc, char *argv[])
     parser.addOption(tmpDirectoryPath);
     parser.process(app);
 
-    QCommandLineOption lzmaPath("lzma"
-         , QCoreApplication::tr("Binary to use as lzma [%1 by default].").arg(Utils::lzmaProgram())
-         , "lzma_bin");
-    parser.addOption(lzmaPath);
-
-    QCommandLineOption xdeltaPath("xdelta3"
-         , QCoreApplication::tr("Binary to use as xdelta3 [%1 by default].").arg(Utils::xdeltaProgram())
-         , "xdelta3_bin");
-    parser.addOption(xdeltaPath);
-
     QCommandLineOption verbose(QStringList() << "verbose"
          , QCoreApplication::tr("Run in verbose mode."));
     parser.addOption(verbose);
@@ -72,12 +62,6 @@ int main(int argc, char *argv[])
 
         if(parser.isSet(deltaMetadataFilename))
             packager.setDeltaMetadataFilename(parser.value(deltaMetadataFilename));
-
-        if(parser.isSet(lzmaPath))
-            Utils::setLzmaProgram(parser.value(lzmaPath));
-
-        if(parser.isSet(xdeltaPath))
-            Utils::setXdeltaProgram(parser.value(xdeltaPath));
 
         try
         {
