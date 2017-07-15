@@ -11,17 +11,17 @@ int main(int argc, char *argv[])
     QCoreApplication app(argc, argv);
 
     QCommandLineParser parser;
-    parser.setApplicationDescription(QCoreApplication::tr("repository"));
+    parser.setApplicationDescription(QCoreApplication::tr("manage a repository"));
     parser.addHelpOption();
     parser.addVersionOption();
 
     parser.addPositionalArgument("command", QCoreApplication::tr("The command to execute."
-                                                                 "\n - versions"
-                                                                 "\n - mkpackage"
-                                                                 "\n - addpackage"
-                                                                 "\n - rmpackage"
-                                                                 "\n - setversion"
-                                                                 "\n - simplify"
+                                                                 "\n - versions: list all versions"
+                                                                 "\n - mkpackage: create a new version"
+                                                                 "\n - addpackage: import a version"
+                                                                 "\n - rmpackage: remove a version"
+                                                                 "\n - setversion: set current version"
+                                                                 "\n - simplify: simplify the repository according to the current version"
                                                                  ), "<command>");
 
     QCommandLineOption verbose(QStringList() << "verbose"

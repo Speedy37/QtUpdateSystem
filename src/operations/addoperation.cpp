@@ -207,7 +207,7 @@ void AddOperation::applyData()
 
         Q_ASSERT(sha1(&file) == m_finalSha1);
 
-        qCDebug(LOG_ADDOP) << "Extraction succeeded" << path();
+        qCDebug(LOG_ADDOP) << "Decompression succeeded of" << path();
 
         cleanup();
     }

@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     QCoreApplication app(argc, argv);
 
     QCommandLineParser parser;
-    parser.setApplicationDescription(QCoreApplication::tr("updater"));
+    parser.setApplicationDescription(QCoreApplication::tr("manage a local repository (check for updates, update, check integrity)"));
     parser.addHelpOption();
     parser.addVersionOption();
 
@@ -27,19 +27,9 @@ int main(int argc, char *argv[])
          , QCoreApplication::tr("Path to use for temporary files.")
          , "tmp_directory");
 
-    QCommandLineOption lzmaPath("lzma"
-         , QCoreApplication::tr("Binary to use as lzma [%1 by default].").arg(Utils::lzmaProgram())
-         , "lzma_bin");
-
-    QCommandLineOption xdeltaPath("xdelta3"
-         , QCoreApplication::tr("Binary to use as xdelta3 [%1 by default].").arg(Utils::xdeltaProgram())
-         , "xdelta3_bin");
-
     parser.addOption(checkonly);
     parser.addOption(force);
     parser.addOption(tmpDirectoryPath);
-    parser.addOption(lzmaPath);
-    parser.addOption(xdeltaPath);
     parser.addOption(verbose);
     parser.addPositionalArgument("local_repository", QCoreApplication::tr("Path to the local repository."), "<local_repository>");
     parser.addPositionalArgument("remote_repository", QCoreApplication::tr("Path to the remote repository."), "<remote_repository>");
@@ -66,12 +56,6 @@ int main(int argc, char *argv[])
 
         if(parser.isSet(tmpDirectoryPath))
             updater.setTmpDirectory(parser.value(tmpDirectoryPath));
-
-        if(parser.isSet(lzmaPath))
-            Utils::setLzmaProgram(parser.value(lzmaPath));
-
-        if(parser.isSet(xdeltaPath))
-            Utils::setXdeltaProgram(parser.value(xdeltaPath));
 
         if(args.size() == 4)
             updater.setCredentials(args[2], args[3]);
