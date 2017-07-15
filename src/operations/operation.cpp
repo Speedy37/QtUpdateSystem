@@ -48,21 +48,21 @@ void Operation::apply()
 {
     try
     {
-        qCDebug(LOG_OP).noquote() << "Apply on [" << type() << "] " << path();
+        qCDebug(LOG_OP) << "Apply on [" << type() << "] " << path();
         m_errorString = QString();
         Q_ASSERT_X(localDataStatus() == ApplyRequired, __FUNCTION__, (m_path + m_dataFilename).toLocal8Bit().data());
         applyData();
         Q_ASSERT(localDataStatus() == Valid);
         m_status = Valid;
-        qCDebug(LOG_OP).noquote() << "Apply succeeded on [" << type() << "] " << path();
+        qCDebug(LOG_OP) << "Apply succeeded on [" << type() << "] " << path();
     }
     catch(const QString &msg)
     {
         cleanup();
-        qCDebug(LOG_OP).noquote() << msg;
+        qCDebug(LOG_OP) << msg;
         m_errorString = msg;
         m_status = ApplyFailed;
-        qCDebug(LOG_OP).noquote() << "Apply failed on [" << type() << "] " << path() << ": " << msg;
+        qCDebug(LOG_OP) << "Apply failed on [" << type() << "] " << path() << ": " << msg;
     }
 }
 
