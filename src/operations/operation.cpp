@@ -47,13 +47,13 @@ void Operation::apply()
 {
     try
     {
+        qCDebug(LOG_OP, "Apply on [%s] %s", type().toLocal8Bit().data(), path().toLocal8Bit().data());
         m_errorString = QString();
-        if (localDataStatus() != ApplyRequired)
-            localDataStatus();
-        Q_ASSERT_X(localDataStatus() == ApplyRequired, __FUNCTION__, (m_path + m_dataFilename).toLatin1());
+        Q_ASSERT_X(localDataStatus() == ApplyRequired, __FUNCTION__, (m_path + m_dataFilename).toLocal8Bit().data());
         applyData();
         Q_ASSERT(localDataStatus() == Valid);
         m_status = Valid;
+        qCDebug(LOG_OP, "Apply succeeded on [%s] %s", type().toLocal8Bit().data(), path().toLocal8Bit().data());
     }
     catch(const QString &msg)
     {
@@ -61,6 +61,7 @@ void Operation::apply()
         qCDebug(LOG_OP) << msg;
         m_errorString = msg;
         m_status = ApplyFailed;
+        qCDebug(LOG_OP, "Apply failed on [%s] %s: %s", type().toLocal8Bit().data(), path().toLocal8Bit().data(), msg.toLocal8Bit().data());
     }
 }
 
